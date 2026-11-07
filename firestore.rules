@@ -1,0 +1,9 @@
+rules_version = '2';
+// Không login: ai có link app đều đọc/ghi được, nhưng chỉ trong các collection của app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{col}/{id} {
+      allow read, write: if col in ['staff', 'accounts', 'projects', 'config', 'members'];
+    }
+  }
+}
