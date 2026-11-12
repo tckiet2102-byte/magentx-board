@@ -13,4 +13,5 @@ Vercel deploy tự động từ nhánh `main` của repo này (https://magentx-b
 - Dữ liệu ở Firebase Firestore (cấu hình `FIREBASE_CONFIG` đầu file), quyền ở `firestore.rules`.
 - Đăng nhập bằng mã PIN 4 số (`staff/{id}.pin`, băm SHA-256 + salt), giữ 24 giờ trên mỗi máy. Mã PIN của Hào vào được mọi tài khoản.
 - Duyệt bước dự án: Hiếu bắt buộc, Hào không bắt buộc (`staff.qcOpt`). Booking credit và account: chỉ Hào.
+- Player duyệt video (`ReviewPlayer`): video Drive phát qua `api/drive.js` (Google trả 403 nếu nhúng thẳng từ web khác). Ghi chú theo thời điểm và nét vẽ lưu ở `steps.{bước}.vn`, link video kèm theo ở `steps.{bước}.rv`.
 - Đừng ghi mã PIN hay dữ liệu thay người dùng trên web thật khi kiểm tra.

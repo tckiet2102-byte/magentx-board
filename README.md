@@ -5,6 +5,7 @@ Web tĩnh trên Vercel, dữ liệu lưu ở Firebase Firestore. Không cần đ
 
 - `public/index.html`: toàn bộ app
 - `firestore.rules`: quyền đọc/ghi database
+- `api/drive.js`: hàm trung chuyển video Google Drive cho player duyệt (chạy trên Vercel)
 - `vercel.json`: cấu hình deploy
 - `magentx-demo-offline.html`: bản demo cũ (dữ liệu lưu trong trình duyệt), giữ lại để tham khảo
 
@@ -39,6 +40,13 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 ## Duyệt
 - **Các bước dự án:** Hiếu duyệt là bắt buộc. Hiếu duyệt bản hiện tại thì bước xong, dù Hào chưa duyệt. Hào duyệt thêm nếu cần (không bắt buộc); nếu Hào duyệt trước thì bước vẫn chờ Hiếu. Đổi ai bắt buộc hay không bắt buộc ở **Cài đặt › Nhân sự › Duyệt QC**.
 - **Booking credit Higgsfield:** chỉ Hào duyệt. Chưa duyệt thì chưa được gen.
+
+## Player duyệt video
+- Ở mỗi bước đã nộp link tới **file video trên Google Drive** (dạng `drive.google.com/file/d/…`), bấm **Duyệt trên player**: tua bằng thanh thời gian, lùi/tới từng khung hình (phím ← →), vẽ lên khung hình, ghi chú gắn với đúng thời điểm. Người làm tick **Đã sửa** cho từng ghi chú.
+- Nếu link kết quả là folder, bấm **Thêm link file video để duyệt trên player** và dán link file video trong folder đó.
+- Điều kiện: file chia sẻ **Bất kỳ ai có đường liên kết**, định dạng MP4 (H.264). Không đạt thì player chuyển sang trình xem của Google Drive, thời điểm ghi chú phải nhập tay.
+- Google chặn phát thẳng file Drive trên web khác, nên video đi qua `api/drive.js` trên Vercel. Băng thông tính vào gói Vercel (gói miễn phí 100 GB mỗi tháng), nên nộp bản xem nhẹ thay vì file master.
+- Ghi chú và nét vẽ lưu trong `projects/{id}.steps.{bước}.vn`. Phím tắt: Space phát/dừng, ← → từng khung hình, Shift + ← → 1 giây, D bật vẽ, N gõ ghi chú, Ctrl + Enter lưu.
 
 ## Lưu ý
 - Mã PIN chặn việc chọn nhầm hoặc giả tên người khác trên giao diện. Database vẫn mở cho ai có link (xem `firestore.rules`), nên vẫn chỉ gửi link trong nội bộ.

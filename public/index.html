@@ -573,6 +573,75 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 @media (max-width:720px){.drp-months > :nth-child(2){display:none}.drp-pop{right:0}.drp-wd,.drp-days{grid-template-columns:repeat(7,minmax(36px,1fr))}}
 @media (max-width:420px){.drp-field > b{font-size:14px}.drp-field{padding:8px 10px}}
 
+/* video review player: sân khấu và bảng điều khiển luôn tối để nhìn rõ hình, cột ghi chú theo giao diện chung */
+.rv{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--paper)}
+.rv .sp{flex:1}
+.rv-h{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--rule)}
+.rv-title{display:flex;flex-direction:column;min-width:0}
+.rv-title b{font-size:17px;line-height:1.3}
+.rv-title .meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv-main{display:grid;grid-template-columns:minmax(0,1fr) 370px;min-height:0}
+.rv-left{display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0;background:#0b0d12;color:var(--ink);
+  --paper:#0f1219;--surface:#171b25;--subtle:#1b2030;--tint:#232a3b;--ink:#eceff6;--ink-2:#aeb5c7;--ink-3:#808899;--rule:#2a3142;--field:#4c5672;--field-hover:#6a7594;
+  --action:#7c9dff;--action-hover:#98b2ff;--action-soft:#1f2b4d;--on-action:#0f1219;--bad:#ff7d73;--bad-soft:#40201e;--d-todo:#626e84;--d-review:#e5ad2e;--d-done:#4cc27d;color-scheme:dark}
+.rv-stage{position:relative;display:grid;place-items:center;min-height:0;overflow:hidden;padding:0}
+.rv-fit{position:relative;background:#000}
+.rv-fit video,.rv-fit iframe{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;background:#000}
+.rv-fit canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
+.rv-fit canvas.on{pointer-events:auto;cursor:crosshair;outline:2px solid var(--action);outline-offset:-2px}
+.rv-msg{margin:0;padding:24px;color:var(--ink-2);font-size:15px;text-align:center}
+.rv-msg.over{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.rv-ctl{display:flex;flex-direction:column;gap:10px;padding:8px 16px 14px;background:var(--surface);border-top:1px solid var(--rule)}
+.rv-tl{position:relative;height:28px;cursor:pointer;touch-action:none}
+.rv-tl::before{content:"";position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--tint)}
+.rv-tl .fill{position:absolute;left:0;top:12px;height:4px;border-radius:2px;background:var(--action)}
+.rv-tl .head{position:absolute;top:4px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;background:#fff}
+.rv-tl b{position:absolute;top:8px;width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid var(--surface);background:var(--d-review);pointer-events:none}
+.rv-tl b.ok{background:var(--d-done)}
+.rv-tl b.old{background:var(--d-todo)}
+.rv-tl b.sel{box-shadow:0 0 0 2px #fff}
+.rv-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rv-play{min-width:96px}
+.rv-tc{font-size:14.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:4px}
+.rv-tc b{color:var(--ink);font-size:16px}
+.rv .btn.on{background:var(--action-soft);border-color:var(--action);color:var(--ink)}
+.rv-colors{display:flex;gap:6px;align-items:center}
+.rv-colors button{width:26px;height:26px;padding:0;border-radius:50%;border:2px solid var(--surface);background:var(--c);box-shadow:0 0 0 1.5px var(--field);cursor:pointer}
+.rv-colors button.on{box-shadow:0 0 0 2.5px var(--action)}
+.rv-compose{display:flex;gap:10px;align-items:stretch}
+.rv-compose textarea{flex:1 1 auto;min-width:0;resize:none}
+.rv-compose .btn{height:auto;min-height:44px;flex:none}
+.rv-manual{width:104px;height:auto;flex:none}
+.rv-note{margin:0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.rv-side{display:flex;flex-direction:column;min-height:0;background:var(--surface);border-left:1px solid var(--rule)}
+.rv-side-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 10px}
+.rv-side-h h2{font-size:18px}
+.rv-old{padding:0 16px 10px;font-size:14px;color:var(--ink-2)}
+.rv-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 10px 12px;display:flex;flex-direction:column;gap:6px}
+.rv-n{flex:none}
+.rv ~ .toasts{bottom:auto;top:72px}
+.rv-n{border:1px solid var(--rule);border-radius:12px;background:var(--surface)}
+.rv-n.on{border-color:var(--action);background:var(--action-soft)}
+.rv-n-main{display:flex;flex-direction:column;gap:3px;width:100%;padding:10px 12px 6px;border:0;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:12px}
+.rv-n-top{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:13.5px;color:var(--ink-2)}
+.rv-n-tc{font-size:14.5px;color:var(--action);font-variant-numeric:tabular-nums}
+.rv-tag{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink-3)}
+.rv-n-text{font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.rv-n.ok .rv-n-text{color:var(--ink-3);text-decoration:line-through}
+.rv-n-act{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 6px 12px}
+.rv-n-act .check{font-size:13.5px;min-height:30px;color:var(--ink-2)}
+.rv-empty{margin:0;padding:18px 8px;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
+.rv-side-f{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--rule)}
+@media (max-width:900px){
+  .rv-main{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);overflow-y:auto}
+  .rv-left{grid-template-rows:auto auto}
+  .rv-stage{height:42vh}
+  .rv-side{border-left:0;border-top:1px solid var(--rule);min-height:240px}
+  .rv-list{overflow:visible}
+  .rv-compose{flex-wrap:wrap}
+  .rv-compose .btn{flex:1 1 100%}
+  .rv-title .meta{display:none}
+}
 /* modal, popover, toast */
 .scrim{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow-y:auto}
 .modal{width:100%;max-width:600px;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;margin:auto 0}
@@ -918,6 +987,7 @@ function enrichStep(def, raw, t, reviewers){
   st.optBy = st.qcBy.filter(r => st.mustBy.indexOf(r) < 0);
   st.waitBy = st.mustBy.filter(r => st.approvedBy.indexOf(r) < 0);
   st.comments = Object.keys(raw.cm||{}).filter(k => raw.cm[k] && raw.cm[k].text).map(k => Object.assign({cid:k}, raw.cm[k])).sort((a,b) => (a.at||0) - (b.at||0));
+  st.vnotes = Object.keys(raw.vn||{}).filter(k => raw.vn[k] && typeof raw.vn[k].t === 'number').map(k => Object.assign({nid:k}, raw.vn[k])).sort((a,b) => (a.t - b.t) || ((a.at||0) - (b.at||0)));
   if(!raw.link) st.state = (raw.start && raw.start <= t) ? 'doing' : 'todo';
   else if(!st.waitBy.length) st.state = 'done';
   else if(st.fixOn) st.state = 'fix';
@@ -1333,6 +1403,12 @@ const ICONS = {
   send: 'M22 2L11 13 M22 2l-7 20-4-9-9-4z',
   upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
   download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',
+  play: 'M6 4l14 8-14 8V4z',
+  pause: 'M8 5v14 M16 5v14',
+  undo: 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  trash: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+  vol: 'M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 0 1 0 7',
+  mute: 'M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6',
   alert: 'M12 9v4 M12 17h.01 M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z',
   sliders: 'M21 4h-7 M10 4H3 M21 12h-9 M8 12H3 M21 20h-5 M12 20H3 M14 2v4 M8 10v4 M16 18v4',
   gear: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
@@ -1852,6 +1928,7 @@ function StepBody({p, st, D, me}){
   const list = all ? st.comments : st.comments.slice(-3);
   const active = compose || !!note.trim();
   const names = st.qcBy.map(r => nameOf(D, r)).join(' và ');
+  const vurl = videoLinkOf(st), vnOpen = st.vnotes.filter(n => !n.ok).length;
   return html`<div class="sbody">
     <div class="sb-head"><p class="meta">${st.def.out}</p>${w ? html`<button type="button" class="btn xs" aria-pressed=${editing} onClick=${() => setEditing(!editing)}><${Ic} n=${editing ? 'check' : 'edit'} s=${14}/>${editing ? 'Xong' : 'Sửa bước'}</button>` : null}</div>
     ${editing ? html`<${StepEditor} p=${p} st=${st} D=${D}/>` : null}
@@ -1860,6 +1937,9 @@ function StepBody({p, st, D, me}){
         ? html`<div class="linkline"><a class="ext" href=${st.link} target="_blank" rel="noopener"><${Ic} n="link" s=${17}/>${shortUrl(st.link)}</a><span class="meta">v${pad3(st.ver)}, ${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}</span>${w ? html`<button type="button" class="btn xs" onClick=${() => setLinkOpen(true)}><${Ic} n="upload" s=${14}/>Nộp bản mới</button>` : null}</div>`
         : (w ? html`<div class="slot"><input class="inp sm" type="url" placeholder="Dán link Drive, Frame.io hoặc Higgsfield" value=${link} aria-label="Link kết quả" onInput=${e => setLink(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') submit(); }}/><button type="button" class="btn primary sm" disabled=${!link.trim()} onClick=${submit}><${Ic} n="send" s=${16}/>Nộp link</button>${st.link ? html`<button type="button" class="btn sm" onClick=${() => { setLinkOpen(false); setLink(''); }}>Hủy</button>` : null}</div>${st.link ? html`<span class="hint">Nộp bản mới thì người duyệt cần duyệt lại.</span>` : null}`
         : html`<span class="meta linkline">Chưa nộp link.</span>`)}
+      ${st.link && !linkOpen ? (vurl
+        ? html`<div class="linkline"><button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${st.vnotes.length ? st.vnotes.length+' ghi chú trên video'+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>${w && !canReview(st.link) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${true}/>` : null}</div>`
+        : (w && VIDEO_STEPS[st.id] ? html`<div class="linkline"><${VideoLinkAdd} p=${p} st=${st}/></div>` : null)) : null}
     </div></div>
     <div class="sb-row"><span class="sb-lab">Duyệt</span><div class="sb-val">
       ${!st.qcBy.length ? html`<span class="meta linkline">Bước này không cần duyệt.</span>`
@@ -2088,7 +2168,7 @@ function QCCard({q, D, me}){
   return html`<article class="qcard">
     <a class="pn2" href=${'#job-'+p.id} onClick=${e => { e.preventDefault(); openJob(p.id, st.id); }}>${p.name}</a>
     <p class="meta">${st.def.no} ${st.def.name}, bản v${pad3(st.ver)}. ${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}.</p>
-    <div class="acts"><a class="btn sm" href=${st.link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở link</a>${mine ? html`<button type="button" class="btn sm ok" onClick=${approve}><${Ic} n="check" s=${16}/>Duyệt</button>` : null}<button type="button" class="btn sm" onClick=${() => openJob(p.id, st.id)}>${mine ? 'Góp ý hoặc yêu cầu sửa' : 'Xem bước'}</button></div>
+    <div class="acts"><a class="btn sm" href=${st.link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở link</a>${videoLinkOf(st) ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button>` : null}${mine ? html`<button type="button" class="btn sm ok" onClick=${approve}><${Ic} n="check" s=${16}/>Duyệt</button>` : null}<button type="button" class="btn sm" onClick=${() => openJob(p.id, st.id)}>${mine ? 'Góp ý hoặc yêu cầu sửa' : 'Xem bước'}</button></div>
   </article>`;
 }
 function QCView({D, me}){
@@ -2342,6 +2422,272 @@ function SettingsView({D, me}){
     <${BackupPanel} D=${D}/>`;
 }
 
+/* ---------- video review player ---------- */
+const RV_COLORS = ['#ff4d4f', '#ffd43b', '#4dabf7', '#ffffff'];
+const RV_COLOR_NAMES = ['Đỏ', 'Vàng', 'Xanh', 'Trắng'];
+const RV_FPS = [24, 25, 30, 50, 60];
+const VIDEO_STEPS = {s05: 1, s06: 1, s07: 1, s08: 1, s09: 1, s10: 1};
+function driveId(u){
+  const s = String(u || '');
+  const m = s.match(/(?:drive|docs)\.google\.com\/file\/d\/([\w-]{20,})/) || s.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]{20,})/) || s.match(/drive\.usercontent\.google\.com\/download\?(?:[^#]*&)?id=([\w-]{20,})/);
+  return m ? m[1] : '';
+}
+function reviewSrc(u){
+  const id = driveId(u);
+  if(id) return '/api/drive?id='+id;
+  return /^https?:\/\/[^?#]+\.(mp4|webm|m4v|mov)(\?|#|$)/i.test(String(u || '')) ? String(u) : '';
+}
+function canReview(u){ return safeUrl(u) && !!reviewSrc(u); }
+/* Link để mở player: link kết quả nếu là file video, không thì link video nộp kèm cho đúng bản đang duyệt. */
+function videoLinkOf(st){
+  if(canReview(st.link)) return st.link;
+  return st.rv && (+st.rv.ver || 0) === st.ver && canReview(st.rv.url) ? st.rv.url : '';
+}
+function tcOf(t, fps){
+  const f = Math.max(0, Math.floor((+t || 0) * fps + 1e-3)), s = Math.floor(f / fps);
+  const hh = Math.floor(s / 3600);
+  return (hh ? pad(hh)+':' : '')+pad(Math.floor(s % 3600 / 60))+':'+pad(s % 60)+':'+pad(f % fps);
+}
+function parseTc(v){
+  const s = String(v || '').trim().replace(',', '.');
+  if(!s || !/^\d+(\.\d+)?(:\d+(\.\d+)?){0,2}$/.test(s)) return null;
+  return s.split(':').reduce((a, x) => a * 60 + (+x), 0);
+}
+const rv36 = n => { const s = Math.max(0, Math.min(1295, Math.round(n * 1295))).toString(36); return s.length < 2 ? '0'+s : s; };
+function encStroke(st){ return st.c+'|'+st.p.map(q => rv36(q[0])+rv36(q[1])).join(''); }
+function decStroke(s){
+  const i = String(s).indexOf('|'), d = String(s).slice(i + 1), p = [];
+  for(let k = 0; k + 4 <= d.length; k += 4) p.push([parseInt(d.slice(k, k + 2), 36) / 1295, parseInt(d.slice(k + 2, k + 4), 36) / 1295]);
+  return {c: +String(s).slice(0, i) || 0, p};
+}
+function paintStrokes(cv, strokes){
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  const lw = Math.max(2.5, W * 0.0045);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  strokes.forEach(st => {
+    if(!st.p.length) return;
+    ctx.beginPath();
+    st.p.forEach((q, i) => i ? ctx.lineTo(q[0] * W, q[1] * H) : ctx.moveTo(q[0] * W, q[1] * H));
+    if(st.p.length === 1) ctx.lineTo(st.p[0][0] * W + 0.5, st.p[0][1] * H);
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = lw + 3; ctx.stroke();
+    ctx.strokeStyle = RV_COLORS[st.c] || RV_COLORS[0]; ctx.lineWidth = lw; ctx.stroke();
+  });
+}
+function VideoLinkAdd({p, st, has}){
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState('');
+  const save = () => {
+    const u = v.trim(); if(!u) return;
+    if(!canReview(u)){ toast('Cần link tới file video trên Google Drive (dạng drive.google.com/file/d/…), không phải link folder.', 'warn'); return; }
+    W.project(p.id, {steps: {[st.id]: {rv: {url: u, ver: st.ver}}}}); setOpen(false); setV(''); toast('Đã lưu link video cho player');
+  };
+  if(!open) return html`<button type="button" class="btn xs" onClick=${() => setOpen(true)}><${Ic} n="link" s=${14}/>${has ? 'Đổi link video' : 'Thêm link file video để duyệt trên player'}</button>`;
+  return html`<div class="slot"><input class="inp sm" type="url" placeholder="Link file video trên Drive: drive.google.com/file/d/…" value=${v} aria-label="Link file video" onInput=${e => setV(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') save(); }}/><button type="button" class="btn sm primary" disabled=${!v.trim()} onClick=${save}>Lưu</button><button type="button" class="btn sm" onClick=${() => { setOpen(false); setV(''); }}>Hủy</button></div>`;
+}
+function ReviewPlayer({D, pid, sid, me}){
+  const p = D.pmap[pid], st = p ? p.steps.find(x => x.id === sid) : null;
+  const link = st ? videoLinkOf(st) : '';
+  const did = driveId(link), src = reviewSrc(link);
+  const vref = useRef(null), cref = useRef(null), stageRef = useRef(null), tlRef = useRef(null), taRef = useRef(null);
+  const drawing = useRef(null), scrub = useRef(null);
+  const [failed, setFailed] = useState(false);
+  const [meta, setMeta] = useState(null);
+  const [cur, setCur] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [rate, setRate] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [fps, setFps] = useState(() => { const f = +lsGet('mx.fps'); return RV_FPS.indexOf(f) >= 0 ? f : 25; });
+  const [box, setBox] = useState(null);
+  const [tool, setTool] = useState(false);
+  const [color, setColor] = useState(0);
+  const [draft, setDraft] = useState([]);
+  const [draftT, setDraftT] = useState(null);
+  const [text, setText] = useState('');
+  const [manual, setManual] = useState('');
+  const [sel, setSel] = useState('');
+  const all = st ? st.vnotes : [];
+  const older = all.filter(n => (+n.ver || 0) !== (st ? st.ver : 0));
+  const [old, setOld] = useState(() => older.length > 0 && older.length === all.length);
+  const mode = !src ? 'none' : failed ? (did ? 'frame' : 'none') : 'video';
+  const w = canW();
+  const frame = 1 / fps;
+  const tc = t => tcOf(t, fps);
+
+  useEffect(() => { const o = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = o; }; }, []);
+  /* không đọc được video trong 25 giây thì chuyển sang trình xem của Drive */
+  useEffect(() => { if(mode !== 'video' || meta) return; const t = setTimeout(() => setFailed(true), 25000); return () => clearTimeout(t); }, [mode, !!meta, src]);
+  useEffect(() => {
+    const el = stageRef.current; if(!el) return;
+    const fit = () => { const W = el.clientWidth, H = el.clientHeight; const ar = meta && meta.w && meta.h ? meta.w / meta.h : 16 / 9; let bw = W, bh = W / ar; if(bh > H){ bh = H; bw = H * ar; } setBox(b => b && b.w === Math.floor(bw) && b.h === Math.floor(bh) ? b : {w: Math.floor(bw), h: Math.floor(bh)}); };
+    fit();
+    if(!window.ResizeObserver){ window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
+    const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
+  }, [meta && meta.w, meta && meta.h, mode]);
+  useEffect(() => {
+    if(!playing) return; let id;
+    const tick = () => { const v = vref.current; if(v) setCur(v.currentTime); id = requestAnimationFrame(tick); };
+    id = requestAnimationFrame(tick); return () => cancelAnimationFrame(id);
+  }, [playing]);
+
+  const notes = all.filter(n => old || (+n.ver || 0) === (st ? st.ver : 0));
+  const openN = notes.filter(n => !n.ok).length;
+  const selNote = sel ? notes.find(n => n.nid === sel) : null;
+  const passing = !selNote && mode === 'video' ? (playing ? notes.slice().reverse().find(n => n.t <= cur && cur < n.t + 1.2 && n.d && n.d.length) : notes.find(n => Math.abs(n.t - cur) <= frame * 0.6)) : null;
+  const act = selNote || passing || null;
+  const draftHere = draft.length > 0 && (mode !== 'video' || draftT === null || Math.abs(cur - draftT) <= frame * 0.6);
+  const shown = draftHere ? draft : (!draft.length && act && act.d ? act.d.map(decStroke) : []);
+  const repaint = () => {
+    const cv = cref.current; if(!cv || !box) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), W = Math.round(box.w * dpr), H = Math.round(box.h * dpr);
+    if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+    paintStrokes(cv, shown);
+  };
+  useEffect(repaint);
+
+  const seek = (t, keep) => { const v = vref.current, d = meta ? meta.dur : 0; const x = Math.max(0, Math.min(d || 0, t)); if(v) v.currentTime = x; setCur(x); if(!keep) setSel(''); };
+  const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); v.play().catch(() => {}); } else v.pause(); };
+  const stepF = k => { const v = vref.current; if(!v || !meta) return; v.pause(); seek((Math.round(v.currentTime * fps) + k) / fps + 0.001); };
+  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } setSel(n.nid); };
+  const anchor = draft.length && draftT !== null ? draftT : cur;
+
+  const patchNote = (nid, o) => W.project(p.id, {steps: {[st.id]: {vn: {[nid]: o}}}});
+  const addNote = () => {
+    const body = text.trim(); if(!body && !draft.length) return;
+    let t = anchor;
+    if(mode !== 'video'){ t = parseTc(manual); if(t === null){ toast('Nhập thời điểm dạng phút:giây, ví dụ 0:12.', 'warn'); return; } }
+    const d = draft.filter(s => s.p.length).map(encStroke);
+    if(d.join('').length > 14000){ toast('Nét vẽ quá nhiều. Bấm Hoàn tác bớt vài nét rồi lưu lại.', 'warn'); return; }
+    const nid = rid('n');
+    patchNote(nid, {t: +t.toFixed(3), text: body, by: me || null, at: Date.now(), ver: st.ver, d});
+    setText(''); setManual(''); setDraft([]); setDraftT(null); setTool(false); setSel(nid);
+    toast('Đã thêm ghi chú tại '+tc(t));
+  };
+  const approve = ok => { const now = Date.now(); const o = {qc: {[me]: {ok, ver: st.ver, at: now, uid: S.uid || null}}}; if(ok && st.fix && st.fix.by === me) o.fix = null; W.project(p.id, {steps: {[st.id]: o}}); toast(ok ? 'Đã duyệt bản v'+pad3(st.ver) : 'Đã bỏ duyệt'); };
+  const askFix = () => {
+    const now = Date.now(), n = all.filter(x => !x.ok && (+x.ver || 0) === st.ver).length;
+    W.project(p.id, {steps: {[st.id]: {cm: {[rid('c')]: {by: me, at: now, text: n ? 'Cần sửa theo '+n+' ghi chú trên video.' : 'Cần sửa, xem ghi chú trên video.', kind: 'fix', ver: st.ver}}, fix: {by: me, at: now, ver: st.ver}, qc: {[me]: {ok: false, ver: st.ver, at: now, uid: S.uid || null}}}}});
+    toast('Đã gửi yêu cầu sửa');
+  };
+
+  /* vẽ */
+  const pt = e => { const r = cref.current.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+  const dDown = e => {
+    if(!tool || draft.length >= 24) return; e.preventDefault();
+    try { cref.current.setPointerCapture(e.pointerId); } catch(x){}
+    const v = vref.current; if(v && !v.paused) v.pause();
+    if(!draft.length) setDraftT(v && mode === 'video' ? v.currentTime : null);
+    drawing.current = {c: color, p: [pt(e)]}; setSel('');
+    setDraft(d => d.concat([drawing.current]));
+  };
+  const dMove = e => { const s = drawing.current; if(!s) return; const q = pt(e), l = s.p[s.p.length - 1]; if(s.p.length >= 400 || Math.hypot(q[0] - l[0], q[1] - l[1]) < 0.004) return; s.p.push(q); repaint(); };
+  const dUp = () => { if(drawing.current){ drawing.current = null; setDraft(d => d.slice()); } };
+  const toolOn = on => { const v = vref.current; if(on && v && !v.paused) v.pause(); setTool(on); };
+
+  /* tua bằng thanh thời gian */
+  const tlAt = e => { const r = tlRef.current.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (meta ? meta.dur : 0); };
+  const tDown = e => { const v = vref.current; if(!v || !meta) return; e.preventDefault(); try { tlRef.current.setPointerCapture(e.pointerId); } catch(x){} scrub.current = {was: !v.paused}; v.pause(); seek(tlAt(e)); };
+  const tMove = e => { if(scrub.current) seek(tlAt(e)); };
+  const tUp = () => { const s = scrub.current; scrub.current = null; if(s && s.was && vref.current) vref.current.play().catch(() => {}); };
+
+  const keyRef = useRef(null);
+  keyRef.current = e => {
+    const tag = (e.target && e.target.tagName) || '', typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if(e.key === 'Escape'){ e.stopPropagation(); if(typing) e.target.blur(); else if(tool) setTool(false); else closeModal(); return; }
+    if(typing || e.ctrlKey || e.metaKey || e.altKey || mode !== 'video') return;
+    if(e.key === ' ' || e.key === 'k' || e.key === 'K'){ e.preventDefault(); toggle(); }
+    else if(e.key === 'ArrowLeft'){ e.preventDefault(); e.shiftKey ? seek(cur - 1) : stepF(-1); }
+    else if(e.key === 'ArrowRight'){ e.preventDefault(); e.shiftKey ? seek(cur + 1) : stepF(1); }
+    else if(e.key === 'd' || e.key === 'D'){ if(w){ e.preventDefault(); toolOn(!tool); } }
+    else if(e.key === 'n' || e.key === 'N'){ if(w && taRef.current){ e.preventDefault(); taRef.current.focus(); } }
+  };
+  useEffect(() => { const h = e => keyRef.current(e); document.addEventListener('keydown', h, true); return () => document.removeEventListener('keydown', h, true); }, []);
+
+  if(!p || !st) return html`<div class="rv"><div class="rv-h"><b>Không tìm thấy bước này.</b><span class="sp"></span><button type="button" class="btn sm" onClick=${closeModal}>Đóng</button></div></div>`;
+  const myReview = !!(me && w && st.qcBy.indexOf(me) >= 0);
+  const iApproved = myReview && st.approvedBy.indexOf(me) >= 0;
+  const dur = meta ? meta.dur : 0;
+  const pct = t => (dur ? Math.max(0, Math.min(100, t / dur * 100)) : 0)+'%';
+  const canDel = n => w && (n.by === me || me === 'hao');
+  return html`<div class="rv" role="dialog" aria-modal="true" aria-label=${'Duyệt video: '+st.def.name}>
+    <header class="rv-h">
+      <div class="rv-title"><b>${st.def.no} ${st.def.name}, bản v${pad3(st.ver)}</b><span class="meta">${p.name}</span></div>
+      <span class="sp"></span>
+      <a class="btn sm" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
+      <button type="button" class="btn sm" onClick=${closeModal}><${Ic} n="x" s=${16}/>Đóng</button>
+    </header>
+    <div class="rv-main">
+      <div class="rv-left">
+        <div class="rv-stage" ref=${stageRef}>
+          ${mode === 'none' ? html`<p class="rv-msg">Không phát được link này. Player cần link tới file video trên Google Drive.</p>` : html`<div class="rv-fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'}>
+            ${mode === 'video'
+              ? html`<video ref=${vref} src=${src} playsinline preload="auto" muted=${muted}
+                  onLoadedMetadata=${e => { const v = e.target; setMeta({dur: v.duration || 0, w: v.videoWidth, h: v.videoHeight}); }}
+                  onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
+                  onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => setCur(e.target.currentTime)}
+                  onError=${() => { if(!meta) setFailed(true); else toast('Mất kết nối tới video. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
+                  onClick=${() => { if(!tool) toggle(); }}></video>`
+              : html`<iframe src=${'https://drive.google.com/file/d/'+did+'/preview'} allow="autoplay; fullscreen" title="Video trên Google Drive"></iframe>`}
+            <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
+            ${mode === 'video' && !meta ? html`<p class="rv-msg over">Đang tải video từ Google Drive…</p>` : null}
+          </div>`}
+        </div>
+        <div class="rv-ctl">
+          ${mode === 'video' ? html`
+            <div class="rv-tl" ref=${tlRef} role="slider" tabindex="0" aria-label="Thanh thời gian" aria-valuemin="0" aria-valuemax=${Math.round(dur)} aria-valuenow=${Math.round(cur)} aria-valuetext=${tc(cur)} onPointerDown=${tDown} onPointerMove=${tMove} onPointerUp=${tUp} onPointerCancel=${tUp}>
+              <i class="fill" style=${'width:'+pct(cur)}></i>
+              ${notes.map(n => html`<b key=${n.nid} class=${(n.ok ? 'ok' : '')+((+n.ver || 0) !== st.ver ? ' old' : '')+(act && act.nid === n.nid ? ' sel' : '')} style=${'left:'+pct(n.t)}></b>`)}
+              <i class="head" style=${'left:'+pct(cur)}></i>
+            </div>
+            <div class="rv-bar">
+              <button type="button" class="btn sm primary rv-play" disabled=${!meta} onClick=${toggle} aria-label=${playing ? 'Dừng' : 'Phát'}><${Ic} n=${playing ? 'pause' : 'play'} s=${17}/>${playing ? 'Dừng' : 'Phát'}</button>
+              <button type="button" class="icon-btn sm" disabled=${!meta} onClick=${() => stepF(-1)} title="Lùi 1 khung hình (phím ←)" aria-label="Lùi 1 khung hình"><${Ic} n="left" s=${16}/></button>
+              <button type="button" class="icon-btn sm" disabled=${!meta} onClick=${() => stepF(1)} title="Tới 1 khung hình (phím →)" aria-label="Tới 1 khung hình"><${Ic} n="right" s=${16}/></button>
+              <span class="rv-tc" aria-live="off"><b>${tc(cur)}</b> / ${tc(dur)}</span>
+              <span class="sp"></span>
+              <select class="sel sm auto" value=${rate} aria-label="Tốc độ phát" onChange=${e => { const r = +e.target.value; setRate(r); if(vref.current) vref.current.playbackRate = r; }}>${[0.25, 0.5, 1, 1.5, 2].map(r => html`<option key=${r} value=${r}>${r}×</option>`)}</select>
+              <select class="sel sm auto" value=${fps} aria-label="Số khung hình mỗi giây" title="Số khung hình mỗi giây của video" onChange=${e => { const f = +e.target.value; setFps(f); lsSet('mx.fps', String(f)); }}>${RV_FPS.map(f => html`<option key=${f} value=${f}>${f} fps</option>`)}</select>
+              <button type="button" class="icon-btn sm" onClick=${() => setMuted(!muted)} title=${muted ? 'Bật tiếng' : 'Tắt tiếng'} aria-label=${muted ? 'Bật tiếng' : 'Tắt tiếng'}><${Ic} n=${muted ? 'mute' : 'vol'} s=${16}/></button>
+            </div>`
+            : mode === 'frame' ? html`<p class="rv-note">Không phát trực tiếp được file này nên đang dùng trình xem của Google Drive: không tua theo khung hình được, thời điểm ghi chú phải nhập tay. Để dùng đủ tính năng, file cần là MP4 (H.264) và chia sẻ “Bất kỳ ai có đường liên kết”. <button type="button" class="btn xs" onClick=${() => { setMeta(null); setFailed(false); }}>Thử phát lại</button></p>` : null}
+          ${w && mode !== 'none' ? html`
+            <div class="rv-bar">
+              <button type="button" class=${'btn sm'+(tool ? ' on' : '')} aria-pressed=${tool} onClick=${() => toolOn(!tool)} title="Vẽ lên khung hình (phím D)"><${Ic} n="edit" s=${16}/>${tool ? 'Đang vẽ' : 'Vẽ lên khung hình'}</button>
+              ${tool || draft.length ? html`<div class="rv-colors" role="radiogroup" aria-label="Màu nét vẽ">${RV_COLORS.map((c, i) => html`<button key=${c} type="button" role="radio" aria-checked=${color === i} aria-label=${RV_COLOR_NAMES[i]} title=${RV_COLOR_NAMES[i]} class=${color === i ? 'on' : ''} style=${'--c:'+c} onClick=${() => setColor(i)}></button>`)}</div>
+                <button type="button" class="btn xs" disabled=${!draft.length} onClick=${() => setDraft(d => d.slice(0, -1))}><${Ic} n="undo" s=${14}/>Hoàn tác</button>
+                <button type="button" class="btn xs" disabled=${!draft.length} onClick=${() => { setDraft([]); setDraftT(null); }}>Xóa nét vẽ</button>` : null}
+              ${draft.length && mode === 'video' && !draftHere ? html`<button type="button" class="btn xs" onClick=${() => { if(vref.current) vref.current.pause(); seek(draftT + 0.0005); }}>Về khung đang vẽ ${tc(draftT)}</button>` : null}
+            </div>
+            <div class="rv-compose">
+              ${mode !== 'video' ? html`<input class="inp sm rv-manual" value=${manual} placeholder="phút:giây" aria-label="Thời điểm ghi chú, dạng phút:giây" onInput=${e => setManual(e.target.value)}/>` : null}
+              <textarea ref=${taRef} class="inp" rows="2" placeholder=${mode === 'video' ? 'Ghi chú tại '+tc(anchor)+': chỗ nào sai, cần sửa gì…' : 'Chỗ nào sai, cần sửa gì…'} aria-label="Nội dung ghi chú" value=${text}
+                onFocus=${() => { const v = vref.current; if(v && !v.paused) v.pause(); }} onInput=${e => setText(e.target.value)}
+                onKeyDown=${e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); addNote(); } }}></textarea>
+              <button type="button" class="btn primary" disabled=${!text.trim() && !draft.length} onClick=${addNote} title="Ctrl + Enter"><${Ic} n="plus" s=${17}/>Thêm ghi chú</button>
+            </div>` : (mode !== 'none' && !w ? html`<p class="rv-note">Đăng nhập để ghi chú và vẽ lên video.</p>` : null)}
+        </div>
+      </div>
+      <aside class="rv-side" aria-label="Ghi chú trên video">
+        <div class="rv-side-h"><h2>Ghi chú <span class="faint">${notes.length}</span></h2>${openN ? html`<span class="st sm review">${openN} chưa xử lý</span>` : (notes.length ? html`<span class="st sm done">Đã xử lý hết</span>` : null)}</div>
+        ${older.length ? html`<label class="check rv-old"><input type="checkbox" checked=${old} onChange=${e => setOld(e.target.checked)}/>Hiện cả ${older.length} ghi chú của bản cũ</label>` : null}
+        <div class="rv-list">
+          ${notes.length ? notes.map(n => html`<div key=${n.nid} class=${'rv-n'+(act && act.nid === n.nid ? ' on' : '')+(n.ok ? ' ok' : '')}>
+            <button type="button" class="rv-n-main" onClick=${() => jump(n)} aria-label=${'Tới '+tc(n.t)+': '+(n.text || 'nét vẽ')}>
+              <span class="rv-n-top"><b class="rv-n-tc">${tc(n.t)}</b><span>${nameOf(D, n.by)}</span>${(+n.ver || 0) !== st.ver ? html`<span class="rv-tag">bản v${pad3(n.ver)}</span>` : null}${n.d && n.d.length ? html`<span class="rv-tag draw"><${Ic} n="edit" s=${12}/>có vẽ</span>` : null}</span>
+              <span class="rv-n-text">${n.text || 'Xem nét vẽ trên khung hình.'}</span>
+            </button>
+            <div class="rv-n-act"><label class="check"><input type="checkbox" checked=${!!n.ok} disabled=${!w} onChange=${e => patchNote(n.nid, {ok: e.target.checked, okBy: me || null, okAt: Date.now()})}/>Đã sửa${n.ok && n.okBy ? html`<span class="meta">, ${nameOf(D, n.okBy)}</span>` : null}</label>${canDel(n) ? html`<button type="button" class="icon-btn sm bare" title="Xóa ghi chú" aria-label=${'Xóa ghi chú tại '+tc(n.t)} onClick=${() => { patchNote(n.nid, null); if(sel === n.nid) setSel(''); }}><${Ic} n="trash" s=${15}/></button>` : null}</div>
+          </div>`) : html`<p class="rv-empty">${mode === 'none' ? 'Chưa có ghi chú.' : 'Chưa có ghi chú. Dừng ở khung cần sửa rồi gõ ghi chú, hoặc bấm Vẽ lên khung hình để khoanh chỗ sai.'}</p>`}
+        </div>
+        ${myReview && st.link ? html`<div class="rv-side-f">
+          ${iApproved ? html`<span class="st done">Bạn đã duyệt bản v${pad3(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm" onClick=${() => approve(false)}>Bỏ duyệt</button>`
+            : html`<button type="button" class="btn sm danger" onClick=${askFix}>Yêu cầu sửa</button><span class="sp"></span><button type="button" class="btn ok" onClick=${() => approve(true)}><${Ic} n="check" s=${17}/>Duyệt v${pad3(st.ver)}</button>`}
+        </div>` : null}
+      </aside>
+    </div>
+  </div>`;
+}
+
 /* ---------- project form ---------- */
 const TIER_HINT = {
   A: html`<b>Tier A:</b> có bước 04B quay thật. Khách duyệt qua 6 mốc, G0 đến G5.`,
@@ -2551,6 +2897,7 @@ function ModalHost({D, me}){
   if(m.type === 'project') return html`<${ProjectForm} key=${m.pid || 'new'} D=${D} pid=${m.pid}/>`;
   if(m.type === 'identity') return html`<${IdentityModal} D=${D} me=${me}/>`;
   if(m.type === 'account') return html`<${AccountForm} key=${m.aid || 'new'} D=${D} aid=${m.aid}/>`;
+  if(m.type === 'review') return html`<${ReviewPlayer} key=${m.pid+'/'+m.sid} D=${D} pid=${m.pid} sid=${m.sid} me=${me}/>`;
   return null;
 }
 function App(){
