@@ -16,7 +16,7 @@ Web tĩnh trên Vercel, dữ liệu lưu ở Firebase Firestore. Không cần đ
 4. Vào **Project settings › Your apps**, bấm biểu tượng Web `</>` để đăng ký app, rồi copy đoạn `firebaseConfig`.
 5. Dán đoạn đó vào `FIREBASE_CONFIG` ở đầu phần `<script>` trong `public/index.html`.
 
-Lần đầu mở app, database trống sẽ được ghi sẵn 4 nhân sự, 7 account và các thông số mặc định.
+Lần đầu mở app, database trống sẽ được ghi sẵn 5 nhân sự (Hào, Hiếu, Đô, Việt, Bích Thuận), 7 account và các thông số mặc định. Database đã có dữ liệu thì thêm người mới ở **Cài đặt**.
 
 ## Chuyển dữ liệu từ bản demo sang
 1. Mở `magentx-demo-offline.html` trên đúng trình duyệt đã dùng demo, rồi bấm **Tải dữ liệu demo (.json)** trên thanh vàng ở đầu trang.
@@ -31,5 +31,6 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 
 ## Lưu ý
 - Ai có link đều xem và sửa được, vì vậy chỉ gửi link trong nội bộ.
+- Nút **Điều chỉnh số dư**, **Sửa account** và **Thêm account** ở trang Credit chỉ hiện khi đang chọn tên Hào. Vì app không có đăng nhập nên đây là ẩn nút, chưa phải khóa quyền ở database.
 - Định kỳ bấm **Xuất Excel** (ở Cài đặt, Dự án hoặc Credit) để giữ bản backup.
 - Gói miễn phí Firestore cho mỗi ngày 50.000 lượt đọc, 20.000 lượt ghi và tổng 1 GiB lưu trữ. Dữ liệu không hết hạn.
