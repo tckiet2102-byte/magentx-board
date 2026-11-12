@@ -36,6 +36,10 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Mã PIN của **Hào** vào được mọi tài khoản. Ai quên mã PIN thì Hào vào **Cài đặt › Nhân sự › Mã PIN › Đặt lại**, người đó tạo mã mới ở lần đăng nhập tới.
 - Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
 
+## Duyệt
+- **Các bước dự án:** Hiếu duyệt là bắt buộc. Hiếu duyệt bản hiện tại thì bước xong, dù Hào chưa duyệt. Hào duyệt thêm nếu cần (không bắt buộc); nếu Hào duyệt trước thì bước vẫn chờ Hiếu. Đổi ai bắt buộc hay không bắt buộc ở **Cài đặt › Nhân sự › Duyệt QC**.
+- **Booking credit Higgsfield:** chỉ Hào duyệt. Chưa duyệt thì chưa được gen.
+
 ## Lưu ý
 - Mã PIN chặn việc chọn nhầm hoặc giả tên người khác trên giao diện. Database vẫn mở cho ai có link (xem `firestore.rules`), nên vẫn chỉ gửi link trong nội bộ.
 - Nút **Điều chỉnh số dư**, **Sửa account** và **Thêm account** ở trang Credit chỉ hiện khi đang đăng nhập là Hào.
