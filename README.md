@@ -29,8 +29,15 @@ npx vercel --prod
 ```
 Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau mỗi lần sửa `index.html`, chạy lại `npx vercel --prod`.
 
+## Đăng nhập bằng mã PIN
+- Mở web, chọn tên mình. Lần đầu: tạo mã PIN 4 số (nhập 2 lần). Lần sau: chỉ gõ 4 số.
+- Máy đã đăng nhập được giữ 24 giờ, hết hạn thì hỏi lại mã PIN. Bấm tên mình ở góc trên để **Đổi mã PIN** hoặc **Đăng xuất**.
+- Chưa đăng nhập thì chỉ xem được, không sửa được.
+- Mã PIN của **Hào** vào được mọi tài khoản. Ai quên mã PIN thì Hào vào **Cài đặt › Nhân sự › Mã PIN › Đặt lại**, người đó tạo mã mới ở lần đăng nhập tới.
+- Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
+
 ## Lưu ý
-- Ai có link đều xem và sửa được, vì vậy chỉ gửi link trong nội bộ.
-- Nút **Điều chỉnh số dư**, **Sửa account** và **Thêm account** ở trang Credit chỉ hiện khi đang chọn tên Hào. Vì app không có đăng nhập nên đây là ẩn nút, chưa phải khóa quyền ở database.
+- Mã PIN chặn việc chọn nhầm hoặc giả tên người khác trên giao diện. Database vẫn mở cho ai có link (xem `firestore.rules`), nên vẫn chỉ gửi link trong nội bộ.
+- Nút **Điều chỉnh số dư**, **Sửa account** và **Thêm account** ở trang Credit chỉ hiện khi đang đăng nhập là Hào.
 - Định kỳ bấm **Xuất Excel** (ở Cài đặt, Dự án hoặc Credit) để giữ bản backup.
 - Gói miễn phí Firestore cho mỗi ngày 50.000 lượt đọc, 20.000 lượt ghi và tổng 1 GiB lưu trữ. Dữ liệu không hết hạn.

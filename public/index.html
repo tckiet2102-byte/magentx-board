@@ -578,6 +578,13 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .modal{width:100%;max-width:600px;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;margin:auto 0}
 .modal.wide{max-width:760px}
 .modal-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:1px solid var(--rule)}
+.inp.pin{width:168px;height:56px;padding:0 0 0 .55em;text-align:center;font-size:28px;font-weight:700;letter-spacing:.55em;font-variant-numeric:tabular-nums}
+.pin-pair .inp.pin{width:100%;max-width:168px}
+.pin-err{margin:0;font-size:14.5px;font-weight:600}
+.who-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.opt.who{font:inherit;color:inherit;text-align:left}
+.opt.who:hover{border-color:var(--field-hover);background:var(--subtle)}
+.login-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
 .modal-h h2{font-size:21px}
 .modal-b{padding:22px 24px 24px;display:flex;flex-direction:column;gap:20px}
 .form{display:flex;flex-direction:column;gap:20px}
@@ -778,12 +785,18 @@ function lsSet(k, v){ try { v === null ? localStorage.removeItem(k) : localStora
 function cleanShot(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
 function uniqSteps(list){ const seen = {}; return list.filter(q => { const k = q.p.id+'/'+q.st.id; if(seen[k]) return false; seen[k] = 1; return true; }); }
 
+/* ---------- login session (24 giờ trên máy này) ---------- */
+const SESS_MS = 24 * 3600 * 1000;
+function sessGet(){ try { const x = JSON.parse(lsGet('mx.sess') || 'null'); return x && x.staff && x.exp > Date.now() ? x : null; } catch(e){ return null; } }
+function sessSet(staff, pv){ lsSet('mx.sess', staff ? JSON.stringify({staff, pv: pv || 0, exp: Date.now() + SESS_MS}) : null); }
+function skipActive(){ return (+lsGet('mx.viewonly') || 0) > Date.now(); }
+
 /* ---------- store ---------- */
 const S = {
   v:0, phase:'boot', db:null, user:null, uid:null, isOwner:false, canWrite:null, readOnly:false,
   staff:{}, members:{}, accounts:{}, config:null, configExists:false, projects:{},
   got:{}, firstData:false, stale:false, toasts:[], modal:null, focus:null, created:null,
-  localMe: lsGet('mx.me'),
+  localMe: (sessGet() || {}).staff || null,
 };
 const subs = new Set();
 let queued = false;
@@ -792,7 +805,7 @@ function useStore(){ const [, force] = useState(0); useEffect(() => { const f = 
 function toast(msg, tone){ const id = rid('t'); S.toasts = S.toasts.concat([{id, msg, tone}]); emit(); setTimeout(() => { S.toasts = S.toasts.filter(t => t.id !== id); emit(); }, 3600); }
 function openModal(m){ S.modal = m; emit(); }
 function closeModal(){ S.modal = null; emit(); }
-function canW(){ return S.phase === 'ready' && !S.readOnly; }
+function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId(); }
 /* credit balances and account settings: only Hào */
 function canCredit(){ return canW() && !!S.isOwner && meId() === 'hao'; }
 function meId(){ if(S.uid && S.members[S.uid] && S.members[S.uid].staff) return S.members[S.uid].staff; return S.localMe || null; }
@@ -827,8 +840,8 @@ async function boot(){
 }
 
 const wq = {};
-function wdoc(path, op){
-  if(!canW()){ toast('Bạn đang ở chế độ chỉ xem.', 'warn'); return Promise.resolve(false); }
+function wdoc(path, op, beforeLogin){
+  if(!(beforeLogin ? S.phase === 'ready' && !S.readOnly : canW())){ toast(meId() ? 'Bạn đang ở chế độ chỉ xem.' : 'Đăng nhập để sửa.', 'warn'); return Promise.resolve(false); }
   const run = () => op(S.db.doc(path));
   const p = (wq[path] || Promise.resolve()).then(() => run().catch(e => {
     if(e && e.code === 'unavailable') return new Promise(r => setTimeout(r, 500 + Math.random()*700)).then(run);
@@ -855,13 +868,34 @@ const W = {
   config: patch => wdoc('config/main', r => S.configExists ? r.update(patch) : r.set(Object.assign({}, DEF_CFG, patch))),
   member: (uid, staffId) => wdoc('members/'+uid, r => r.set({staff: staffId, at: Date.now()})),
 };
-function pickMe(staffId){
-  S.localMe = staffId; lsSet('mx.me', staffId);
-  if(!staffId) lsSet('mx.idskip', '1');
-  if(S.uid && canW()) W.member(S.uid, staffId || null);
-  closeModal();
-  if(staffId) toast('Đã chọn: '+((S.staff[staffId] && S.staff[staffId].name) || staffId));
+/* Mã PIN 4 số: lưu dạng băm SHA-256 kèm salt trong staff/{id}.pin = {h, s, at}. */
+async function pinHash(sid, salt, pin){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mx-pin|'+sid+'|'+salt+'|'+pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+function hasPin(sid){ const p = S.staff[sid] && S.staff[sid].pin; return !!(p && p.h && p.s); }
+async function pinOk(sid, pin){ if(!hasPin(sid)) return false; const p = S.staff[sid].pin; return (await pinHash(sid, p.s, pin)) === p.h; }
+async function setPinFor(sid, pin){
+  const salt = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
+  const np = {h: await pinHash(sid, salt, pin), s: salt, at: Date.now()};
+  const ok = await wdoc('staff/'+sid, r => r.update({pin: np}), true);
+  if(ok){ S.staff[sid] = Object.assign({}, S.staff[sid], {pin: np}); emit(); }
+  return ok ? np : null;
+}
+function login(sid, viaHao){
+  const p = S.staff[sid] && S.staff[sid].pin;
+  S.localMe = sid; sessSet(sid, p ? p.at : 0); lsSet('mx.viewonly', null); S.idAsked = true;
+  closeModal();
+  const nm = (S.staff[sid] && S.staff[sid].name) || sid;
+  toast(viaHao ? 'Hào đã vào tài khoản '+nm : 'Xin chào '+nm);
+}
+function logout(msg){
+  if(!S.localMe) return;
+  S.localMe = null; sessSet(null); S.idAsked = false;
+  if(msg) toast(msg, 'warn');
+  emit();
+}
+function viewOnly(){ lsSet('mx.viewonly', String(Date.now() + SESS_MS)); closeModal(); }
 
 /* ---------- derived data ---------- */
 function reservedOf(b){ return b.status === 'open' ? Math.max(b.est, b.used) : b.used; }
@@ -1437,21 +1471,77 @@ function TopBar({D, route, me}){
     <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}</a>`)}</nav>
     <div class="top-r">
       <a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>
-      ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title="Đổi người dùng" aria-label=${'Người dùng: '+(s ? s.name : 'chưa chọn')}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Bạn là ai?'}</span></button>` : null}
+      ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
       ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
     </div>
   </div></header>`;
 }
+function PinInput({value, onChange, onDone, label, autoFocus}){
+  const ref = useRef(null);
+  useEffect(() => { if(autoFocus && ref.current) ref.current.focus(); }, []);
+  return html`<input ref=${ref} class="inp pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" placeholder="••••" aria-label=${label} value=${value}
+    onInput=${e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); e.target.value = v; onChange(v); if(v.length === 4 && onDone) onDone(v); }}/>`;
+}
 function IdentityModal({D, me}){
-  const taken = {};
-  Object.keys(S.members).forEach(uid => { const m = S.members[uid]; if(uid !== S.uid && m && m.staff) taken[m.staff] = uid; });
-  const [sel, setSel] = useState(me || '');
   const list = D.staffList.filter(s => s.active !== false);
-  return html`<${Modal} title="Bạn là ai trong phòng?" onClose=${closeModal}>
-    <p class="meta">Chọn tên của bạn để bảng hiện đúng việc của bạn và bật nút duyệt QC đúng người.</p>
-    ${list.length ? html`<div class="opts">${list.map(s => { const dis = !!taken[s.id] && !S.isOwner; return html`<label key=${s.id} class=${'opt'+(sel === s.id ? ' on' : '')+(dis ? ' dis' : '')}><input type="radio" name="who" checked=${sel === s.id} disabled=${dis} onChange=${() => setSel(s.id)}/><span><b>${s.name}</b><small>${s.role || 'Nhân sự'}${taken[s.id] ? ', đã có người chọn' : ''}</small></span></label>`; })}</div>` : html`<p class="meta">Chưa có nhân sự. Thêm ở trang Cài đặt.</p>`}
-    <div class="form-foot"><button type="button" class="btn" onClick=${() => pickMe(null)}>Chỉ xem</button><span class="sp"></span><button type="button" class="btn primary" disabled=${!sel} onClick=${() => pickMe(sel)}><${Ic} n="check"/>Xác nhận</button></div>
-  <//>`;
+  const [step, setStep] = useState(me ? 'home' : 'pick');
+  const [sel, setSel] = useState('');
+  const [pin, setPin] = useState(''); const [pin2, setPin2] = useState('');
+  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const fails = useRef(0); const lock = useRef(0);
+  const name = sid => (S.staff[sid] && S.staff[sid].name) || sid;
+  const go = (k, sid) => { setStep(k); if(sid !== undefined) setSel(sid); setPin(''); setPin2(''); setErr(''); };
+  const choose = sid => go(hasPin(sid) ? 'pin' : 'new', sid);
+  const check = async v => {
+    if(busy) return;
+    if(Date.now() < lock.current){ setErr('Sai quá 5 lần. Đợi '+Math.ceil((lock.current - Date.now()) / 1000)+' giây rồi thử lại.'); setPin(''); return; }
+    setBusy(true);
+    const own = await pinOk(sel, v);
+    const viaHao = !own && sel !== 'hao' && await pinOk('hao', v);
+    setBusy(false);
+    if(own || viaHao){ fails.current = 0; login(sel, viaHao); return; }
+    fails.current++; setPin('');
+    if(fails.current >= 5){ fails.current = 0; lock.current = Date.now() + 30000; setErr('Sai quá 5 lần. Đợi 30 giây rồi thử lại.'); }
+    else setErr('Mã PIN chưa đúng, thử lại.');
+  };
+  const save = async (sid, after) => {
+    if(!/^\d{4}$/.test(pin)) return setErr('Mã PIN cần đúng 4 chữ số.');
+    if(pin !== pin2) return setErr('Hai lần nhập chưa khớp.');
+    setBusy(true); const np = await setPinFor(sid, pin); setBusy(false);
+    if(!np) return setErr('Chưa lưu được mã PIN. Kiểm tra mạng rồi thử lại.');
+    after(np);
+  };
+  const ss = sessGet();
+  const cards = html`<div class="opts who-grid">${list.map(s => html`<button key=${s.id} type="button" class=${'opt who'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><span><b>${s.name}</b><small>${s.role || 'Nhân sự'}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</small></span></button>`)}</div>`;
+  const pinBox = (lab, v, set, done, af) => html`<div class="field"><span class="lab">${lab}</span><${PinInput} value=${v} onChange=${x => { set(x); setErr(''); }} onDone=${done} label=${lab} autoFocus=${af}/></div>`;
+  const back = html`<button type="button" class="btn" onClick=${() => go(me ? 'home' : 'pick', '')}><${Ic} n="left" s=${16}/>Quay lại</button>`;
+  const errLine = err ? html`<p class="bad-t pin-err" role="alert">${err}</p>` : null;
+  let title, body;
+  if(step === 'home'){
+    title = 'Tài khoản của bạn';
+    body = html`<p>Bạn đang đăng nhập là <b>${name(me)}</b>.${ss ? html` Máy này giữ đăng nhập đến <b>${fT(ss.exp)}</b>.` : null}</p>
+      <div class="acts"><button type="button" class="btn sm" onClick=${() => go('change', me)}><${Ic} n="edit" s=${16}/>Đổi mã PIN</button><button type="button" class="btn sm danger" onClick=${() => { logout(); go('pick', ''); }}>Đăng xuất</button></div>
+      <div class="field"><span class="lab">Vào tài khoản khác</span>${cards}</div>
+      <div class="form-foot"><span class="sp"></span><button type="button" class="btn" onClick=${closeModal}>Đóng</button></div>`;
+  } else if(step === 'pin'){
+    title = 'Đăng nhập: '+name(sel);
+    body = html`<p class="meta">Nhập mã PIN 4 số của ${name(sel)}.</p>
+      ${pinBox('Mã PIN', pin, setPin, check, true)}${errLine}
+      <p class="meta">Quên mã PIN? Nhờ Hào đặt lại ở trang Cài đặt.${sel !== 'hao' ? ' Hào có thể nhập mã PIN của Hào để vào tài khoản này.' : ''}</p>
+      <div class="form-foot">${back}<span class="sp"></span><button type="button" class="btn primary" disabled=${pin.length !== 4 || busy} onClick=${() => check(pin)}><${Ic} n="check"/>Đăng nhập</button></div>`;
+  } else if(step === 'new' || step === 'change'){
+    const isNew = step === 'new';
+    title = isNew ? 'Tạo mã PIN cho '+name(sel) : 'Đổi mã PIN';
+    body = html`<p class="meta">${isNew ? 'Lần đầu đăng nhập: chọn 4 số dễ nhớ. Lần sau vào lại chỉ cần gõ 4 số này.' : 'Chọn mã PIN mới gồm 4 số.'}</p>
+      <div class="grid2 al-top pin-pair">${pinBox(isNew ? 'Mã PIN 4 số' : 'Mã PIN mới', pin, setPin, null, true)}${pinBox('Nhập lại', pin2, setPin2, null, false)}</div>${errLine}
+      <div class="form-foot">${back}<span class="sp"></span><button type="button" class="btn primary" disabled=${pin.length !== 4 || pin2.length !== 4 || busy} onClick=${() => save(sel, np => { if(isNew) login(sel); else { sessSet(sel, np.at); toast('Đã đổi mã PIN'); go('home', ''); } })}><${Ic} n="check"/>${isNew ? 'Tạo mã PIN và vào' : 'Lưu mã PIN mới'}</button></div>`;
+  } else {
+    title = 'Đăng nhập';
+    body = html`<p class="meta">Chọn tên của bạn. Lần đầu bạn sẽ tạo mã PIN 4 số, lần sau chỉ cần gõ 4 số đó.</p>
+      ${list.length ? cards : html`<p class="meta">Chưa có nhân sự.</p>`}
+      <div class="form-foot"><button type="button" class="btn" onClick=${viewOnly}>Chỉ xem</button><span class="sp"></span></div>`;
+  }
+  return html`<${Modal} title=${title} onClose=${closeModal}>${body}<//>`;
 }
 
 /* ---------- month board ---------- */
@@ -2192,6 +2282,12 @@ function BackupPanel({D}){
     <p class="meta">Bản backup chứa toàn bộ dự án, nhân sự, account và thông số. Dùng file này để chuyển dữ liệu từ bản demo sang, hoặc khôi phục khi cần.</p>
   </section>`;
 }
+function PinCell({s, me}){
+  const [ask, setAsk] = useState(false);
+  const has = hasPin(s.id);
+  return html`<div class="acts" style="gap:6px 10px;flex-wrap:nowrap">${has ? html`<span class="st sm done">Đã tạo</span>` : html`<span class="st sm todo">Chưa tạo</span>`}
+    ${has && me === 'hao' && canW() ? (ask ? html`<button type="button" class="btn xs danger" onClick=${() => { setAsk(false); W.staff(s.id, {pin: null}); toast('Đã đặt lại mã PIN của '+s.name+'. Lần đăng nhập tới sẽ tạo mã mới.'); }}>Bấm lần nữa để đặt lại</button>` : html`<button type="button" class="btn xs" onClick=${() => setAsk(true)}>Đặt lại</button>`) : null}</div>`;
+}
 function SettingsView({D, me}){
   const w = canW();
   const [nn, setNn] = useState('');
@@ -2204,19 +2300,20 @@ function SettingsView({D, me}){
   return html`
     <div class="ph"><div><h1>Cài đặt</h1><p>Nhân sự, người duyệt QC và các thông số dùng chung của phòng.</p></div></div>
     <section class="panel flush"><div class="panel-h"><h2>Nhân sự</h2><span class="meta">QC: được duyệt từng bước. Lead: duyệt booking credit và sửa account.</span></div>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Vai trò</th><th>Duyệt QC</th><th>Lead</th><th>Đang làm</th></tr></thead><tbody>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Vai trò</th><th>Duyệt QC</th><th>Lead</th><th>Đang làm</th><th>Mã PIN</th></tr></thead><tbody>
         ${D.staffList.map(s => html`<tr key=${s.id}>
           <td style="min-width:150px"><${InlineText} value=${s.name} label="Tên" onSave=${v => v && W.staff(s.id, {name: v})}/></td>
           <td style="min-width:200px"><${InlineText} value=${s.role || ''} label="Vai trò" placeholder="Vai trò" onSave=${v => W.staff(s.id, {role: v})}/></td>
           <td><label class="check"><input type="checkbox" checked=${!!s.qc} disabled=${!w} aria-label=${'Duyệt QC: '+s.name} onChange=${e => W.staff(s.id, {qc: e.target.checked})}/></label></td>
           <td><label class="check"><input type="checkbox" checked=${!!s.lead} disabled=${!w} aria-label=${'Lead: '+s.name} onChange=${e => W.staff(s.id, {lead: e.target.checked})}/></label></td>
           <td><label class="check"><input type="checkbox" checked=${s.active !== false} disabled=${!w} aria-label=${'Đang làm: '+s.name} onChange=${e => W.staff(s.id, {active: e.target.checked})}/></label></td>
+          <td><${PinCell} s=${s} me=${me}/></td>
         </tr>`)}
       </tbody></table></div>
       ${w ? html`<div class="slot" style="padding:16px 22px 20px"><input class="inp" style="max-width:340px" value=${nn} placeholder="Tên người mới, ví dụ freelancer colorist" aria-label="Tên nhân sự mới" onInput=${e => setNn(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') addStaff(); }}/><button type="button" class="btn" disabled=${!nn.trim()} onClick=${addStaff}><${Ic} n="plus"/>Thêm người</button></div>` : null}
     </section>
-    <section class="panel"><div class="panel-h"><h2>Bạn là ai</h2><button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>${me ? 'Đổi người dùng' : 'Chọn người dùng'}</button></div>
-      <p>${me ? html`Bạn đang là <b>${nameOf(D, me)}</b>.` : 'Bạn chưa chọn mình là ai.'} ${S.uid ? 'Lựa chọn gắn với tài khoản Claude của bạn.' : 'Lựa chọn được lưu trên trình duyệt này.'}</p>
+    <section class="panel"><div class="panel-h"><h2>Đăng nhập</h2><button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>${me ? 'Tài khoản của bạn' : 'Đăng nhập'}</button></div>
+      <p>${me ? html`Bạn đang đăng nhập là <b>${nameOf(D, me)}</b>.` : 'Bạn chưa đăng nhập, đang ở chế độ chỉ xem.'} Mỗi người có mã PIN 4 số riêng, máy đã đăng nhập được giữ trong 24 giờ. Hào có thể dùng mã PIN của mình để vào mọi tài khoản và đặt lại mã PIN cho người quên.</p>
       ${uids.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nhân sự</th><th>Tài khoản Claude đã chọn</th></tr></thead><tbody>${uids.map(u => html`<tr key=${u}><td>${nameOf(D, S.members[u].staff)}</td><td>${(profiles[u] && profiles[u].name) || (u === S.uid ? 'Bạn' : 'Một thành viên')}</td></tr>`)}</tbody></table></div>` : null}
     </section>
     <section class="panel"><div class="panel-h"><h2>Thông số</h2>${!lead ? html`<span class="meta">Thông số credit chỉ leader sửa.</span>` : null}</div>
@@ -2454,8 +2551,14 @@ function App(){
   const D = useMemo(derive, [S.v]);
   const me = meId();
   useEffect(() => {
-    if(S.phase === 'ready' && S.got.staff && S.got.members && !meId() && !S.idAsked && !lsGet('mx.idskip') && D.staffList.length && !S.modal){ S.idAsked = true; openModal({type: 'identity'}); }
+    if(S.localMe){
+      const ss = sessGet();
+      if(!ss || ss.staff !== S.localMe) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.');
+      else if(S.got.staff){ const st = S.staff[S.localMe]; if(!st || !hasPin(S.localMe) || (st.pin.at || 0) !== ss.pv) logout('Mã PIN của tài khoản này vừa được đổi hoặc đặt lại. Đăng nhập lại.'); }
+    }
+    if(S.phase === 'ready' && S.got.staff && !meId() && !S.idAsked && !skipActive() && D.staffList.length && !S.modal){ S.idAsked = true; openModal({type: 'identity'}); }
   });
+  useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
   const free = route.view === 'dat-ten';
   let view;
@@ -2472,6 +2575,7 @@ function App(){
     <${TopBar} D=${D} route=${route} me=${me}/>
     <main class="wrap">
       ${S.stale ? html`<div class="banner warn">Chưa tải được dữ liệu mới nhất, có thể đang mất kết nối. Những gì đang hiện có thể chưa cập nhật.</div>` : null}
+      ${S.phase === 'ready' && S.firstData && !me && !free && !S.readOnly ? html`<div class="banner login-banner"><span>Bạn đang xem, chưa đăng nhập. Đăng nhập để tạo dự án, nộp link, duyệt QC.</span><button type="button" class="btn sm primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div>` : null}
       ${S.readOnly && S.phase === 'ready' ? html`<div class="banner">Bạn đang ở chế độ chỉ xem. Database đang chặn quyền ghi, báo người quản lý bảng kiểm tra Firestore Rules.</div>` : null}
       ${view}
     </main>
