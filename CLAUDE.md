@@ -1,0 +1,16 @@
+# Quy trình cập nhật
+
+Vercel deploy tự động từ nhánh `main` của repo này (https://magentx-board.vercel.app). Mỗi lần sửa xong phải đẩy lên GitHub ngay để web cập nhật, không để thay đổi nằm trên máy:
+
+1. `git fetch origin main`, tạo nhánh mới từ `origin/main` (ví dụ `feature/<việc>` hoặc `update/<việc>`).
+2. Sửa `public/index.html` (toàn bộ app nằm trong file này), chạy thử, commit.
+3. `git push -u origin <nhánh>`.
+4. Merge vào `main` (fast-forward), `git push origin main`.
+5. Chờ Vercel deploy (khoảng 20–30 giây), kiểm tra https://magentx-board.vercel.app đã trả về code mới.
+
+# Ghi chú app
+
+- Dữ liệu ở Firebase Firestore (cấu hình `FIREBASE_CONFIG` đầu file), quyền ở `firestore.rules`.
+- Đăng nhập bằng mã PIN 4 số (`staff/{id}.pin`, băm SHA-256 + salt), giữ 24 giờ trên mỗi máy. Mã PIN của Hào vào được mọi tài khoản.
+- Duyệt bước dự án: Hiếu bắt buộc, Hào không bắt buộc (`staff.qcOpt`). Booking credit và account: chỉ Hào.
+- Đừng ghi mã PIN hay dữ liệu thay người dùng trên web thật khi kiểm tra.
