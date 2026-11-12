@@ -395,7 +395,22 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .linkline .ext{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;overflow-wrap:anywhere}
 .slot{display:flex;gap:10px;flex-wrap:wrap}
 .slot .inp{flex:1 1 300px;width:auto}
+.vchip{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:36px;height:24px;padding:0 8px;border-radius:7px;background:var(--tint);color:var(--ink-2);font-size:13.5px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle}
+.vchip.sm{min-width:30px;height:20px;padding:0 6px;border-radius:6px;font-size:12px}
+.vchip.review{background:var(--wait-soft);color:var(--wait)}
+.vchip.fix{background:var(--bad-soft);color:var(--bad)}
+.vchip.done{background:var(--ok-soft);color:var(--ok)}
+.vchip.old{background:var(--tint);color:var(--ink-3)}
+.vprev{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.vprev-i{display:inline-flex;align-items:center;gap:6px}
+.vprev a{display:inline-flex;text-decoration:none}
+.vprev a:hover .vchip{color:var(--action)}
+.qc-ver{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
 .cmts{display:flex;flex-direction:column;gap:12px}
+.cmt.old{border-left-color:var(--rule)}
+.cmt.old p,.cmt.old .cmt-h b{color:var(--ink-2)}
+.cm-old{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.cm-old .cmts{align-self:stretch}
 .cmt{padding-left:14px;border-left:3px solid var(--field)}
 .cmt.fix{border-left-color:var(--d-fix)}
 .cmt-h{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-size:13.5px;color:var(--ink-2)}
@@ -970,6 +985,9 @@ function viewOnly(){ lsSet('mx.viewonly', String(Date.now() + SESS_MS)); closeMo
 /* ---------- derived data ---------- */
 function reservedOf(b){ return b.status === 'open' ? Math.max(b.est, b.used) : b.used; }
 function cmpBooking(a, b){ return (a.date||'').localeCompare(b.date||'') || (a.n||0) - (b.n||0); }
+/* Số bản nộp của một bước hiện là V1, V2… */
+const vTag = n => 'V'+(+n || 0);
+function VChip({v, tone, sm}){ return html`<span class=${'vchip'+(tone ? ' '+tone : '')+(sm ? ' sm' : '')}>${vTag(v)}</span>`; }
 /* Người duyệt không bắt buộc: Hào mặc định, đổi được ở Cài đặt (staff.qcOpt). */
 function qcOptional(s){ return s && (s.qcOpt === true || s.qcOpt === false) ? s.qcOpt : !!(s && s.id === 'hao'); }
 function enrichStep(def, raw, t, reviewers){
@@ -987,6 +1005,9 @@ function enrichStep(def, raw, t, reviewers){
   st.optBy = st.qcBy.filter(r => st.mustBy.indexOf(r) < 0);
   st.waitBy = st.mustBy.filter(r => st.approvedBy.indexOf(r) < 0);
   st.comments = Object.keys(raw.cm||{}).filter(k => raw.cm[k] && raw.cm[k].text).map(k => Object.assign({cid:k}, raw.cm[k])).sort((a,b) => (a.at||0) - (b.at||0));
+  st.hist = raw.vh || {};
+  st.prev = [];
+  for(let v = st.ver - 1; v >= 1; v--) st.prev.push({v, h: st.hist['v'+v] || null, fx: st.comments.filter(c => c.kind === 'fix' && (+c.ver || 0) === v).slice(-1)[0] || null});
   st.vnotes = Object.keys(raw.vn||{}).filter(k => raw.vn[k] && typeof raw.vn[k].t === 'number').map(k => Object.assign({nid:k}, raw.vn[k])).sort((a,b) => (a.t - b.t) || ((a.at||0) - (b.at||0)));
   if(!raw.link) st.state = (raw.start && raw.start <= t) ? 'doing' : 'todo';
   else if(!st.waitBy.length) st.state = 'done';
@@ -1123,8 +1144,8 @@ function buildActivity(projects){
   projects.forEach(p => {
     if(p.createdAt && !p.source) ev.push({t:p.createdAt, who:p.createdBy, p, text:'tạo dự án'});
     p.steps.forEach(st => {
-      if(st.subAt) ev.push({t:st.subAt, who:st.subBy, p, text:'nộp '+st.def.no+' '+st.def.name+' v'+pad3(st.ver)});
-      Object.keys(st.qc||{}).forEach(r => { const q = st.qc[r]; if(q && q.ok && q.at) ev.push({t:q.at, who:r, p, text:'duyệt '+st.def.no+' '+st.def.name+' v'+pad3(q.ver||0)}); });
+      if(st.subAt) ev.push({t:st.subAt, who:st.subBy, p, text:'nộp '+st.def.no+' '+st.def.name+' '+vTag(st.ver)});
+      Object.keys(st.qc||{}).forEach(r => { const q = st.qc[r]; if(q && q.ok && q.at) ev.push({t:q.at, who:r, p, text:'duyệt '+st.def.no+' '+st.def.name+' '+vTag(q.ver)}); });
       st.comments.forEach(c => ev.push({t:c.at, who:c.by, p, text:(c.kind === 'fix' ? 'yêu cầu sửa ' : 'góp ý ')+st.def.no+': “'+(c.text.length > 70 ? c.text.slice(0,68)+'…' : c.text)+'”'}));
     });
     p.gates.forEach(g => { if(g.ok && g.at) ev.push({t:g.at, who:g.by, p, text:'xác nhận '+g.label}); });
@@ -1905,13 +1926,17 @@ function StepBody({p, st, D, me}){
   const [compose, setCompose] = useState(false);
   const [editing, setEditing] = useState(false);
   const [all, setAll] = useState(false);
+  const [showOld, setShowOld] = useState(null);
   const patch = o => W.project(p.id, {steps: {[st.id]: o}});
   const myReview = !!(me && st.qcBy.indexOf(me) >= 0);
   const submit = () => {
     const v = link.trim(); if(!v) return;
     if(!/^https?:\/\//i.test(v)){ toast('Link cần bắt đầu bằng http:// hoặc https://', 'warn'); return; }
-    patch({link: v, ver: st.ver + 1, subAt: Date.now(), subBy: me || null});
-    setLink(''); setLinkOpen(false); toast('Đã nộp bản v'+pad3(st.ver + 1)+', đang chờ QC');
+    const now = Date.now(), nv = st.ver + 1, vh = {['v'+nv]: {at: now, by: me || null, link: v}};
+    /* bản đang có mà chưa ghi lịch sử (nộp trước khi có tính năng này) thì ghi bù trước khi bị thay */
+    if(st.ver >= 1 && st.link && !st.hist['v'+st.ver]) vh['v'+st.ver] = {at: st.subAt || null, by: st.subBy || null, link: st.link};
+    patch({link: v, ver: nv, subAt: now, subBy: me || null, vh});
+    setLink(''); setLinkOpen(false); toast('Đã nộp '+vTag(nv)+', đang chờ duyệt');
   };
   const comment = kind => {
     const text = note.trim(); if(!text) return;
@@ -1922,41 +1947,55 @@ function StepBody({p, st, D, me}){
   const approve = ok => {
     const now = Date.now(); const o = {qc: {[me]: {ok, ver: st.ver, at: now, uid: S.uid || null}}};
     if(ok && st.fix && st.fix.by === me) o.fix = null;
-    patch(o); toast(ok ? 'Đã duyệt bản v'+pad3(st.ver) : 'Đã bỏ duyệt');
+    patch(o); toast(ok ? 'Đã duyệt '+vTag(st.ver) : 'Đã bỏ duyệt');
   };
   const chk = st.chk || {};
-  const list = all ? st.comments : st.comments.slice(-3);
+  /* góp ý chia theo bản: bản đang duyệt ở trên, bản cũ gom riêng và không còn báo đỏ */
+  const isOldCm = c => (+c.ver || 0) > 0 && (+c.ver || 0) < st.ver;
+  const curCm = st.comments.filter(c => !isOldCm(c)), oldCm = st.comments.filter(isOldCm);
+  const list = all ? curCm : curCm.slice(-3);
+  const oldOpen = showOld === null ? (st.state === 'review' || st.state === 'fix') : showOld;
+  const fixLive = st.fixOn && st.state === 'fix';
+  const cmItem = c => {
+    const cv = +c.ver || 0, old = isOldCm(c), fx = c.kind === 'fix';
+    const tag = !fx ? null : old ? html`<span class="st todo sm">Yêu cầu sửa ở ${vTag(cv)}, đã nộp ${vTag(cv + 1)}</span>` : fixLive ? html`<span class="st fix sm">Yêu cầu sửa</span>` : html`<span class="st done sm">Yêu cầu sửa, đã xử lý</span>`;
+    return html`<div key=${c.cid} class=${'cmt'+(fx && !old && fixLive ? ' fix' : '')+(old ? ' old' : '')}><div class="cmt-h"><b>${nameOf(D, c.by)}</b>${cv ? html`<${VChip} v=${cv} tone=${old ? 'old' : st.state} sm=${true}/>` : null}<span>${fT(c.at)}</span>${tag}</div><p>${c.text}</p></div>`;
+  };
   const active = compose || !!note.trim();
   const names = st.qcBy.map(r => nameOf(D, r)).join(' và ');
-  const vurl = videoLinkOf(st), vnOpen = st.vnotes.filter(n => !n.ok).length;
+  const vurl = videoLinkOf(st);
+  const vnCur = st.vnotes.filter(n => (+n.ver || 0) === st.ver), vnOld = st.vnotes.length - vnCur.length, vnOpen = vnCur.filter(n => !n.ok).length;
+  const nextV = vTag(st.ver + 1);
   return html`<div class="sbody">
     <div class="sb-head"><p class="meta">${st.def.out}</p>${w ? html`<button type="button" class="btn xs" aria-pressed=${editing} onClick=${() => setEditing(!editing)}><${Ic} n=${editing ? 'check' : 'edit'} s=${14}/>${editing ? 'Xong' : 'Sửa bước'}</button>` : null}</div>
     ${editing ? html`<${StepEditor} p=${p} st=${st} D=${D}/>` : null}
     <div class="sb-row"><span class="sb-lab">Kết quả</span><div class="sb-val">
       ${st.link && !linkOpen
-        ? html`<div class="linkline"><a class="ext" href=${st.link} target="_blank" rel="noopener"><${Ic} n="link" s=${17}/>${shortUrl(st.link)}</a><span class="meta">v${pad3(st.ver)}, ${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}</span>${w ? html`<button type="button" class="btn xs" onClick=${() => setLinkOpen(true)}><${Ic} n="upload" s=${14}/>Nộp bản mới</button>` : null}</div>`
-        : (w ? html`<div class="slot"><input class="inp sm" type="url" placeholder="Dán link Drive, Frame.io hoặc Higgsfield" value=${link} aria-label="Link kết quả" onInput=${e => setLink(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') submit(); }}/><button type="button" class="btn primary sm" disabled=${!link.trim()} onClick=${submit}><${Ic} n="send" s=${16}/>Nộp link</button>${st.link ? html`<button type="button" class="btn sm" onClick=${() => { setLinkOpen(false); setLink(''); }}>Hủy</button>` : null}</div>${st.link ? html`<span class="hint">Nộp bản mới thì người duyệt cần duyệt lại.</span>` : null}`
+        ? html`<div class="linkline"><${VChip} v=${st.ver} tone=${st.state}/><a class="ext" href=${st.link} target="_blank" rel="noopener"><${Ic} n="link" s=${17}/>${shortUrl(st.link)}</a><span class="meta">${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}</span>${w ? html`<button type="button" class="btn xs" onClick=${() => setLinkOpen(true)}><${Ic} n="upload" s=${14}/>Nộp ${nextV}</button>` : null}</div>`
+        : (w ? html`<div class="slot"><input class="inp sm" type="url" placeholder=${st.link ? 'Dán link của '+nextV : 'Dán link Drive, Frame.io hoặc Higgsfield'} value=${link} aria-label=${'Link kết quả '+nextV} onInput=${e => setLink(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') submit(); }}/><button type="button" class="btn primary sm" disabled=${!link.trim()} onClick=${submit}><${Ic} n="send" s=${16}/>Nộp ${nextV}</button>${st.link ? html`<button type="button" class="btn sm" onClick=${() => { setLinkOpen(false); setLink(''); }}>Hủy</button>` : null}</div>${st.link ? html`<span class="hint">${vTag(st.ver)} vẫn được giữ trong mục Bản trước. Nộp ${nextV} thì người duyệt cần duyệt lại.</span>` : null}`
         : html`<span class="meta linkline">Chưa nộp link.</span>`)}
       ${st.link && !linkOpen ? (vurl
-        ? html`<div class="linkline"><button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${st.vnotes.length ? st.vnotes.length+' ghi chú trên video'+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>${w && !canReview(st.link) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${true}/>` : null}</div>`
+        ? html`<div class="linkline"><button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${vnCur.length ? vnCur.length+' ghi chú trên '+vTag(st.ver)+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : vnOld ? 'Chưa có ghi chú trên '+vTag(st.ver)+', '+vnOld+' ghi chú ở bản cũ' : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>${w && !canReview(st.link) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${true}/>` : null}</div>`
         : (w && VIDEO_STEPS[st.id] ? html`<div class="linkline"><${VideoLinkAdd} p=${p} st=${st}/></div>` : null)) : null}
+      ${st.prev.length ? html`<div class="vprev"><span class="meta">Bản trước</span>${st.prev.map(x => html`<span key=${x.v} class="vprev-i">${x.h && safeUrl(x.h.link) ? html`<a href=${x.h.link} target="_blank" rel="noopener" title=${'Mở link của '+vTag(x.v)}><${VChip} v=${x.v} tone="old" sm=${true}/></a>` : html`<${VChip} v=${x.v} tone="old" sm=${true}/>`}<span class="meta">${[x.h && x.h.at ? 'nộp '+fT(x.h.at) : '', x.fx ? nameOf(D, x.fx.by)+' yêu cầu sửa '+fT(x.fx.at) : ''].filter(Boolean).join(', ') || 'đã thay bằng '+vTag(x.v + 1)}</span></span>`)}</div>` : null}
     </div></div>
     <div class="sb-row"><span class="sb-lab">Duyệt</span><div class="sb-val">
       ${!st.qcBy.length ? html`<span class="meta linkline">Bước này không cần duyệt.</span>`
         : !st.link ? html`<span class="meta linkline">Có link thì ${st.mustBy.map(r => nameOf(D, r)).join(' và ')} duyệt${st.optBy.length ? ', '+st.optBy.map(r => nameOf(D, r)).join(', ')+' duyệt thêm nếu cần' : ''}.</span>`
-        : html`<div class="qc-row">${st.qcBy.map(r => {
+        : html`<div class="qc-row"><${VChip} v=${st.ver} tone=${st.state}/>${st.qcBy.map(r => {
             const ok = st.approvedBy.indexOf(r) >= 0, fx = st.fixOn && st.fix && st.fix.by === r, opt = st.optBy.indexOf(r) >= 0;
             return html`<span key=${r} class=${'st sm '+(ok ? 'done' : fx ? 'fix' : opt ? 'todo' : 'review')}>${ok ? nameOf(D, r)+' đã duyệt' : fx ? nameOf(D, r)+' yêu cầu sửa' : opt ? nameOf(D, r)+' chưa duyệt, không bắt buộc' : 'Chờ '+nameOf(D, r)+' duyệt'}</span>`;
-          })}${myReview && w ? (st.approvedBy.indexOf(me) >= 0 ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt v${pad3(st.ver)}</button>`) : null}</div>
+          })}${myReview && w ? (st.approvedBy.indexOf(me) >= 0 ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt ${vTag(st.ver)}</button>`) : null}</div>
           ${!me ? html`<span class="hint">Bấm “Bạn là ai?” ở góc trên để duyệt.</span>` : null}`}
     </div></div>
     ${st.id === 's09' ? html`<div class="sb-row"><span class="sb-lab">Tự kiểm</span><div class="sb-val"><div class="checks col">${QC_GROUPS.map(g => html`<label key=${g.k} class="check al-top"><input type="checkbox" checked=${!!chk[g.k]} disabled=${!w} onChange=${e => patch({chk: {[g.k]: e.target.checked}, chkBy: me || null, chkAt: Date.now()})}/><span><b>${g.name}:</b> <span class="meta">${g.desc}</span></span></label>`)}</div></div></div>` : null}
-    <div class="sb-row"><span class="sb-lab">Góp ý${st.comments.length ? html` <span class="faint">${st.comments.length}</span>` : null}</span><div class="sb-val">
-      ${st.comments.length > 3 && !all ? html`<div><button type="button" class="btn xs" onClick=${() => setAll(true)}>Xem cả ${st.comments.length} góp ý</button></div>` : null}
-      ${list.length ? html`<div class="cmts">${list.map(c => html`<div key=${c.cid} class=${'cmt '+(c.kind || '')}><div class="cmt-h"><b>${nameOf(D, c.by)}</b><span>${fT(c.at)}${c.ver ? ', bản v'+pad3(c.ver) : ''}</span>${c.kind === 'fix' ? html`<span class="st fix sm">Yêu cầu sửa</span>` : null}</div><p>${c.text}</p></div>`)}</div>` : null}
+    <div class="sb-row"><span class="sb-lab">Góp ý${curCm.length ? html` <span class="faint">${curCm.length}</span>` : null}</span><div class="sb-val">
+      ${curCm.length > 3 && !all ? html`<div><button type="button" class="btn xs" onClick=${() => setAll(true)}>Xem cả ${curCm.length} góp ý</button></div>` : null}
+      ${list.length ? html`<div class="cmts">${list.map(cmItem)}</div>` : null}
       ${w ? html`<div class="composer"><textarea class="inp" rows=${active ? 3 : 1} placeholder=${myReview && st.link ? 'Viết góp ý cho người làm…' : 'Viết trao đổi về bước này…'} value=${note} aria-label="Góp ý" onFocus=${() => setCompose(true)} onBlur=${() => { if(!note.trim()) setCompose(false); }} onInput=${e => setNote(e.target.value)}></textarea>
         ${active ? html`<div class="acts"><button type="button" class="btn sm" disabled=${!note.trim()} onClick=${() => comment('note')}><${Ic} n="send" s=${16}/>Gửi góp ý</button>${myReview && st.link ? html`<button type="button" class="btn sm danger" disabled=${!note.trim()} onClick=${() => comment('fix')}>Gửi và yêu cầu sửa</button>` : null}</div>` : null}</div>`
         : (st.comments.length ? null : html`<span class="meta linkline">Chưa có góp ý.</span>`)}
+      ${oldCm.length ? html`<div class="cm-old"><button type="button" class="btn xs" aria-expanded=${oldOpen} onClick=${() => setShowOld(!oldOpen)}><${Ic} n=${oldOpen ? 'down' : 'right'} s=${14}/>Góp ý của bản cũ (${oldCm.length})</button>${oldOpen ? html`<div class="cmts">${oldCm.map(cmItem)}</div>` : null}</div>` : null}
     </div></div>
   </div>`;
 }
@@ -1970,7 +2009,7 @@ function StepItem({p, st, D, me, open, onToggle, cls}){
       <button type="button" class="tk-row" onClick=${onToggle} aria-expanded=${open}>
         <span class="tk-name"><span class="sr">Bước ${st.def.no}, </span>${st.def.name}${live ? null : html`<span class="sr">, ${ss.text.toLowerCase()}</span>`}</span>
         <span class="tk-meta"><span class="tk-who">${st.who.length ? st.who.map(x => nameOf(D, x)).join(', ') : html`<span class="faint">Chưa giao</span>`}</span><span class="tk-date">${date}</span></span>
-        <span class="tk-st">${live ? html`<span class=${'st '+ss.cls}>${ss.text}</span>` : null}${st.late ? html`<span class="late">Trễ ${diffDays(st.end, D.t)} ngày</span>` : null}</span>
+        <span class="tk-st">${st.ver > 0 && st.link ? html`<${VChip} v=${st.ver} tone=${st.state} sm=${true}/>` : null}${live ? html`<span class=${'st '+ss.cls}>${ss.text}</span>` : null}${st.late ? html`<span class="late">Trễ ${diffDays(st.end, D.t)} ngày</span>` : null}</span>
         <span class="tk-chev" aria-hidden="true"><${Ic} n="down" s=${18}/></span>
       </button>
       ${open ? html`<${StepBody} p=${p} st=${st} D=${D} me=${me}/>` : null}
@@ -2164,10 +2203,10 @@ function ProjectDetail({D, id, me}){
 /* ---------- QC view ---------- */
 function QCCard({q, D, me}){
   const st = q.st, p = q.p; const mine = me === q.reviewer && canW();
-  const approve = () => { W.project(p.id, {steps: {[st.id]: {qc: {[me]: {ok: true, ver: st.ver, at: Date.now(), uid: S.uid || null}}}}}); toast('Đã duyệt '+st.def.no+' '+st.def.name+', bản v'+pad3(st.ver)); };
+  const approve = () => { W.project(p.id, {steps: {[st.id]: {qc: {[me]: {ok: true, ver: st.ver, at: Date.now(), uid: S.uid || null}}}}}); toast('Đã duyệt '+st.def.no+' '+st.def.name+', '+vTag(st.ver)); };
   return html`<article class="qcard">
     <a class="pn2" href=${'#job-'+p.id} onClick=${e => { e.preventDefault(); openJob(p.id, st.id); }}>${p.name}</a>
-    <p class="meta">${st.def.no} ${st.def.name}, bản v${pad3(st.ver)}. ${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}.</p>
+    <p class="meta qc-ver"><${VChip} v=${st.ver} tone=${st.state} sm=${true}/>${st.def.no} ${st.def.name}. ${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}.</p>
     <div class="acts"><a class="btn sm" href=${st.link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở link</a>${videoLinkOf(st) ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button>` : null}${mine ? html`<button type="button" class="btn sm ok" onClick=${approve}><${Ic} n="check" s=${16}/>Duyệt</button>` : null}<button type="button" class="btn sm" onClick=${() => openJob(p.id, st.id)}>${mine ? 'Góp ý hoặc yêu cầu sửa' : 'Xem bước'}</button></div>
   </article>`;
 }
@@ -2563,7 +2602,7 @@ function ReviewPlayer({D, pid, sid, me}){
     setText(''); setManual(''); setDraft([]); setDraftT(null); setTool(false); setSel(nid);
     toast('Đã thêm ghi chú tại '+tc(t));
   };
-  const approve = ok => { const now = Date.now(); const o = {qc: {[me]: {ok, ver: st.ver, at: now, uid: S.uid || null}}}; if(ok && st.fix && st.fix.by === me) o.fix = null; W.project(p.id, {steps: {[st.id]: o}}); toast(ok ? 'Đã duyệt bản v'+pad3(st.ver) : 'Đã bỏ duyệt'); };
+  const approve = ok => { const now = Date.now(); const o = {qc: {[me]: {ok, ver: st.ver, at: now, uid: S.uid || null}}}; if(ok && st.fix && st.fix.by === me) o.fix = null; W.project(p.id, {steps: {[st.id]: o}}); toast(ok ? 'Đã duyệt '+vTag(st.ver) : 'Đã bỏ duyệt'); };
   const askFix = () => {
     const now = Date.now(), n = all.filter(x => !x.ok && (+x.ver || 0) === st.ver).length;
     W.project(p.id, {steps: {[st.id]: {cm: {[rid('c')]: {by: me, at: now, text: n ? 'Cần sửa theo '+n+' ghi chú trên video.' : 'Cần sửa, xem ghi chú trên video.', kind: 'fix', ver: st.ver}}, fix: {by: me, at: now, ver: st.ver}, qc: {[me]: {ok: false, ver: st.ver, at: now, uid: S.uid || null}}}}});
@@ -2611,7 +2650,7 @@ function ReviewPlayer({D, pid, sid, me}){
   const canDel = n => w && (n.by === me || me === 'hao');
   return html`<div class="rv" role="dialog" aria-modal="true" aria-label=${'Duyệt video: '+st.def.name}>
     <header class="rv-h">
-      <div class="rv-title"><b>${st.def.no} ${st.def.name}, bản v${pad3(st.ver)}</b><span class="meta">${p.name}</span></div>
+      <div class="rv-title"><b>${st.def.no} ${st.def.name} <${VChip} v=${st.ver} tone=${st.state}/></b><span class="meta">${p.name}</span></div>
       <span class="sp"></span>
       <a class="btn sm" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
       <button type="button" class="btn sm" onClick=${closeModal}><${Ic} n="x" s=${16}/>Đóng</button>
@@ -2673,15 +2712,15 @@ function ReviewPlayer({D, pid, sid, me}){
         <div class="rv-list">
           ${notes.length ? notes.map(n => html`<div key=${n.nid} class=${'rv-n'+(act && act.nid === n.nid ? ' on' : '')+(n.ok ? ' ok' : '')}>
             <button type="button" class="rv-n-main" onClick=${() => jump(n)} aria-label=${'Tới '+tc(n.t)+': '+(n.text || 'nét vẽ')}>
-              <span class="rv-n-top"><b class="rv-n-tc">${tc(n.t)}</b><span>${nameOf(D, n.by)}</span>${(+n.ver || 0) !== st.ver ? html`<span class="rv-tag">bản v${pad3(n.ver)}</span>` : null}${n.d && n.d.length ? html`<span class="rv-tag draw"><${Ic} n="edit" s=${12}/>có vẽ</span>` : null}</span>
+              <span class="rv-n-top"><b class="rv-n-tc">${tc(n.t)}</b><span>${nameOf(D, n.by)}</span>${(+n.ver || 0) !== st.ver ? html`<${VChip} v=${n.ver} tone="old" sm=${true}/>` : null}${n.d && n.d.length ? html`<span class="rv-tag draw"><${Ic} n="edit" s=${12}/>có vẽ</span>` : null}</span>
               <span class="rv-n-text">${n.text || 'Xem nét vẽ trên khung hình.'}</span>
             </button>
             <div class="rv-n-act"><label class="check"><input type="checkbox" checked=${!!n.ok} disabled=${!w} onChange=${e => patchNote(n.nid, {ok: e.target.checked, okBy: me || null, okAt: Date.now()})}/>Đã sửa${n.ok && n.okBy ? html`<span class="meta">, ${nameOf(D, n.okBy)}</span>` : null}</label>${canDel(n) ? html`<button type="button" class="icon-btn sm bare" title="Xóa ghi chú" aria-label=${'Xóa ghi chú tại '+tc(n.t)} onClick=${() => { patchNote(n.nid, null); if(sel === n.nid) setSel(''); }}><${Ic} n="trash" s=${15}/></button>` : null}</div>
           </div>`) : html`<p class="rv-empty">${mode === 'none' ? 'Chưa có ghi chú.' : 'Chưa có ghi chú. Dừng ở khung cần sửa rồi gõ ghi chú, hoặc bấm Vẽ lên khung hình để khoanh chỗ sai.'}</p>`}
         </div>
         ${myReview && st.link ? html`<div class="rv-side-f">
-          ${iApproved ? html`<span class="st done">Bạn đã duyệt bản v${pad3(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm" onClick=${() => approve(false)}>Bỏ duyệt</button>`
-            : html`<button type="button" class="btn sm danger" onClick=${askFix}>Yêu cầu sửa</button><span class="sp"></span><button type="button" class="btn ok" onClick=${() => approve(true)}><${Ic} n="check" s=${17}/>Duyệt v${pad3(st.ver)}</button>`}
+          ${iApproved ? html`<span class="st done">Bạn đã duyệt ${vTag(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm" onClick=${() => approve(false)}>Bỏ duyệt</button>`
+            : html`<button type="button" class="btn sm danger" onClick=${askFix}>Yêu cầu sửa</button><span class="sp"></span><button type="button" class="btn ok" onClick=${() => approve(true)}><${Ic} n="check" s=${17}/>Duyệt ${vTag(st.ver)}</button>`}
         </div>` : null}
       </aside>
     </div>

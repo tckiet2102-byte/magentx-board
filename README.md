@@ -41,6 +41,11 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - **Các bước dự án:** Hiếu duyệt là bắt buộc. Hiếu duyệt bản hiện tại thì bước xong, dù Hào chưa duyệt. Hào duyệt thêm nếu cần (không bắt buộc); nếu Hào duyệt trước thì bước vẫn chờ Hiếu. Đổi ai bắt buộc hay không bắt buộc ở **Cài đặt › Nhân sự › Duyệt QC**.
 - **Booking credit Higgsfield:** chỉ Hào duyệt. Chưa duyệt thì chưa được gen.
 
+## Các bản nộp (V1, V2…)
+- Mỗi lần nộp link là một bản mới: V1, V2, V3. Nhãn bản có màu theo trạng thái: vàng là đang chờ duyệt, đỏ là cần sửa, xanh là đã duyệt, xám là bản cũ đã bị thay.
+- Trong bước: dòng **Kết quả** và **Duyệt** luôn ghi rõ đang nói về bản nào; dòng **Bản trước** liệt kê các bản cũ kèm lúc nộp và ai yêu cầu sửa.
+- Góp ý của bản đang duyệt nằm trên. Góp ý và yêu cầu sửa của bản cũ gom vào **Góp ý của bản cũ**, hiện màu xám, không còn báo đỏ.
+
 ## Player duyệt video
 - Ở mỗi bước đã nộp link tới **file video trên Google Drive** (dạng `drive.google.com/file/d/…`), bấm **Duyệt trên player**: tua bằng thanh thời gian, lùi/tới từng khung hình (phím ← →), vẽ lên khung hình, ghi chú gắn với đúng thời điểm. Người làm tick **Đã sửa** cho từng ghi chú.
 - Nếu link kết quả là folder, bấm **Thêm link file video để duyệt trên player** và dán link file video trong folder đó.
