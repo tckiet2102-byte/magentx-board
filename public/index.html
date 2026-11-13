@@ -887,6 +887,16 @@ a.lg-pn:hover{color:var(--action)}
 .nf-list .acts{grid-column:2;grid-row:1 / span 2;flex-wrap:nowrap}
 .nf-tag{flex:none}
 @media (max-width:640px){.nf-list li{grid-template-columns:minmax(0,1fr)}.nf-list .acts{grid-column:1;grid-row:auto}}
+/* phân quyền */
+.perm-tbl th.pm-h{font-size:12.5px;line-height:1.25;white-space:normal;min-width:64px;text-align:center}
+.perm-tbl .pm-grp th{font-size:12px;font-weight:700;color:var(--ink-3);text-align:center;border-bottom:0;padding-bottom:0}
+.perm-tbl td.pm-c{text-align:center}
+.perm-tbl td.pm-c .check{justify-content:center}
+.perm-tbl td.pm-c.ovr{position:relative;background:var(--action-soft)}
+.perm-tbl td.pm-c.ovr::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--action)}
+.pm-who{display:flex;flex-direction:column;min-width:140px}
+.pm-off{opacity:.55}
+.pm-note{padding:12px 22px 18px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -1124,15 +1134,50 @@ function useStore(){ const [, force] = useState(0); useEffect(() => { const f = 
 function toast(msg, tone){ const id = rid('t'); S.toasts = S.toasts.concat([{id, msg, tone}]); emit(); setTimeout(() => { S.toasts = S.toasts.filter(t => t.id !== id); emit(); }, 3600); }
 function openModal(m){ S.modal = m; emit(); }
 function closeModal(){ S.modal = null; emit(); }
-/* Người dùng phòng ban khác chỉ được ghi booking nội bộ; mọi thao tác khác trên bảng cần canW() */
-function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId() && !isReq(meId()); }
-function canBook(){ return S.phase === 'ready' && !S.readOnly && !!meId(); }
+/* Ghi dữ liệu theo quyền của tài khoản đang đăng nhập (can 'edit', 'book'); xem PERM_* bên dưới */
+function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId() && can(meId(), 'edit'); }
+function canBook(){ return S.phase === 'ready' && !S.readOnly && !!meId() && can(meId(), 'book'); }
 /* Người dùng phòng ban khác (staff.kind 'req'): chỉ vào tab Booking nội bộ, không thuộc team Production */
 function isReq(id){ const st = id && S.staff[id]; return !!(st && st.kind === 'req'); }
-/* access 'view' (VD admin operation): xem lịch, dự án và mọi booking nội bộ, không sửa; còn lại chỉ đặt booking */
-function isViewer(id){ const st = id && S.staff[id]; return !!(st && st.kind === 'req' && st.access === 'view'); }
-function bookOnly(id){ return isReq(id) && !isViewer(id); }
-const VIEWER_ROUTES = ['lich', 'du-an', 'job', 'noi-bo'];
+/* ---------- phân quyền từng tài khoản ----------
+   staff.perm = {<khóa>: true|false} ghi đè mặc định; thiếu khóa thì theo loại tài khoản (permDefault).
+   Hào luôn toàn quyền. Duyệt booking credit, sửa account và số dư, đặt lại mã PIN luôn chỉ Hào. */
+const PERM_PAGES = [['lich', 'Lịch tháng'], ['du-an', 'Dự án'], ['noi-bo', 'Booking nội bộ'], ['qc', 'Duyệt QC'], ['credit', 'Credit'], ['dat-ten', 'Đặt tên file'], ['cai-dat', 'Cài đặt'], ['nhat-ky', 'Nhật ký']];
+const PERM_ACTS = [['edit', 'Sửa, làm dự án', 'Tạo và sửa dự án, nộp bản, góp ý, duyệt nếu là người duyệt QC, ghi credit đã dùng'], ['book', 'Gửi booking', 'Gửi yêu cầu việc nội bộ'], ['take', 'Nhận booking', 'Nhận yêu cầu nội bộ, lập dự án và giao người làm']];
+const PERM_LABEL = {}; PERM_PAGES.concat(PERM_ACTS).forEach(x => { PERM_LABEL[x[0]] = x[1]; });
+const PERM_KEYS = PERM_PAGES.concat(PERM_ACTS).map(x => x[0]);
+const PERM_PRESETS = [
+  ['work', 'Làm dự án', ['lich', 'du-an', 'noi-bo', 'qc', 'credit', 'dat-ten', 'cai-dat', 'edit', 'book']],
+  ['lead', 'Lead', ['lich', 'du-an', 'noi-bo', 'qc', 'credit', 'dat-ten', 'cai-dat', 'edit', 'book', 'take']],
+  ['view', 'Xem lịch, dự án', ['lich', 'du-an', 'noi-bo', 'book']],
+  ['book', 'Chỉ đặt booking', ['noi-bo', 'book']],
+];
+function permDefault(st, key){
+  if(key === 'nhat-ky') return false;
+  if(st.kind === 'req'){ if(key === 'noi-bo' || key === 'book') return true; return st.access === 'view' && (key === 'lich' || key === 'du-an'); }
+  if(key === 'take') return !!st.lead;
+  return true;
+}
+function can(id, key){
+  if(!id) return false;
+  if(id === 'hao') return true;
+  const st = S.staff[id]; if(!st) return false;
+  const v = (st.perm || {})[key];
+  return v === true || v === false ? v : permDefault(st, key);
+}
+function pagesOf(id){ return PERM_PAGES.map(x => x[0]).filter(k => can(id, k)); }
+/* cần tải dự án và account khi được xem trang nào khác ngoài Booking nội bộ */
+function needsBoard(id){ return pagesOf(id).some(k => k !== 'noi-bo'); }
+function bookOnly(id){ return !!id && id !== 'hao' && !!S.staff[id] && !needsBoard(id); }
+function isViewer(id){ return isReq(id) && needsBoard(id); }
+/* mẫu đang khớp với quyền của tài khoản: '' là mặc định, 'custom' là tùy chỉnh không khớp mẫu nào */
+function permPreset(u){
+  const p = ((S.staff[u.id] || u).perm) || {};
+  if(!PERM_KEYS.some(k => p[k] === true || p[k] === false)) return '';
+  const on = PERM_KEYS.filter(k => can(u.id, k));
+  const m = PERM_PRESETS.find(x => x[2].length === on.length && x[2].every(k => on.indexOf(k) >= 0));
+  return m ? m[0] : 'custom';
+}
 /* credit balances and account settings: only Hào */
 function canApproveBooking(){ return canW() && meId() === 'hao'; }
 function canCredit(){ return canW() && !!S.isOwner && meId() === 'hao'; }
@@ -1162,7 +1207,7 @@ async function boot(){
     if(name === 'projects') S.firstData = true;
     if(name === 'staff' && meId() && !S.bootPriv){ S.bootPriv = true; S.startPrivate(); }
     /* được nâng lên quyền xem lịch, dự án trong lúc đang mở bảng: tải cả bảng ngay, không cần đăng nhập lại */
-    else if(name === 'staff' && meId() && !S.privOn && isViewer(meId()) && S.startPrivate) S.startPrivate();
+    else if(name === 'staff' && meId() && !S.privOn && needsBoard(meId()) && S.startPrivate) S.startPrivate();
     settle(); emit();
   }, onErr(name));
   /* người đặt booking chỉ theo dõi dự án lập từ yêu cầu của mình, không tải cả bảng */
@@ -1406,6 +1451,14 @@ function logDescStaff(sid, patch){
     else if(k === 'lead') add('admin', v ? 'đặt '+nm+' làm Lead' : 'bỏ Lead của '+nm);
     else if(k === 'active') add('admin', old.kind === 'req' ? (v ? 'mở khóa tài khoản '+nm : 'khóa tài khoản '+nm) : v ? 'đánh dấu '+nm+' đang làm' : 'đánh dấu '+nm+' không còn làm');
     else if(k === 'dept') add('admin', 'đổi bộ phận của '+nm+' thành '+v);
+    else if(k === 'perm'){
+      /* chỉ ghi các quyền thực sự đổi, gộp một dòng cho mỗi tài khoản */
+      const was = x => { const o = (old.perm || {})[x]; return o === true || o === false ? o : permDefault(old, x); };
+      const now = x => v === null ? permDefault(old, x) : (v[x] === true || v[x] === false ? v[x] : (x in v ? permDefault(old, x) : was(x)));
+      const on = [], offs = [];
+      PERM_KEYS.forEach(x => { if(now(x) !== was(x)) (now(x) ? on : offs).push(PERM_LABEL[x] || x); });
+      if(on.length || offs.length) add('admin', 'đổi quyền của '+nm+': '+[on.length ? 'mở '+on.join(', ') : '', offs.length ? 'tắt '+offs.join(', ') : ''].filter(Boolean).join('; '));
+    }
     else if(k === 'access') add('admin', v === 'view' ? 'cho '+nm+' xem lịch và dự án' : 'đổi '+nm+' về quyền chỉ đặt booking');
     else add('admin', 'sửa thông tin nhân sự '+nm);
   });
@@ -2104,9 +2157,10 @@ function DateRange({start, end, onChange, labels}){
 
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
-  const req = isReq(me);
-  const tabs = req ? (isViewer(me) ? [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ']] : [['noi-bo','Booking nội bộ']]) : [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
-  const inNew = me && isLead(D, me) ? Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].status === 'new').length : 0;
+  const req = isReq(me), known = !!me && (me === 'hao' || !!S.staff[me]);
+  const navLabel = {lich: 'Lịch tháng', 'du-an': 'Dự án', 'noi-bo': 'Booking nội bộ', qc: 'Duyệt QC', credit: 'Credit', 'dat-ten': 'Đặt tên file', 'nhat-ky': 'Nhật ký'};
+  const tabs = known ? pagesOf(me).filter(k => k !== 'cai-dat').map(k => [k, navLabel[k]]) : [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
+  const inNew = me && can(me, 'take') ? Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].status === 'new').length : 0;
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
   const s = me && D.staffMap[me];
@@ -2114,9 +2168,9 @@ function TopBar({D, route, me}){
     <a class="brand" href="#lich">${Clapper()}<span>MagentX <span class="sub">Production</span></span></a>
     <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}${t[0] === 'du-an' && D.myNew.length ? html`<span class="cnt" title="Dự án mới giao cho bạn">${D.myNew.length}</span>` : null}</a>`)}</nav>
     <div class="top-r">
-      ${req ? null : html`<a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>`}
+      ${known && !can(me, 'cai-dat') ? null : html`<a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>`}
       ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
-      ${canW() && !req ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
+      ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
     </div>
   </div></header>`;
 }
@@ -3281,6 +3335,7 @@ function SettingsView({D, me}){
       <p>${me ? html`Bạn đang đăng nhập là <b>${nameOf(D, me)}</b>.` : 'Bạn chưa đăng nhập, đang ở chế độ chỉ xem.'} Mỗi người có mã PIN 4 số riêng, máy đã đăng nhập được giữ trong 24 giờ. Hào có thể dùng mã PIN của mình để vào mọi tài khoản và đặt lại mã PIN cho người quên.</p>
       ${uids.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nhân sự</th><th>Tài khoản Claude đã chọn</th></tr></thead><tbody>${uids.map(u => html`<tr key=${u}><td>${nameOf(D, S.members[u].staff)}</td><td>${(profiles[u] && profiles[u].name) || (u === S.uid ? 'Bạn' : 'Một thành viên')}</td></tr>`)}</tbody></table></div>` : null}
     </section>
+    <${PermPanel} D=${D} me=${me}/>
     <${ReqUsersPanel} D=${D} me=${me}/>
     <${ClientsPanel} D=${D} me=${me}/>
     <section class="panel"><div class="panel-h"><h2>Thông số</h2>${!lead ? html`<span class="meta">Thông số credit chỉ leader sửa.</span>` : null}</div>
@@ -3300,6 +3355,46 @@ function SettingsView({D, me}){
     <${BackupPanel} D=${D}/>`;
 }
 
+function PermPanel({D, me}){
+  const edit = canW() && me === 'hao';
+  const rows = D.staffList.concat(D.reqList);
+  const set = (u, k, val) => {
+    const st = S.staff[u.id] || {}, o = {};
+    const put = (key, v) => { o[key] = v === permDefault(st, key) ? null : v; };
+    put(k, val);
+    /* nhận booking cần sửa dự án và trang Booking nội bộ; gửi booking cần trang Booking nội bộ */
+    if(val && k === 'take'){ if(!can(u.id, 'edit')) put('edit', true); if(!can(u.id, 'noi-bo')) put('noi-bo', true); }
+    if(val && k === 'book' && !can(u.id, 'noi-bo')) put('noi-bo', true);
+    if(!val && k === 'noi-bo'){ if(can(u.id, 'book')) put('book', false); if(can(u.id, 'take')) put('take', false); }
+    W.staff(u.id, {perm: o});
+  };
+  const preset = (u, key) => {
+    if(!key){ W.staff(u.id, {perm: null}); return; }
+    const pr = PERM_PRESETS.find(x => x[0] === key); if(!pr) return;
+    const st = S.staff[u.id] || {}, o = {};
+    PERM_KEYS.forEach(k => { const v = pr[2].indexOf(k) >= 0; o[k] = v === permDefault(st, k) ? null : v; });
+    W.staff(u.id, {perm: o});
+  };
+  const cell = (u, k) => {
+    const locked = u.id === 'hao' || !edit, on = can(u.id, k), ovr = u.id !== 'hao' && ((S.staff[u.id] || {}).perm || {})[k] !== undefined && ((S.staff[u.id] || {}).perm || {})[k] !== null;
+    return html`<td key=${k} class=${'pm-c'+(ovr ? ' ovr' : '')}><label class="check"><input type="checkbox" checked=${on} disabled=${locked} aria-label=${PERM_LABEL[k]+': '+u.name} onChange=${e => set(u, k, e.target.checked)}/></label></td>`;
+  };
+  return html`<section class="panel flush" aria-label="Phân quyền từng tài khoản">
+    <div class="panel-h"><div><h2>Phân quyền từng tài khoản</h2><p class="meta">Tick để mở trang hoặc thao tác cho từng người, chọn mẫu để đặt nhanh. Ô có chấm là khác mặc định của loại tài khoản; "Mặc định" bỏ mọi tùy chỉnh. Duyệt booking credit, sửa account và số dư, đặt lại mã PIN luôn chỉ Hào.</p></div>${!edit ? html`<span class="meta">Chỉ Hào sửa.</span>` : null}</div>
+    <div class="tbl-wrap"><table class="tbl perm-tbl">
+      <thead>
+        <tr class="pm-grp"><th></th><th></th><th colspan=${PERM_PAGES.length}>Trang được xem</th><th colspan=${PERM_ACTS.length}>Thao tác</th></tr>
+        <tr><th>Tài khoản</th><th>Mẫu</th>${PERM_PAGES.map(x => html`<th key=${x[0]} class="pm-h">${x[1]}</th>`)}${PERM_ACTS.map(x => html`<th key=${x[0]} class="pm-h" title=${x[2]}>${x[1]}</th>`)}</tr>
+      </thead>
+      <tbody>${rows.map(u => html`<tr key=${u.id} class=${u.active === false ? 'pm-off' : ''}>
+        <td class="pm-who"><b>${u.name}</b><span class="meta">${u.id === 'hao' ? 'Toàn quyền' : u.kind === 'req' ? (u.dept || 'Phòng ban khác') : (u.role || 'Production')}${u.active === false ? ', đã nghỉ' : ''}</span></td>
+        <td>${u.id === 'hao' ? html`<span class="meta">Cố định</span>` : html`<select class="sel sm auto" value=${permPreset(u)} disabled=${!edit} aria-label=${'Mẫu quyền của '+u.name} onChange=${e => preset(u, e.target.value)}><option value="">Mặc định</option>${PERM_PRESETS.map(x => html`<option key=${x[0]} value=${x[0]}>${x[1]}</option>`)}${permPreset(u) === 'custom' ? html`<option value="custom" disabled>Tùy chỉnh</option>` : null}</select>`}</td>
+        ${PERM_KEYS.map(k => cell(u, k))}
+      </tr>`)}</tbody>
+    </table></div>
+    <p class="meta pm-note">Mặc định: team Production xem mọi trang trừ Nhật ký, sửa và làm dự án; Lead nhận booking. Phòng ban khác chỉ Booking nội bộ, hoặc thêm Lịch và Dự án nếu chọn quyền "Xem lịch, dự án". Đổi quyền có hiệu lực ngay trên máy người đó.</p>
+  </section>`;
+}
 function ReqUsersPanel({D, me}){
   const lead = canW() && isLead(D, me);
   const [nu, setNu] = useState({name: '', dept: '', access: ''});
@@ -3319,7 +3414,7 @@ function ReqUsersPanel({D, me}){
       ${D.reqList.map(u => html`<tr key=${u.id}>
         <td style="min-width:150px"><${InlineText} value=${u.name} label=${'Tên '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {name: v})}/></td>
         <td style="min-width:140px"><${InlineText} value=${u.dept || ''} label=${'Bộ phận của '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {dept: v, role: v})}/></td>
-        <td><select class="sel sm auto" value=${u.access === 'view' ? 'view' : ''} disabled=${!lead} aria-label=${'Quyền của '+u.name} onChange=${e => W.staff(u.id, {access: e.target.value || null})}><option value="">Đặt booking</option><option value="view">Xem lịch, dự án</option></select></td>
+        <td><select class="sel sm auto" value=${permPreset(u) === 'custom' ? 'custom' : u.access === 'view' ? 'view' : ''} disabled=${!lead} aria-label=${'Quyền của '+u.name} onChange=${e => W.staff(u.id, {access: e.target.value || null, perm: null})}><option value="">Đặt booking</option><option value="view">Xem lịch, dự án</option>${permPreset(u) === 'custom' ? html`<option value="custom" disabled>Tùy chỉnh</option>` : null}</select></td>
         <td class="nw">${hasPin(u.id) ? html`<span>Đã tạo</span>${me === 'hao' && canW() ? (ask === 'pin'+u.id ? html` <button type="button" class="btn xs danger" onClick=${() => { setAsk(''); W.staff(u.id, {pin: null}); toast('Đã đặt lại mã PIN của '+u.name+'.'); }}>Bấm lần nữa để đặt lại</button>` : html` <button type="button" class="btn xs" onClick=${() => setAsk('pin'+u.id)}>Đặt lại</button>`) : null}` : html`<span class="meta">Chưa tạo</span>`}</td>
         <td class="num">${cnt[u.id] || 0}</td>
         <td><label class="check"><input type="checkbox" checked=${u.active !== false} disabled=${!lead} aria-label=${'Đang dùng: '+u.name} onChange=${e => W.staff(u.id, {active: e.target.checked})}/></label></td>
@@ -4043,7 +4138,7 @@ const LOG_RANGES = [['1', 'Hôm nay'], ['7', '7 ngày'], ['30', '30 ngày']];
 const logFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
 const logHm = ms => { const d = new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
 function LogView({D, me}){
-  const ok = me === 'hao';
+  const ok = can(me, 'nhat-ky');
   const [range, setRange] = useState('7');
   const [who, setWho] = useState('');
   const [cat, setCat] = useState('');
@@ -4062,7 +4157,7 @@ function LogView({D, me}){
     return () => offs.forEach(f => { if(typeof f === 'function') f(); });
   }, [ok, dayIds.join()]);
   useEffect(() => { setLim(200); }, [range, who, cat, q]);
-  if(!ok) return html`<div class="ph"><div><h1>Nhật ký thao tác</h1><p>Chỉ tài khoản Hào xem được trang này.</p></div></div>`;
+  if(!ok) return html`<div class="ph"><div><h1>Nhật ký thao tác</h1><p>Tài khoản này chưa được mở trang Nhật ký.</p></div></div>`;
 
   const from = parse(dayIds[dayIds.length - 1]).getTime();
   const all = [];
@@ -4213,7 +4308,7 @@ function IntakeForm({D, id, me}){
   <//>`;
 }
 function IntakeCard({b, D, me}){
-  const lead = canW() && isLead(D, me), mine = canBook() && b.by === me;
+  const lead = canW() && can(me, 'take'), mine = canBook() && b.by === me;
   const [ask, setAsk] = useState(''), [reason, setReason] = useState('');
   const late = b.due && b.due < D.t;
   const take = () => openModal({type: 'project', pre: {useCase: 'INT', src: 'new', intake: b.id, name: b.name, type: b.type || 'Internal', pn: intakePname(b), seqOn: true,
@@ -4237,7 +4332,7 @@ function IntakeCard({b, D, me}){
   </article>`;
 }
 function IntakeView({D, me}){
-  const lead = isLead(D, me), req = bookOnly(me);
+  const lead = can(me, 'take'), req = bookOnly(me) && !lead;
   const all = intakeList(D).filter(b => !req || b.by === me);
   const byDue = (a, b) => (b.prio === 'urgent') - (a.prio === 'urgent') || String(a.due).localeCompare(String(b.due));
   const fresh = all.filter(b => b.status === 'new').sort(byDue);
@@ -4298,9 +4393,11 @@ function App(){
   });
   useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
-  const req = isReq(me), only = bookOnly(me), viewer = isViewer(me);
+  const req = isReq(me), known = !!me && (me === 'hao' || !!S.staff[me]);
+  const pages = known ? pagesOf(me) : [], only = known && bookOnly(me);
+  const okRoute = v => !known || (v === 'job' ? pages.indexOf('du-an') >= 0 : pages.indexOf(v) >= 0);
   useEffect(() => { if(me && !req && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
-  useEffect(() => { if(only && route.view !== 'noi-bo') location.hash = 'noi-bo'; else if(viewer && VIEWER_ROUTES.indexOf(route.view) < 0) location.hash = 'lich'; }, [only, viewer, route.view]);
+  useEffect(() => { if(known && pages.length && !okRoute(route.view)) location.hash = pages[0]; }, [known, pages.join(), route.view]);
   useEffect(() => {
     /* giao trước lúc mở bảng: gom một thông báo; giao trong lúc đang mở: báo từng dự án */
     if(me && S.asgFor !== me){ S.asgFor = me; S.asgBase = Date.now(); }
@@ -4317,8 +4414,9 @@ function App(){
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;
   else if(!free && S.phase === 'ready' && !me) view = html`<div class="boot"><div class="boot-card"><b>Đăng nhập để xem bảng</b><span>Chọn tên của bạn và nhập mã PIN 4 số. Phòng ban khác cần đặt việc nội bộ thì tạo tài khoản mới.</span><button type="button" class="btn primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div></div>`;
+  else if(known && !pages.length) view = html`<div class="boot"><div class="boot-card"><b>Tài khoản chưa được mở trang nào</b><span>Hỏi Hào cấp quyền ở Cài đặt › Phân quyền.</span></div></div>`;
   else if(only) view = html`<${IntakeView} D=${D} me=${me}/>`;
-  else if(viewer && VIEWER_ROUTES.indexOf(route.view) < 0) view = html`<${CalendarView} D=${D} me=${me}/>`;
+  else if(known && !okRoute(route.view)) view = html`<div class="boot"><div class="boot-card"><span>Đang chuyển trang…</span></div></div>`;
   else if(!free && (S.phase === 'boot' || !S.firstData)) view = html`<div class="boot"><div class="boot-card"><b>Đang tải dữ liệu phòng…</b><span>Lịch, dự án và credit Higgsfield.</span></div></div>`;
   else if(route.view === 'du-an') view = html`<${ProjectsView} D=${D}/>`;
   else if(route.view === 'qc') view = html`<${QCView} D=${D} me=${me}/>`;

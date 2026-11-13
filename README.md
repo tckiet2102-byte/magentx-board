@@ -49,6 +49,12 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Bấm **Bật thông báo trên máy này** trong khung để trình duyệt hiện thông báo cả khi đang ở tab khác (chỉ khi bảng đang mở).
 - Khung "Job Register có N job chưa lên bảng" chỉ hiện với tài khoản Hào.
 
+## Phân quyền từng tài khoản
+- Cài đặt › **Phân quyền từng tài khoản** (chỉ Hào sửa): mỗi tài khoản một dòng, tick để mở hoặc tắt từng trang (Lịch tháng, Dự án, Booking nội bộ, Duyệt QC, Credit, Đặt tên file, Cài đặt, Nhật ký) và từng thao tác (Sửa, làm dự án; Gửi booking; Nhận booking).
+- Cột **Mẫu** đặt nhanh: Làm dự án, Lead, Xem lịch, dự án, Chỉ đặt booking; **Mặc định** bỏ mọi tùy chỉnh. Ô có chấm là khác mặc định.
+- Mặc định: team Production xem mọi trang trừ Nhật ký và được sửa, làm dự án; Lead được nhận booking; phòng ban khác chỉ Booking nội bộ (hoặc thêm Lịch, Dự án với quyền "Xem lịch, dự án").
+- Đổi quyền có hiệu lực ngay trên máy người đó; mở trang bị tắt thì bảng chuyển về trang đầu tiên được phép. Duyệt booking credit, sửa account và số dư, đặt lại mã PIN luôn chỉ Hào. Người duyệt QC và Lead vẫn đặt ở bảng Nhân sự.
+
 ## Người dùng phòng ban khác
 - Người ngoài phòng Production (Marketing, Sale, Học viện…) đăng nhập để **gửi yêu cầu việc nội bộ** và theo dõi tình trạng. Họ chỉ thấy tab **Booking nội bộ** với yêu cầu của chính mình: chờ nhận, đã giao (người làm, hạn giao, tiến độ từng bước), tạm hoãn hay từ chối kèm lý do. Họ không thấy lịch, dự án, credit, cài đặt, và không có trong lịch hay danh sách giao việc.
 - **Tự tạo tài khoản:** ở màn hình đăng nhập bấm **Tạo tài khoản mới**, nhập họ tên, bộ phận, mã PIN 4 số (hai lần). Nếu Hào đặt **mã mời** ở Cài đặt thì phải gõ đúng mã đó.
