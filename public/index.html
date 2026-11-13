@@ -1,4 +1,5 @@
 <title>MagentX Production Board</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#1B1BE0">
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -57,7 +58,7 @@
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font:400 15px/1.55 var(--f);-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.55 var(--f);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 a{color:var(--action);text-decoration:none}
 a:hover{text-decoration:underline}
 button{font:inherit;color:inherit}
@@ -84,10 +85,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .brand{display:flex;align-items:center;gap:13px;color:var(--ink);white-space:nowrap}
 .brand:hover{text-decoration:none}
 /* logo MagentX vẽ bằng SVG (public/logo.svg), cao 26px: chữ "Magent" cao khoảng 14px, cân với chữ menu 15px */
-.logo{display:block;height:26px;width:auto;flex:none;fill:var(--brand)}
+.logo{--lh:26px;display:block;height:var(--lh);width:calc(var(--lh) * 756 / 173);flex:none;fill:var(--brand)}
 .brand-sub{position:relative;top:-1px;padding-left:13px;font-size:14.5px;font-weight:600;letter-spacing:.01em;line-height:1;color:var(--ink-2)}
 .brand-sub::before{content:"";position:absolute;left:0;top:50%;width:1px;height:17px;transform:translateY(-50%);background:var(--field)}
-.boot-logo{height:34px;margin-bottom:12px}
+.boot-logo{--lh:34px;margin-bottom:12px}
 .nav{display:flex;align-self:stretch;gap:2px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
 .nav a{position:relative;display:flex;align-items:center;gap:8px;padding:0 13px;font-size:15px;font-weight:500;color:var(--ink-2);white-space:nowrap}
@@ -101,7 +102,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   .brand{flex:1 1 auto;min-height:46px}
   .nav{order:3;flex-basis:100%;height:48px;margin-inline:-8px}
 }
-@media (max-width:560px){.brand .logo{height:22px}.brand-sub{display:none}.top-r .who-name{display:none}}
+.nav.fade-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent)}
+.nav.fade-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 40px);mask-image:linear-gradient(to right,transparent,#000 40px)}
+.nav.fade-l.fade-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent)}
+@media (max-width:560px){
+  .brand .logo{--lh:22px}.brand-sub{display:none}.top-r .who-name{display:none}
+  .top-in{padding-block:4px 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .brand{min-height:50px}
+  .nav{height:44px;margin-inline:-6px}
+  .nav a{padding:0 11px;font-size:14.5px}
+  .nav a.on::after{left:11px;right:11px}
+  .top-r{gap:6px}
+}
+@media (max-width:370px){.xs-hide{display:none}}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1.5px solid var(--field);background:var(--surface);color:var(--ink);font:600 15px/1 var(--f);cursor:pointer;white-space:nowrap;text-decoration:none;transition:background-color .12s,border-color .12s}
@@ -162,6 +175,11 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .seg button:hover{color:var(--ink)}
 .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgb(0 0 0 / .14)}
 .seg button:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:560px){
+  .seg{max-width:100%}
+  .seg button{height:auto;min-height:36px;padding:6px 12px;line-height:1.25;white-space:normal}
+  .modal .seg{display:flex;align-self:stretch}.modal .seg button{flex:1 1 0}
+}
 
 /* status: coloured dot + word */
 .st{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;white-space:nowrap}
@@ -181,6 +199,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .panel.flush{padding:0;overflow:hidden;gap:0}
 .panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
 .panel.flush > .panel-h{padding:18px 22px 14px}
+@media (max-width:560px){.panel{padding:16px}.panel.flush > .panel-h{padding:16px 16px 12px}}
 .banner{padding:12px 16px;border-radius:12px;background:var(--action-soft);font-size:14.5px}
 .banner.warn{background:var(--wait-soft)}
 .empty{padding:20px;border:1.5px dashed var(--field);border-radius:14px;color:var(--ink-2);font-size:15px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
@@ -203,6 +222,14 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .tbl td.bad{color:var(--bad);font-weight:700}
 .tbl td.strong{font-weight:700}
 .tbl .cell-actions{margin-top:8px}
+@media (max-width:780px){
+  .tbl-wrap,.roles-wrap{background:linear-gradient(to right,var(--surface) 30%,transparent) left / 40px 100% no-repeat local,linear-gradient(to left,var(--surface) 30%,transparent) right / 40px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,rgb(0 0 0 / .14),transparent) left / 14px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,rgb(0 0 0 / .14),transparent) right / 14px 100% no-repeat scroll}
+  .tbl th{padding:10px 12px}
+  .tbl td{padding:12px}
+  .tbl.bk td:nth-child(2){min-width:170px}
+  .perm-tbl tr > :first-child{position:sticky;left:0;z-index:1;background:var(--surface);box-shadow:1px 0 0 var(--rule)}
+  .perm-tbl thead tr > :first-child{background:var(--subtle)}
+}
 
 /* attention row */
 .attn{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -433,7 +460,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .vold-t b{font-size:14.5px}
 .vold-i{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--subtle)}
 .vold-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
-@media (max-width:780px){.sbody{padding:14px}.vc-sec{grid-template-columns:minmax(0,1fr)}.vc-lab{padding-top:0}.vcard{padding:12px}}
+@media (max-width:780px){.sbody{padding:14px}.tk-c > .sbody{position:relative;z-index:2;margin-left:-38px}.vc-sec{grid-template-columns:minmax(0,1fr)}.vc-lab{padding-top:0}.vcard{padding:12px}.sb-head{flex-wrap:wrap}.sb-head .meta{flex:1 1 200px}}
 .blk{display:flex;flex-direction:column;gap:10px}
 .linkline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-height:36px}
 .linkline .ext{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;overflow-wrap:anywhere}
@@ -736,6 +763,8 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .toast.warn{background:var(--wait);color:var(--surface)}
 .toast.bad{background:var(--bad);color:var(--surface)}
 @media (max-width:640px){:root{--namew:150px;--dayw:32px}h1{font-size:25px}.mnav h1{min-width:0}.uform{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.uform .btn{grid-column:1 / -1}}
+/* iPhone tự phóng to trang khi chạm vào ô nhập chữ nhỏ hơn 16px: máy cảm ứng dùng 16px */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]):not(.pin),select,textarea{font-size:16px!important}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 /* nhật ký thao tác */
 .lg-people{display:flex;flex-wrap:wrap;gap:8px}
@@ -2173,13 +2202,26 @@ function TopBar({D, route, me}){
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
   const s = me && D.staffMap[me];
+  const navRef = useRef(null);
+  useEffect(() => {
+    const n = navRef.current; if(!n) return;
+    const upd = () => { n.classList.toggle('fade-l', n.scrollLeft > 4); n.classList.toggle('fade-r', n.scrollLeft + n.clientWidth < n.scrollWidth - 4); };
+    n.addEventListener('scroll', upd, {passive: true}); window.addEventListener('resize', upd); upd();
+    return () => { n.removeEventListener('scroll', upd); window.removeEventListener('resize', upd); };
+  }, []);
+  useEffect(() => {
+    const n = navRef.current, a = n && n.querySelector('a.on'); if(!a || n.scrollWidth <= n.clientWidth) return;
+    const nr = n.getBoundingClientRect(), ar = a.getBoundingClientRect();
+    if(ar.left < nr.left + 40 || ar.right > nr.right - 40) n.scrollBy({left: ar.left - nr.left - (nr.width - ar.width) / 2, behavior: n.dataset.ready ? 'smooth' : 'auto'});
+    n.dataset.ready = '1';
+  }, [act, tabs.length]);
   return html`<header class="top"><div class="top-in">
     <a class="brand" href="#lich" aria-label="MagentX Production, về trang đầu"><${Logo}/><span class="brand-sub">Production</span></a>
-    <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}${t[0] === 'du-an' && D.myNew.length ? html`<span class="cnt" title="Dự án mới giao cho bạn">${D.myNew.length}</span>` : null}</a>`)}</nav>
+    <nav class="nav" ref=${navRef} aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}${t[0] === 'du-an' && D.myNew.length ? html`<span class="cnt" title="Dự án mới giao cho bạn">${D.myNew.length}</span>` : null}</a>`)}</nav>
     <div class="top-r">
       ${known && !can(me, 'cai-dat') ? null : html`<a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>`}
       ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
-      ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
+      ${canW() ? html`<button type="button" class="btn primary" aria-label="Tạo dự án" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/><span>Tạo<span class="xs-hide"> dự án</span></span></button>` : null}
     </div>
   </div></header>`;
 }
@@ -3019,7 +3061,7 @@ function CreditView({D, me}){
     <div class="legend"><span class="lg"><i class="sw" style="background:var(--d-doing)"></i>Đã dùng</span><span class="lg"><i class="sw doing"></i>Giữ chỗ chưa dùng</span><span class="lg"><i class="sw" style="background:var(--d-review)"></i>Dùng chưa log</span><span class="lg"><i class="sw done"></i>Còn book được</span><span class="lg">Vạch đen là Cap</span></div>
     <section class="panel flush" aria-label="Booking">
       <div class="panel-h"><h2>Booking</h2><div class="acts"><div class="seg" role="group" aria-label="Phạm vi"><button type="button" class=${scope === 'cur' ? 'on' : ''} aria-pressed=${scope === 'cur'} onClick=${() => setScope('cur')}>Kỳ hiện tại</button><button type="button" class=${scope === 'all' ? 'on' : ''} aria-pressed=${scope === 'all'} onClick=${() => setScope('all')}>Tất cả</button></div><button type="button" class="btn sm" onClick=${() => copyText(bookingsTSV(D))}><${Ic} n="copy" s=${16}/>Copy sang Sheets</button><${XlsxBtn} D=${D} sm=${true}/></div></div>
-      ${rows.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Ngày book</th><th>Dự án</th><th>Người order</th><th>Account</th><th>Check</th><th class="n">Dự kiến</th><th class="n">Đã dùng</th><th class="n">Còn lại</th><th class="n">Giữ chỗ</th><th class="n">Lũy kế acc</th></tr></thead><tbody>
+      ${rows.length ? html`<div class="tbl-wrap"><table class="tbl bk"><thead><tr><th>Ngày book</th><th>Dự án</th><th>Người order</th><th>Account</th><th>Check</th><th class="n">Dự kiến</th><th class="n">Đã dùng</th><th class="n">Còn lại</th><th class="n">Giữ chỗ</th><th class="n">Lũy kế acc</th></tr></thead><tbody>
         ${rows.map(b => html`<tr key=${b.pid+b.bid}><td class="nw">${fD(b.date)}</td><td><a href=${'#job-'+b.pid}>${b.p.name}</a><div class="meta">${b.p.useCase === 'INT' ? 'Nội bộ' : 'Job khách'}, deadline ${fD(b.p.deadline)}</div></td><td>${nameOf(D, b.p.pic)}</td><td class="nw code">${D.amap[b.acc] ? D.amap[b.acc].code : '—'}</td><td><span class=${'st sm '+(CHECK_CLS[b.chk.k] || 'todo')}>${b.chk.k}</span></td><td class="n">${fN(b.est)}</td><td class="n">${fN(b.used)}</td><td class=${'n'+(b.status === 'open' && b.est - b.used < 0 ? ' bad' : '')}>${b.status === 'open' ? fN(b.est - b.used) : '—'}</td><td class="n">${fN(reservedOf(b))}</td><td class="n">${b.cum ? fN(b.cum) : '—'}</td></tr>`)}
       </tbody></table></div>` : html`<p class="empty" style="margin:0 22px 22px">Chưa có booking nào.</p>`}
     </section>
