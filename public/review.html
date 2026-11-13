@@ -6,6 +6,8 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Duyệt video · MagentX</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#1B1BE0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
@@ -13,8 +15,8 @@
 :root{
   --paper:#f2f4f8;--surface:#fff;--subtle:#f7f8fb;--tint:#eceff6;--ink:#171b2e;--ink-2:#4b5369;--ink-3:#7c8396;--rule:#e0e4ed;--field:#b3bbcc;--field-hover:#8a93a8;
   --action:#2347d6;--action-hover:#1a39b6;--action-soft:#e4eaff;--on-action:#fff;--ok:#1b8448;--ok-soft:#e1f3e8;--wait:#9a5900;--wait-soft:#fff1d6;--bad:#c3342b;--bad-soft:#fde8e6;
-  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--paper:#0f1219;--surface:#171b25;--subtle:#1b2030;--tint:#232a3b;--ink:#eceff6;--ink-2:#aeb5c7;--ink-3:#808899;--rule:#2a3142;--field:#4c5672;--field-hover:#6a7594;
+  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color-scheme:light;--brand:#1B1BE0}
+@media (prefers-color-scheme:dark){:root{--brand:#9C9EFF;--paper:#0f1219;--surface:#171b25;--subtle:#1b2030;--tint:#232a3b;--ink:#eceff6;--ink-2:#aeb5c7;--ink-3:#808899;--rule:#2a3142;--field:#4c5672;--field-hover:#6a7594;
   --action:#7c9dff;--action-hover:#98b2ff;--action-soft:#1f2b4d;--on-action:#0f1219;--ok:#5ccf8a;--ok-soft:#173523;--wait:#f0bd5a;--wait-soft:#3a2d10;--bad:#ff7d73;--bad-soft:#40201e;color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -50,8 +52,11 @@ textarea.inp{height:auto;padding:9px 12px;line-height:1.5;resize:none}
 .boot-card b{font-size:19px}
 .app{position:fixed;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr)}
 .top{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--rule)}
-.brand{font-weight:800;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
-.brand span{font-weight:500;color:var(--ink-2)}
+.brand{display:flex;align-items:center;gap:12px;white-space:nowrap}
+/* logo dùng chung file /logo.svg, tô màu bằng mask để đổi theo giao diện sáng, tối */
+.brand .logo{display:block;height:22px;aspect-ratio:756/173;background:var(--brand);-webkit-mask:url(/logo.svg) center/contain no-repeat;mask:url(/logo.svg) center/contain no-repeat}
+.brand span{position:relative;padding-left:12px;font-size:14px;font-weight:600;line-height:1;color:var(--ink-2)}
+.brand span::before{content:"";position:absolute;left:0;top:50%;width:1px;height:16px;transform:translateY(-50%);background:var(--field,#b3bbcc)}
 .ttl{display:flex;flex-direction:column;min-width:0}
 .ttl b{font-size:16.5px;line-height:1.3;display:flex;align-items:center;gap:8px}
 .ttl .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -315,7 +320,7 @@ function Player({data, setData, toast}){
   const mineDec = data.dec;
   return html`<div class="app">
     <header class="top">
-      <div class="brand">MagentX <span>duyệt video</span></div>
+      <div class="brand"><i class="logo" role="img" aria-label="MagentX"></i><span>Duyệt video</span></div>
       <div class="ttl"><b>${data.step.no} ${data.step.name} <span class="vchip">V${ver}</span></b><span class="meta">${data.project}</span></div>
       <span class="sp"></span>
     </header>

@@ -9,6 +9,7 @@ Web tĩnh trên Vercel, dữ liệu lưu ở Firebase Firestore. Không cần đ
 - `api/review.js`: API cho trang duyệt của khách (đọc/ghi qua Firestore REST, chỉ trả phần khách được xem)
 - `public/review.html`: trang duyệt video của khách, mở bằng link `/r/<dự án>/<mã link>`
 - `public/rv-core.js`: bộ tải sẵn video theo khúc, dùng chung cho player nội bộ và trang khách
+- `public/logo.svg`, `public/favicon.svg`: logo MagentX (vector) và icon trên tab trình duyệt
 - `vercel.json`: cấu hình deploy
 - `magentx-demo-offline.html`: bản demo cũ (dữ liệu lưu trong trình duyệt), giữ lại để tham khảo
 
