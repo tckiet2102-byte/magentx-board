@@ -1,4 +1,11 @@
 {
   "outputDirectory": "public",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/r/:pid/:tok", "destination": "/review.html" }
+  ],
+  "headers": [
+    { "source": "/r/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/rv-core.js", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] }
+  ]
 }

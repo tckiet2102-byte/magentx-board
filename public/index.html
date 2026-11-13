@@ -609,7 +609,22 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .rv-ctl{display:flex;flex-direction:column;gap:10px;padding:8px 16px 14px;background:var(--surface);border-top:1px solid var(--rule)}
 .rv-tl{position:relative;height:28px;cursor:pointer;touch-action:none}
 .rv-tl::before{content:"";position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--tint)}
+.rv-tl .buf{position:absolute;left:0;top:12px;height:4px;border-radius:2px;background:#4c5672}
 .rv-tl .fill{position:absolute;left:0;top:12px;height:4px;border-radius:2px;background:var(--action)}
+.rv-tl b.cl{border-radius:3px}
+.rv-load{font-size:13px;color:var(--ink-2)}
+.rv-client{font-weight:700;color:var(--wait)}
+.rv-cdec{margin:0 16px 10px;padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.rv-cdec.ok{background:var(--ok-soft)}
+.rv-cdec.bad{background:var(--bad-soft)}
+.rv-share-wrap{position:relative}
+.rv-share{position:absolute;right:0;top:calc(100% + 8px);z-index:5;width:min(440px,calc(100vw - 24px));max-height:min(70vh,560px);overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--field);border-radius:14px;box-shadow:var(--shadow)}
+.rv-share-h{display:flex;align-items:center;justify-content:space-between}
+.rv-share-list{display:flex;flex-direction:column;gap:10px}
+.rv-sl{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--rule);border-radius:12px}
+.rv-sl.dead{opacity:.65}
+.rv-sl-top{display:flex;align-items:center;gap:8px}
+.rv-sl .inp{font-size:12.5px}
 .rv-tl .head{position:absolute;top:4px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;background:#fff}
 .rv-tl b{position:absolute;top:8px;width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid var(--surface);background:var(--d-review);pointer-events:none}
 .rv-tl b.ok{background:var(--d-done)}
@@ -656,6 +671,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
   .rv-compose{flex-wrap:wrap}
   .rv-compose .btn{flex:1 1 100%}
   .rv-title .meta{display:none}
+  .rv-share{position:fixed;left:12px;right:12px;top:64px;width:auto}
 }
 /* modal, popover, toast */
 .scrim{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow-y:auto}
@@ -759,6 +775,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 </script>
 <script>!function(n,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):n.htm=e()}(this,function(){var n=function(e,t,u,s){var r;t[0]=0;for(var p=1;p<t.length;p++){var h=t[p++],o=t[p]?(t[0]|=h?1:2,u[t[p++]]):t[++p];3===h?s[0]=o:4===h?s[1]=Object.assign(s[1]||{},o):5===h?(s[1]=s[1]||{})[t[++p]]=o:6===h?s[1][t[++p]]+=o+"":h?(r=e.apply(o,n(e,o,u,["",null])),s.push(r),o[0]?t[0]|=2:(t[p-2]=0,t[p]=r)):s.push(o)}return s},e=new Map;return function(t){var u=e.get(this);return u||(u=new Map,e.set(this,u)),(u=n(this,u.get(t)||(u.set(t,u=function(n){for(var e,t,u=1,s="",r="",p=[0],h=function(n){1===u&&(n||(s=s.replace(/^\s*\n\s*|\s*\n\s*$/g,"")))?p.push(0,n,s):3===u&&(n||s)?(p.push(3,n,s),u=2):2===u&&"..."===s&&n?p.push(4,n,0):2===u&&s&&!n?p.push(5,0,!0,s):u>=5&&((s||!n&&5===u)&&(p.push(u,0,s,t),u=6),n&&(p.push(u,n,0,t),u=6)),s=""},o=0;o<n.length;o++){o&&(1===u&&h(),h(o));for(var f=0;f<n[o].length;f++)e=n[o][f],1===u?"<"===e?(h(),p=[p],u=3):s+=e:4===u?"--"===s&&">"===e?(u=1,s=""):s=e+s[0]:r?e===r?r="":s+=e:'"'===e||"'"===e?r=e:">"===e?(h(),u=1):u&&("="===e?(u=5,t=s,s=""):"/"===e&&(u<5||">"===n[o][f+1])?(h(),3===u&&(p=p[0]),u=p,(p=p[0]).push(2,0,u),u=0):" "===e||"\t"===e||"\n"===e||"\r"===e?(h(),u=2):s+=e),3===u&&"!--"===s&&(u=4,p=p[0])}return h(),p}(t)),u),arguments,[])).length>1?u:u[0]}});
 </script>
+<script src="/rv-core.js"></script>
 <script>
 (function(){
 'use strict';
@@ -909,19 +926,24 @@ async function boot(){
   if(S.canWrite === false) S.readOnly = true;
   if(!db){ S.phase = 'nodb'; emit(); return; }
   S.db = db; S.phase = 'ready'; emit();
-  const timer = setTimeout(() => { if(!S.got.projects || !S.got.staff){ S.stale = true; emit(); } }, 10000);
+  let timer = null;
   const settle = () => { if(S.got.projects && S.got.staff && S.got.accounts){ clearTimeout(timer); S.stale = false; } };
-  const onErr = k => e => { S.got[k] = true; S.firstData = true; if(e && e.code === 'revoked') S.readOnly = true; else toast('Không đọc được dữ liệu ('+(e && e.code || 'lỗi')+').', 'bad'); settle(); emit(); };
-  ['staff','members','accounts','projects'].forEach(name => {
-    db.collection(name).onSnapshot(snap => {
-      const o = {}; snap.docs.forEach(d => { if(d.exists) o[d.id] = d.data(); });
-      S[name] = o;
-      if(!snap.metadata.fromCache) S.got[name] = true;
-      if(name === 'projects') S.firstData = true;
-      settle(); emit();
-    }, onErr(name));
-  });
+  const onErr = k => e => { S.got[k] = true; if(k === 'projects') S.firstData = true; if(e && e.code === 'revoked') S.readOnly = true; else toast('Không đọc được dữ liệu ('+(e && e.code || 'lỗi')+').', 'bad'); settle(); emit(); };
+  const sub = name => db.collection(name).onSnapshot(snap => {
+    const o = {}; snap.docs.forEach(d => { if(d.exists) o[d.id] = d.data(); });
+    S[name] = o;
+    if(!snap.metadata.fromCache) S.got[name] = true;
+    if(name === 'projects') S.firstData = true;
+    settle(); emit();
+  }, onErr(name));
+  ['staff','members'].forEach(sub);
   db.doc('config/main').onSnapshot(d => { S.config = d.exists ? d.data() : null; S.configExists = !!d.exists; if(!d.metadata.fromCache) S.got.config = true; emit(); }, onErr('config'));
+  S.startPrivate = () => {
+    if(S.privOn) return; S.privOn = true;
+    timer = setTimeout(() => { if(!S.got.projects || !S.got.staff){ S.stale = true; emit(); } }, 10000);
+    ['accounts','projects'].forEach(sub);
+  };
+  if(meId()) S.startPrivate();
 }
 
 const wq = {};
@@ -970,6 +992,7 @@ async function setPinFor(sid, pin){
 function login(sid, viaHao){
   const p = S.staff[sid] && S.staff[sid].pin;
   S.localMe = sid; sessSet(sid, p ? p.at : 0); lsSet('mx.viewonly', null); S.idAsked = true;
+  if(S.startPrivate) S.startPrivate();
   closeModal();
   const nm = (S.staff[sid] && S.staff[sid].name) || sid;
   toast(viaHao ? 'Hào đã vào tài khoản '+nm : 'Xin chào '+nm);
@@ -1043,6 +1066,12 @@ function enrich(id, raw, t, cfg, reviewers){
   p.used = sum(p.bookings.map(b => b.used));
   const gr = raw.gates || {};
   p.gates = (p.tier ? TIERS[p.tier].gates : []).map(gid => Object.assign({}, GATES[gid], gr[gid] || {}, {id: gid, na: gid === 'g0' && raw.useCase === 'INT'}));
+  const shr = raw.shares || {};
+  p.shareList = Object.keys(shr).filter(k => shr[k] && shr[k].sid).map(k => Object.assign({tok: k}, shr[k])).sort((a, b) => (b.at || 0) - (a.at || 0));
+  p.steps.forEach(st => {
+    st.shares = p.shareList.filter(x => x.sid === st.id);
+    st.cdec = st.shares.filter(x => x.dec && x.dec.at).map(x => Object.assign({tok: x.tok}, x.dec)).sort((a, b) => b.at - a.at)[0] || null;
+  });
   p.revs = Object.keys(raw.revs||{}).filter(k => raw.revs[k]).map(k => Object.assign({rid:k}, raw.revs[k])).sort((a,b) => (a.at||0) - (b.at||0));
   p.revAllowed = (raw.revAllowed === 0 || raw.revAllowed) ? +raw.revAllowed : null;
   p.pay = raw.useCase === 'EXT' && (p.tier === 'A' || (+raw.value||0) >= cfg.payMin);
@@ -1135,6 +1164,7 @@ function finishAlerts(p, codeCount){
   if(p.revAllowed !== null && p.revs.length > p.revAllowed) al.push({tone:'bad', text:'Vòng sửa '+p.revs.length+'/'+p.revAllowed+', vượt số vòng trong HĐ'});
   const lateN = p.steps.filter(s => s.late).length;
   if(lateN && !p.closed) al.push({tone:'warn', text: lateN+' bước trễ lịch'});
+  p.steps.forEach(st => { if(st.cdec && !st.cdec.ok && (+st.cdec.ver || 0) === st.ver) al.push({tone:'warn', text:'Khách yêu cầu sửa '+st.def.no+' '+st.def.name+' '+vTag(st.ver)}); });
   const fixN = p.steps.filter(s => s.state === 'fix').length;
   if(fixN) al.push({tone:'warn', text: fixN+' bước đang cần sửa'});
   const seen = {}; p.alerts = al.filter(a => seen[a.text] ? false : (seen[a.text] = true));
@@ -1644,7 +1674,7 @@ function IdentityModal({D, me}){
     title = 'Đăng nhập';
     body = html`<p class="meta">Chọn tên của bạn. Lần đầu bạn sẽ tạo mã PIN 4 số, lần sau chỉ cần gõ 4 số đó.</p>
       ${list.length ? cards : html`<p class="meta">Chưa có nhân sự.</p>`}
-      <div class="form-foot"><button type="button" class="btn" onClick=${viewOnly}>Chỉ xem</button><span class="sp"></span></div>`;
+      <p class="meta">Bảng chỉ dành cho nhân sự MagentX. Khách xem video qua link riêng mà team gửi.</p>`;
   }
   return html`<${Modal} title=${title} onClose=${closeModal}>${body}<//>`;
 }
@@ -1977,6 +2007,7 @@ function StepBody({p, st, D, me}){
       ${st.link && !linkOpen ? (vurl
         ? html`<div class="linkline"><button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${vnCur.length ? vnCur.length+' ghi chú trên '+vTag(st.ver)+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : vnOld ? 'Chưa có ghi chú trên '+vTag(st.ver)+', '+vnOld+' ghi chú ở bản cũ' : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>${w && !canReview(st.link) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${true}/>` : null}</div>`
         : (w && VIDEO_STEPS[st.id] ? html`<div class="linkline"><${VideoLinkAdd} p=${p} st=${st}/></div>` : null)) : null}
+      ${st.cdec ? html`<div class="linkline cdec"><span class=${'st sm '+((+st.cdec.ver || 0) !== st.ver ? 'todo' : st.cdec.ok ? 'done' : 'fix')}>Khách ${st.cdec.name} ${st.cdec.ok ? 'đồng ý' : 'yêu cầu sửa'} ${vTag(st.cdec.ver)}</span><span class="meta">${fT(st.cdec.at)}${st.cdec.text ? ': '+st.cdec.text : ''}</span></div>` : null}
       ${st.prev.length ? html`<div class="vprev"><span class="meta">Bản trước</span>${st.prev.map(x => html`<span key=${x.v} class="vprev-i">${x.h && safeUrl(x.h.link) ? html`<a href=${x.h.link} target="_blank" rel="noopener" title=${'Mở link của '+vTag(x.v)}><${VChip} v=${x.v} tone="old" sm=${true}/></a>` : html`<${VChip} v=${x.v} tone="old" sm=${true}/>`}<span class="meta">${[x.h && x.h.at ? 'nộp '+fT(x.h.at) : '', x.fx ? nameOf(D, x.fx.by)+' yêu cầu sửa '+fT(x.fx.at) : ''].filter(Boolean).join(', ') || 'đã thay bằng '+vTag(x.v + 1)}</span></span>`)}</div>` : null}
     </div></div>
     <div class="sb-row"><span class="sb-lab">Duyệt</span><div class="sb-val">
@@ -2524,13 +2555,54 @@ function VideoLinkAdd({p, st, has}){
   if(!open) return html`<button type="button" class="btn xs" onClick=${() => setOpen(true)}><${Ic} n="link" s=${14}/>${has ? 'Đổi link video' : 'Thêm link file video để duyệt trên player'}</button>`;
   return html`<div class="slot"><input class="inp sm" type="url" placeholder="Link file video trên Drive: drive.google.com/file/d/…" value=${v} aria-label="Link file video" onInput=${e => setV(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') save(); }}/><button type="button" class="btn sm primary" disabled=${!v.trim()} onClick=${save}>Lưu</button><button type="button" class="btn sm" onClick=${() => { setOpen(false); setV(''); }}>Hủy</button></div>`;
 }
+const SHARE_DAYS = 30;
+function newToken(){ const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', a = crypto.getRandomValues(new Uint8Array(24)); let t = A[a[0] % 52]; for(let i = 1; i < 24; i++) t += A[a[i] % 62]; return t; }
+function shareUrl(p, tok){ return location.origin+'/r/'+encodeURIComponent(p.id)+'/'+tok; }
+function SharePanel({p, st, link, me, onClose}){
+  const ref = useRef(null);
+  useEffect(() => {
+    const d = e => { if(ref.current && !ref.current.contains(e.target) && !(e.target.closest && e.target.closest('.rv-share-btn'))) onClose(); };
+    document.addEventListener('mousedown', d); return () => document.removeEventListener('mousedown', d);
+  }, []);
+  const now = Date.now();
+  const put = (tok, o) => W.project(p.id, {shares: {[tok]: o}});
+  const create = () => {
+    const tok = newToken();
+    put(tok, {sid: st.id, sno: st.def.no, sname: st.def.name, ver: st.ver, url: link, on: true, by: me || null, at: now, exp: now + SHARE_DAYS * 864e5});
+    copyText(shareUrl(p, tok));
+  };
+  const list = st.shares;
+  return html`<div class="rv-share" ref=${ref} role="dialog" aria-label="Link gửi khách">
+    <div class="rv-share-h"><b>Link gửi khách</b><button type="button" class="icon-btn sm bare" aria-label="Đóng" onClick=${onClose}><${Ic} n="x" s=${16}/></button></div>
+    <p class="meta">Khách mở link là xem được video, tua, vẽ và gửi góp ý theo từng khung hình, không cần đăng nhập. Khách không thấy dữ liệu nào khác của MagentX. Góp ý của khách hiện ngay trong player này.</p>
+    ${list.length ? html`<div class="rv-share-list">${list.map(x => {
+      const exp = x.exp && x.exp < now, off = x.on === false, live = !exp && !off, url = shareUrl(p, x.tok);
+      return html`<div key=${x.tok} class=${'rv-sl'+(live ? '' : ' dead')}>
+        <div class="rv-sl-top"><${VChip} v=${x.ver} tone=${live ? ((+x.ver || 0) === st.ver ? st.state : 'old') : 'old'} sm=${true}/><span class="meta">${off ? 'Đã tắt' : exp ? 'Hết hạn '+fD(ymd(new Date(x.exp))) : 'Mở đến '+fD(ymd(new Date(x.exp)))}, tạo ${fT(x.at)}</span></div>
+        <input class="inp sm code" readonly value=${url} aria-label="Link gửi khách" onFocus=${e => e.target.select()}/>
+        ${x.dec && x.dec.at ? html`<span class=${'st sm '+((+x.dec.ver || 0) !== (+x.ver || 0) ? 'todo' : x.dec.ok ? 'done' : 'fix')}>Khách ${x.dec.name} ${x.dec.ok ? 'đồng ý' : 'yêu cầu sửa'} ${vTag(x.dec.ver)}</span>` : null}
+        <div class="acts">
+          ${live ? html`<button type="button" class="btn xs" onClick=${() => copyText(url)}><${Ic} n="copy" s=${14}/>Copy link</button>` : null}
+          ${(live || exp) && (+x.ver || 0) < st.ver ? html`<button type="button" class="btn xs" onClick=${() => { put(x.tok, {ver: st.ver, url: link, on: true, exp: now + SHARE_DAYS * 864e5}); toast('Link này giờ cho khách xem '+vTag(st.ver)); }}>Đưa ${vTag(st.ver)} lên link này</button>` : null}
+          ${exp && (+x.ver || 0) === st.ver ? html`<button type="button" class="btn xs" onClick=${() => { put(x.tok, {on: true, exp: now + SHARE_DAYS * 864e5}); toast('Đã gia hạn link thêm '+SHARE_DAYS+' ngày'); }}>Gia hạn ${SHARE_DAYS} ngày</button>` : null}
+          ${off ? html`<button type="button" class="btn xs" onClick=${() => { put(x.tok, {on: true}); toast('Đã mở lại link'); }}>Mở lại</button>` : html`<button type="button" class="btn xs danger" onClick=${() => { put(x.tok, {on: false}); toast('Đã tắt link, khách không mở được nữa'); }}>Tắt link</button>`}
+        </div>
+      </div>`; })}</div>` : null}
+    <div><button type="button" class="btn sm primary" onClick=${create}><${Ic} n="plus" s=${16}/>Tạo link mới cho ${vTag(st.ver)}</button></div>
+    <p class="meta">Link mở trong ${SHARE_DAYS} ngày. Khi có bản mới, bấm "Đưa V… lên link này" để khách xem bản mới trên cùng link.</p>
+  </div>`;
+}
 function ReviewPlayer({D, pid, sid, me}){
   const p = D.pmap[pid], st = p ? p.steps.find(x => x.id === sid) : null;
   const link = st ? videoLinkOf(st) : '';
   const did = driveId(link), src = reviewSrc(link);
   const vref = useRef(null), cref = useRef(null), stageRef = useRef(null), tlRef = useRef(null), taRef = useRef(null);
-  const drawing = useRef(null), scrub = useRef(null);
+  const drawing = useRef(null), scrub = useRef(null), restore = useRef(null), retries = useRef(0);
   const [failed, setFailed] = useState(false);
+  const [blobUrl, setBlobUrl] = useState('');
+  const [load, setLoad] = useState({s: 'idle', p: 0, total: 0});
+  const [waiting, setWaiting] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [meta, setMeta] = useState(null);
   const [cur, setCur] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -2554,6 +2626,18 @@ function ReviewPlayer({D, pid, sid, me}){
   const tc = t => tcOf(t, fps);
 
   useEffect(() => { const o = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = o; }; }, []);
+  /* tải sẵn cả file về máy: tua tức thì, không phụ thuộc mạng */
+  useEffect(() => {
+    if(!did || failed || !window.RV) return;
+    const job = RV.preload(did, {key: 'v'+(st ? st.ver : 0), onProgress: (l, t) => setLoad({s: 'loading', p: l, total: t})});
+    let url = '';
+    job.promise.then(b => {
+      url = URL.createObjectURL(b);
+      const v = vref.current; restore.current = v ? {t: v.currentTime, play: !v.paused} : null;
+      setBlobUrl(url); setLoad(x => ({s: 'done', p: x.total || b.size, total: x.total || b.size}));
+    }, e => setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})));
+    return () => { job.cancel(); if(url) URL.revokeObjectURL(url); };
+  }, [did, failed]);
   /* không đọc được video trong 25 giây thì chuyển sang trình xem của Drive */
   useEffect(() => { if(mode !== 'video' || meta) return; const t = setTimeout(() => setFailed(true), 25000); return () => clearTimeout(t); }, [mode, !!meta, src]);
   useEffect(() => {
@@ -2647,11 +2731,12 @@ function ReviewPlayer({D, pid, sid, me}){
   const iApproved = myReview && st.approvedBy.indexOf(me) >= 0;
   const dur = meta ? meta.dur : 0;
   const pct = t => (dur ? Math.max(0, Math.min(100, t / dur * 100)) : 0)+'%';
-  const canDel = n => w && (n.by === me || me === 'hao');
+  const canDel = n => w && (n.src === 'client' ? me === 'hao' : (n.by === me || me === 'hao'));
   return html`<div class="rv" role="dialog" aria-modal="true" aria-label=${'Duyệt video: '+st.def.name}>
     <header class="rv-h">
       <div class="rv-title"><b>${st.def.no} ${st.def.name} <${VChip} v=${st.ver} tone=${st.state}/></b><span class="meta">${p.name}</span></div>
       <span class="sp"></span>
+      ${w && link ? html`<div class="rv-share-wrap"><button type="button" class=${'btn sm rv-share-btn'+(shareOpen ? ' on' : '')} aria-expanded=${shareOpen} onClick=${() => setShareOpen(!shareOpen)}><${Ic} n="send" s=${16}/>Gửi khách${st.shares.length ? ' ('+st.shares.filter(x => x.on !== false && !(x.exp && x.exp < Date.now())).length+')' : ''}</button>${shareOpen ? html`<${SharePanel} p=${p} st=${st} link=${link} me=${me} onClose=${() => setShareOpen(false)}/>` : null}</div>` : null}
       <a class="btn sm" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
       <button type="button" class="btn sm" onClick=${closeModal}><${Ic} n="x" s=${16}/>Đóng</button>
     </header>
@@ -2660,22 +2745,23 @@ function ReviewPlayer({D, pid, sid, me}){
         <div class="rv-stage" ref=${stageRef}>
           ${mode === 'none' ? html`<p class="rv-msg">Không phát được link này. Player cần link tới file video trên Google Drive.</p>` : html`<div class="rv-fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'}>
             ${mode === 'video'
-              ? html`<video ref=${vref} src=${src} playsinline preload="auto" muted=${muted}
-                  onLoadedMetadata=${e => { const v = e.target; setMeta({dur: v.duration || 0, w: v.videoWidth, h: v.videoHeight}); }}
+              ? html`<video ref=${vref} src=${blobUrl || src} playsinline preload="auto" muted=${muted}
+                  onLoadedMetadata=${e => { const v = e.target; setMeta({dur: v.duration || 0, w: v.videoWidth, h: v.videoHeight}); const r = restore.current; restore.current = null; if(r){ v.currentTime = r.t; v.playbackRate = rate; if(r.play) v.play().catch(() => {}); } }}
+                  onWaiting=${() => setWaiting(true)} onPlaying=${() => { setWaiting(false); retries.current = 0; }} onCanPlay=${() => setWaiting(false)}
                   onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
-                  onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => setCur(e.target.currentTime)}
-                  onError=${() => { if(!meta) setFailed(true); else toast('Mất kết nối tới video. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
+                  onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => { setCur(e.target.currentTime); setWaiting(false); }}
+                  onError=${() => { const v = vref.current; if(!meta){ if(!blobUrl) setFailed(true); return; } if(retries.current < 4 && v){ retries.current++; restore.current = {t: v.currentTime || cur, play: !v.paused}; const s0 = v.src; v.removeAttribute('src'); v.load(); setTimeout(() => { v.src = s0; v.load(); }, 600 * retries.current); } else toast('Mạng đang chập chờn. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
                   onClick=${() => { if(!tool) toggle(); }}></video>`
               : html`<iframe src=${'https://drive.google.com/file/d/'+did+'/preview'} allow="autoplay; fullscreen" title="Video trên Google Drive"></iframe>`}
             <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
-            ${mode === 'video' && !meta ? html`<p class="rv-msg over">Đang tải video từ Google Drive…</p>` : null}
+            ${mode === 'video' && !meta ? html`<p class="rv-msg over">Đang tải video từ Google Drive…</p>` : mode === 'video' && waiting ? html`<p class="rv-msg over">Đang tải…</p>` : null}
           </div>`}
         </div>
         <div class="rv-ctl">
           ${mode === 'video' ? html`
             <div class="rv-tl" ref=${tlRef} role="slider" tabindex="0" aria-label="Thanh thời gian" aria-valuemin="0" aria-valuemax=${Math.round(dur)} aria-valuenow=${Math.round(cur)} aria-valuetext=${tc(cur)} onPointerDown=${tDown} onPointerMove=${tMove} onPointerUp=${tUp} onPointerCancel=${tUp}>
-              <i class="fill" style=${'width:'+pct(cur)}></i>
-              ${notes.map(n => html`<b key=${n.nid} class=${(n.ok ? 'ok' : '')+((+n.ver || 0) !== st.ver ? ' old' : '')+(act && act.nid === n.nid ? ' sel' : '')} style=${'left:'+pct(n.t)}></b>`)}
+              ${load.s === 'done' ? html`<i class="buf" style="width:100%"></i>` : null}<i class="fill" style=${'width:'+pct(cur)}></i>
+              ${notes.map(n => html`<b key=${n.nid} class=${(n.ok ? 'ok' : '')+(n.src === 'client' ? ' cl' : '')+((+n.ver || 0) !== st.ver ? ' old' : '')+(act && act.nid === n.nid ? ' sel' : '')} style=${'left:'+pct(n.t)}></b>`)}
               <i class="head" style=${'left:'+pct(cur)}></i>
             </div>
             <div class="rv-bar">
@@ -2687,7 +2773,8 @@ function ReviewPlayer({D, pid, sid, me}){
               <select class="sel sm auto" value=${rate} aria-label="Tốc độ phát" onChange=${e => { const r = +e.target.value; setRate(r); if(vref.current) vref.current.playbackRate = r; }}>${[0.25, 0.5, 1, 1.5, 2].map(r => html`<option key=${r} value=${r}>${r}×</option>`)}</select>
               <select class="sel sm auto" value=${fps} aria-label="Số khung hình mỗi giây" title="Số khung hình mỗi giây của video" onChange=${e => { const f = +e.target.value; setFps(f); lsSet('mx.fps', String(f)); }}>${RV_FPS.map(f => html`<option key=${f} value=${f}>${f} fps</option>`)}</select>
               <button type="button" class="icon-btn sm" onClick=${() => setMuted(!muted)} title=${muted ? 'Bật tiếng' : 'Tắt tiếng'} aria-label=${muted ? 'Bật tiếng' : 'Tắt tiếng'}><${Ic} n=${muted ? 'mute' : 'vol'} s=${16}/></button>
-            </div>`
+            </div>
+            ${load.s !== 'idle' ? html`<div class="rv-load" aria-live="polite">${load.s === 'done' ? 'Video đã tải xong, tua tức thì.' : load.s === 'loading' && load.total ? 'Đang tải sẵn video '+Math.floor(load.p / load.total * 100)+'% ('+RV.mb(load.p)+' / '+RV.mb(load.total)+'). Tua sẽ mượt hơn khi tải xong.' : load.s === 'big' ? 'File lớn ('+RV.mb(load.total)+'), video phát trực tiếp.' : load.s === 'stream' ? 'Đang phát trực tiếp.' : ''}</div>` : null}`
             : mode === 'frame' ? html`<p class="rv-note">Không phát trực tiếp được file này nên đang dùng trình xem của Google Drive: không tua theo khung hình được, thời điểm ghi chú phải nhập tay. Để dùng đủ tính năng, file cần là MP4 (H.264) và chia sẻ “Bất kỳ ai có đường liên kết”. <button type="button" class="btn xs" onClick=${() => { setMeta(null); setFailed(false); }}>Thử phát lại</button></p>` : null}
           ${w && mode !== 'none' ? html`
             <div class="rv-bar">
@@ -2708,11 +2795,12 @@ function ReviewPlayer({D, pid, sid, me}){
       </div>
       <aside class="rv-side" aria-label="Ghi chú trên video">
         <div class="rv-side-h"><h2>Ghi chú <span class="faint">${notes.length}</span></h2>${openN ? html`<span class="st sm review">${openN} chưa xử lý</span>` : (notes.length ? html`<span class="st sm done">Đã xử lý hết</span>` : null)}</div>
+        ${st.cdec && (+st.cdec.ver || 0) === st.ver ? html`<div class=${'rv-cdec '+(st.cdec.ok ? 'ok' : 'bad')}><b>Khách ${st.cdec.name} ${st.cdec.ok ? 'đồng ý' : 'yêu cầu sửa'} ${vTag(st.cdec.ver)}</b><span class="meta">${fT(st.cdec.at)}</span>${st.cdec.text ? html`<span>${st.cdec.text}</span>` : null}</div>` : null}
         ${older.length ? html`<label class="check rv-old"><input type="checkbox" checked=${old} onChange=${e => setOld(e.target.checked)}/>Hiện cả ${older.length} ghi chú của bản cũ</label>` : null}
         <div class="rv-list">
           ${notes.length ? notes.map(n => html`<div key=${n.nid} class=${'rv-n'+(act && act.nid === n.nid ? ' on' : '')+(n.ok ? ' ok' : '')}>
             <button type="button" class="rv-n-main" onClick=${() => jump(n)} aria-label=${'Tới '+tc(n.t)+': '+(n.text || 'nét vẽ')}>
-              <span class="rv-n-top"><b class="rv-n-tc">${tc(n.t)}</b><span>${nameOf(D, n.by)}</span>${(+n.ver || 0) !== st.ver ? html`<${VChip} v=${n.ver} tone="old" sm=${true}/>` : null}${n.d && n.d.length ? html`<span class="rv-tag draw"><${Ic} n="edit" s=${12}/>có vẽ</span>` : null}</span>
+              <span class="rv-n-top"><b class="rv-n-tc">${tc(n.t)}</b>${n.src === 'client' ? html`<span class="rv-client">Khách: ${n.cn || 'chưa ghi tên'}</span>` : html`<span>${nameOf(D, n.by)}</span>`}${(+n.ver || 0) !== st.ver ? html`<${VChip} v=${n.ver} tone="old" sm=${true}/>` : null}${n.d && n.d.length ? html`<span class="rv-tag draw"><${Ic} n="edit" s=${12}/>có vẽ</span>` : null}</span>
               <span class="rv-n-text">${n.text || 'Xem nét vẽ trên khung hình.'}</span>
             </button>
             <div class="rv-n-act"><label class="check"><input type="checkbox" checked=${!!n.ok} disabled=${!w} onChange=${e => patchNote(n.nid, {ok: e.target.checked, okBy: me || null, okAt: Date.now()})}/>Đã sửa${n.ok && n.okBy ? html`<span class="meta">, ${nameOf(D, n.okBy)}</span>` : null}</label>${canDel(n) ? html`<button type="button" class="icon-btn sm bare" title="Xóa ghi chú" aria-label=${'Xóa ghi chú tại '+tc(n.t)} onClick=${() => { patchNote(n.nid, null); if(sel === n.nid) setSel(''); }}><${Ic} n="trash" s=${15}/></button>` : null}</div>
@@ -2950,13 +3038,14 @@ function App(){
       if(!ss || ss.staff !== S.localMe) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.');
       else if(S.got.staff){ const st = S.staff[S.localMe]; if(!st || !hasPin(S.localMe) || (st.pin.at || 0) !== ss.pv) logout('Mã PIN của tài khoản này vừa được đổi hoặc đặt lại. Đăng nhập lại.'); }
     }
-    if(S.phase === 'ready' && S.got.staff && !meId() && !S.idAsked && !skipActive() && D.staffList.length && !S.modal){ S.idAsked = true; openModal({type: 'identity'}); }
+    if(S.phase === 'ready' && S.got.staff && !meId() && !S.idAsked && D.staffList.length && !S.modal){ S.idAsked = true; openModal({type: 'identity'}); }
   });
   useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
   const free = route.view === 'dat-ten';
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;
+  else if(!free && S.phase === 'ready' && !me) view = html`<div class="boot"><div class="boot-card"><b>Đăng nhập để xem bảng</b><span>Chọn tên của bạn và nhập mã PIN 4 số.</span><button type="button" class="btn primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div></div>`;
   else if(!free && (S.phase === 'boot' || !S.firstData)) view = html`<div class="boot"><div class="boot-card"><b>Đang tải dữ liệu phòng…</b><span>Lịch, dự án và credit Higgsfield.</span></div></div>`;
   else if(route.view === 'du-an') view = html`<${ProjectsView} D=${D}/>`;
   else if(route.view === 'qc') view = html`<${QCView} D=${D} me=${me}/>`;
@@ -2969,7 +3058,7 @@ function App(){
     <${TopBar} D=${D} route=${route} me=${me}/>
     <main class="wrap">
       ${S.stale ? html`<div class="banner warn">Chưa tải được dữ liệu mới nhất, có thể đang mất kết nối. Những gì đang hiện có thể chưa cập nhật.</div>` : null}
-      ${S.phase === 'ready' && S.firstData && !me && !free && !S.readOnly ? html`<div class="banner login-banner"><span>Bạn đang xem, chưa đăng nhập. Đăng nhập để tạo dự án, nộp link, duyệt QC.</span><button type="button" class="btn sm primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div>` : null}
+      ${false ? html`<div class="banner login-banner"><span>Bạn đang xem, chưa đăng nhập. Đăng nhập để tạo dự án, nộp link, duyệt QC.</span><button type="button" class="btn sm primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div>` : null}
       ${S.readOnly && S.phase === 'ready' ? html`<div class="banner">Bạn đang ở chế độ chỉ xem. Database đang chặn quyền ghi, báo người quản lý bảng kiểm tra Firestore Rules.</div>` : null}
       ${view}
     </main>

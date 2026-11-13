@@ -6,6 +6,9 @@ Web tĩnh trên Vercel, dữ liệu lưu ở Firebase Firestore. Không cần đ
 - `public/index.html`: toàn bộ app
 - `firestore.rules`: quyền đọc/ghi database
 - `api/drive.js`: hàm trung chuyển video Google Drive cho player duyệt (chạy trên Vercel)
+- `api/review.js`: API cho trang duyệt của khách (đọc/ghi qua Firestore REST, chỉ trả phần khách được xem)
+- `public/review.html`: trang duyệt video của khách, mở bằng link `/r/<dự án>/<mã link>`
+- `public/rv-core.js`: bộ tải sẵn video theo khúc, dùng chung cho player nội bộ và trang khách
 - `vercel.json`: cấu hình deploy
 - `magentx-demo-offline.html`: bản demo cũ (dữ liệu lưu trong trình duyệt), giữ lại để tham khảo
 
@@ -33,7 +36,7 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 ## Đăng nhập bằng mã PIN
 - Mở web, chọn tên mình. Lần đầu: tạo mã PIN 4 số (nhập 2 lần). Lần sau: chỉ gõ 4 số.
 - Máy đã đăng nhập được giữ 24 giờ, hết hạn thì hỏi lại mã PIN. Bấm tên mình ở góc trên để **Đổi mã PIN** hoặc **Đăng xuất**.
-- Chưa đăng nhập thì chỉ xem được, không sửa được.
+- Chưa đăng nhập thì không xem được bảng (dự án và credit chỉ tải sau khi đăng nhập). Khách chỉ dùng link duyệt riêng.
 - Mã PIN của **Hào** vào được mọi tài khoản. Ai quên mã PIN thì Hào vào **Cài đặt › Nhân sự › Mã PIN › Đặt lại**, người đó tạo mã mới ở lần đăng nhập tới.
 - Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
 
@@ -52,6 +55,17 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Điều kiện: file chia sẻ **Bất kỳ ai có đường liên kết**, định dạng MP4 (H.264). Không đạt thì player chuyển sang trình xem của Google Drive, thời điểm ghi chú phải nhập tay.
 - Google chặn phát thẳng file Drive trên web khác, nên video đi qua `api/drive.js` trên Vercel. Băng thông tính vào gói Vercel (gói miễn phí 100 GB mỗi tháng), nên nộp bản xem nhẹ thay vì file master.
 - Ghi chú và nét vẽ lưu trong `projects/{id}.steps.{bước}.vn`. Phím tắt: Space phát/dừng, ← → từng khung hình, Shift + ← → 1 giây, D bật vẽ, N gõ ghi chú, Ctrl + Enter lưu.
+
+## Gửi link duyệt cho khách
+- Trong player, bấm **Gửi khách**, rồi **Tạo link mới cho V…**. Link tự copy, dạng `https://magentx-board.vercel.app/r/<dự án>/<mã>`.
+- Khách mở link không cần đăng nhập: xem video, tua từng khung hình, vẽ, gửi góp ý theo thời điểm, và bấm **Đồng ý bản này** hoặc **Cần sửa**. Khách chỉ thấy video, tên bước và góp ý của khách; không thấy dữ liệu nào khác.
+- Góp ý của khách hiện ngay trong player nội bộ với nhãn **Khách: tên**; team tick **Đã sửa** như ghi chú thường, khách thấy "MagentX đã sửa". Khách yêu cầu sửa thì dự án hiện cảnh báo trong **Cần xử lý**.
+- Link mở 30 ngày. Có bản mới thì bấm **Đưa V… lên link này** để khách xem bản mới trên cùng link. **Tắt link** khi không muốn khách mở nữa.
+- Mã link lưu ở `projects/{id}.shares.{mã}`; góp ý của khách nằm chung `steps.{bước}.vn` với `src: 'client'`.
+
+## Tốc độ phát video
+- Player (cả nội bộ và khách) vừa phát trực tiếp vừa tải sẵn cả file về máy theo khúc 8 MB, 3 khúc song song, mỗi khúc tự thử lại khi rớt mạng. Tải xong thì tua tức thì (khoảng 0,1 giây), không phụ thuộc mạng. File lớn hơn 900 MB (260 MB trên điện thoại) chỉ phát trực tiếp.
+- Mỗi lần Google Drive trả dữ liệu mất khoảng 1,5–2 giây, nên nộp bản xem nhẹ: MP4 H.264, 1080p khoảng 8–15 Mbps, bật **Fast Start / Web optimized** khi xuất để video bắt đầu phát nhanh hơn.
 
 ## Lưu ý
 - Mã PIN chặn việc chọn nhầm hoặc giả tên người khác trên giao diện. Database vẫn mở cho ai có link (xem `firestore.rules`), nên vẫn chỉ gửi link trong nội bộ.
