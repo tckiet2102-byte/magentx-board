@@ -2,7 +2,7 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/r/:pid/:tok", "destination": "/review.html" }
+    { "source": "/r/:pid/:tok", "destination": "/review" }
   ],
   "headers": [
     { "source": "/r/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
