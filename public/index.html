@@ -1040,8 +1040,6 @@ function cmpBooking(a, b){ return (a.date||'').localeCompare(b.date||'') || (a.n
 /* Số bản nộp của một bước hiện là V1, V2… */
 const vTag = n => 'V'+(+n || 0);
 function VChip({v, tone, sm}){ return html`<span class=${'vchip'+(tone ? ' '+tone : '')+(sm ? ' sm' : '')}>${vTag(v)}</span>`; }
-/* Người duyệt không bắt buộc: Hào mặc định, đổi được ở Cài đặt (staff.qcOpt). */
-function qcOptional(s){ return s && (s.qcOpt === true || s.qcOpt === false) ? s.qcOpt : !!(s && s.id === 'hao'); }
 function enrichStep(def, raw, t, reviewers){
   const st = Object.assign({}, raw, {id: def.id, def});
   st.who = Array.isArray(raw.who) ? raw.who.filter(Boolean) : [];
@@ -1049,20 +1047,19 @@ function enrichStep(def, raw, t, reviewers){
   const revIds = reviewers.map(r => r.id);
   st.qcBy = Array.isArray(raw.qcBy) ? raw.qcBy.filter(r => revIds.indexOf(r) >= 0) : revIds;
   const qc = raw.qc || {};
-  st.approvedBy = st.qcBy.filter(r => st.ver > 0 && qc[r] && qc[r].ok && (+qc[r].ver||0) === st.ver);
   st.fixOn = !!(st.ver > 0 && raw.fix && (+raw.fix.ver||0) === st.ver);
-  const optIds = reviewers.filter(r => r.opt).map(r => r.id);
-  st.mustBy = st.qcBy.filter(r => optIds.indexOf(r) < 0);
-  if(!st.mustBy.length) st.mustBy = st.qcBy.slice();
-  st.optBy = st.qcBy.filter(r => st.mustBy.indexOf(r) < 0);
-  st.waitBy = st.mustBy.filter(r => st.approvedBy.indexOf(r) < 0);
+  /* quyết định mới nhất thắng: lượt duyệt trước một yêu cầu sửa cùng bản thì không tính */
+  const fixAt = st.fixOn ? (+raw.fix.at || 0) : 0;
+  st.approvedBy = st.qcBy.filter(r => st.ver > 0 && qc[r] && qc[r].ok && (+qc[r].ver||0) === st.ver && (+qc[r].at||0) >= fixAt);
+  /* Một người trong danh sách duyệt (Hiếu hoặc Hào) duyệt bản hiện tại là bước xong */
+  st.waitBy = st.approvedBy.length ? [] : st.qcBy.slice();
   st.comments = Object.keys(raw.cm||{}).filter(k => raw.cm[k] && raw.cm[k].text).map(k => Object.assign({cid:k}, raw.cm[k])).sort((a,b) => (a.at||0) - (b.at||0));
   st.hist = raw.vh || {};
   st.prev = [];
   for(let v = st.ver - 1; v >= 1; v--) st.prev.push({v, h: st.hist['v'+v] || null, fx: st.comments.filter(c => c.kind === 'fix' && (+c.ver || 0) === v).slice(-1)[0] || null});
   st.vnotes = Object.keys(raw.vn||{}).filter(k => raw.vn[k] && typeof raw.vn[k].t === 'number').map(k => Object.assign({nid:k}, raw.vn[k])).sort((a,b) => (a.t - b.t) || ((a.at||0) - (b.at||0)));
   if(!raw.link) st.state = (raw.start && raw.start <= t) ? 'doing' : 'todo';
-  else if(!st.waitBy.length) st.state = 'done';
+  else if(st.approvedBy.length || !st.qcBy.length) st.state = 'done';
   else if(st.fixOn) st.state = 'fix';
   else st.state = 'review';
   st.late = st.state !== 'done' && !!raw.end && raw.end < t;
@@ -1217,7 +1214,7 @@ function derive(){
   ['buffer','nearFull','unloggedWarn','revDefault','payMin'].forEach(k => { cfg[k] = +cfg[k] || 0; });
   const staffList = Object.keys(S.staff).map(id => Object.assign({id}, S.staff[id])).sort((a,b) => (a.order||99) - (b.order||99) || String(a.name).localeCompare(String(b.name)));
   const staffMap = {}; staffList.forEach(s => { staffMap[s.id] = s; });
-  const reviewers = staffList.filter(s => s.qc && s.active !== false).map(s => Object.assign({}, s, {opt: qcOptional(s)}));
+  const reviewers = staffList.filter(s => s.qc && s.active !== false);
   const projects = Object.keys(S.projects).map(id => enrich(id, S.projects[id], t, cfg, reviewers));
   const pmap = {}; projects.forEach(p => { pmap[p.id] = p; });
   const codeCount = {}; projects.forEach(p => { if(p.code) codeCount[p.code] = (codeCount[p.code]||0) + 1; });
@@ -1232,7 +1229,7 @@ function derive(){
   const allSteps = [];
   projects.forEach(p => { if(p.status === 'cancelled') return; p.steps.forEach(st => allSteps.push({p, st})); });
   const qcPending = [];
-  allSteps.forEach(x => { if(!x.st.link || x.st.state === 'done' || x.st.state === 'fix') return; x.st.qcBy.forEach(r => { if(x.st.approvedBy.indexOf(r) < 0) qcPending.push({p:x.p, st:x.st, reviewer:r, opt: x.st.optBy.indexOf(r) >= 0}); }); });
+  allSteps.forEach(x => { if(!x.st.link || x.st.state === 'done' || x.st.state === 'fix') return; x.st.qcBy.forEach(r => { if(x.st.approvedBy.indexOf(r) < 0) qcPending.push({p:x.p, st:x.st, reviewer:r}); }); });
   qcPending.sort((a,b) => (a.st.subAt||0) - (b.st.subAt||0));
   return {t, cfg, staffList, staffMap, reviewers, projects, pmap, bookings, accounts, amap, allSteps, qcPending, activity: buildActivity(projects)};
 }
@@ -1241,7 +1238,7 @@ function isLead(D, me){ return !!(me && D.staffMap[me] && D.staffMap[me].lead); 
 function stepStatus(st, D){
   if(st.state === 'done') return {cls:'done', text:'Đã duyệt'};
   if(st.state === 'fix') return {cls:'fix', text:'Cần sửa'};
-  if(st.state === 'review') return {cls:'review', text:'Chờ '+st.waitBy.map(r => nameOf(D, r)).join(', ')+' duyệt'};
+  if(st.state === 'review') return {cls:'review', text:'Chờ '+st.waitBy.map(r => nameOf(D, r)).join(' hoặc ')+' duyệt'};
   if(st.state === 'doing') return {cls:'doing', text:'Đang làm'};
   return {cls:'todo', text:'Chưa tới'};
 }
@@ -1629,7 +1626,7 @@ function DateRange({start, end, onChange, labels}){
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
   const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['qc','Duyệt QC'],['credit','Credit Higgsfield'],['dat-ten','Đặt tên file']];
-  const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me && !q.opt)).length : 0;
+  const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
   const s = me && D.staffMap[me];
   return html`<header class="top"><div class="top-in">
@@ -1812,7 +1809,7 @@ function DayPop({pop, D, onClose}){
 }
 function AttnBar({D, me}){
   const isRev = !!(me && D.reviewers.some(r => r.id === me));
-  const qc = uniqSteps(D.qcPending.filter(q => !q.opt && (!isRev || q.reviewer === me))).length;
+  const qc = uniqSteps(D.qcPending.filter(q => !isRev || q.reviewer === me)).length;
   const open = D.projects.filter(p => !p.closed);
   const late = open.filter(p => p.late).length;
   const soon = open.filter(p => p.daysLeft !== null && p.daysLeft >= 0 && p.daysLeft <= 7).length;
@@ -1976,7 +1973,7 @@ function StepEditor({p, st, D}){
   return html`<div class="editor">
     <div class="field"><span class="lab">Người làm</span><div class="checks">${D.staffList.filter(s => s.active !== false || st.who.indexOf(s.id) >= 0).map(s => html`<label key=${s.id} class="check"><input type="checkbox" checked=${st.who.indexOf(s.id) >= 0} onChange=${e => toggle('who', s.id, e.target.checked)}/>${s.name}</label>`)}</div></div>
     <div class="field"><span class="lab">Thời gian</span><${DateRange} start=${st.start || ''} end=${st.end || ''} labels=${['Bắt đầu', 'Kết thúc']} onChange=${(a, b) => patch({start: a, end: b})}/></div>
-    <div class="field"><span class="lab">Người duyệt</span>${D.reviewers.length ? html`<div class="checks">${D.reviewers.map(r => html`<label key=${r.id} class="check"><input type="checkbox" checked=${st.qcBy.indexOf(r.id) >= 0} onChange=${e => toggle('qcBy', r.id, e.target.checked)}/>${r.name}${r.opt ? ' (không bắt buộc)' : ''}</label>`)}</div>` : html`<span class="meta">Chưa ai được đặt làm người duyệt. Đặt ở trang Cài đặt.</span>`}</div>
+    <div class="field"><span class="lab">Người duyệt</span>${D.reviewers.length ? html`<div class="checks">${D.reviewers.map(r => html`<label key=${r.id} class="check"><input type="checkbox" checked=${st.qcBy.indexOf(r.id) >= 0} onChange=${e => toggle('qcBy', r.id, e.target.checked)}/>${r.name}</label>`)}</div>` : html`<span class="meta">Chưa ai được đặt làm người duyệt. Đặt ở trang Cài đặt.</span>`}</div>
   </div>`;
 }
 /* Link Drive → {id, kind}; tên file/folder lấy qua /api/drive?meta=1, nhớ trong máy để không hỏi lại */
@@ -2110,11 +2107,10 @@ function StepBody({p, st, D, me}){
           ${w && (!vurl || !canReview(st.link)) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${!!vurl}/>` : null}
         </div>` : null}
       <div class="vc-sec"><span class="vc-lab">Duyệt nội bộ</span><div class="vc-val">
-        ${!st.qcBy.length ? html`<span class="meta">Bước này không cần duyệt.</span>` : st.qcBy.map(r => {
-          const ok = st.approvedBy.indexOf(r) >= 0, fx = st.fixOn && st.fix && st.fix.by === r, opt = st.optBy.indexOf(r) >= 0, q = (st.qc || {})[r];
-          return html`<div key=${r} class="qc-p"><span class=${'st sm '+(ok ? 'done' : fx ? 'fix' : opt ? 'todo' : 'review')}>${ok ? nameOf(D, r)+' đã duyệt' : fx ? nameOf(D, r)+' yêu cầu sửa' : opt ? nameOf(D, r)+' chưa duyệt' : 'Chờ '+nameOf(D, r)+' duyệt'}</span>${opt ? html`<span class="meta">(không bắt buộc)</span>` : null}${ok && q && q.at ? html`<span class="meta">${fT(q.at)}</span>` : null}
-            ${r === me && w ? (ok ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt ${curV}</button>`) : null}</div>`;
-        })}
+        ${!st.qcBy.length ? html`<span class="meta">Bước này không cần duyệt.</span>`
+          : st.state === 'done' ? st.approvedBy.map(r => { const q = (st.qc || {})[r]; return html`<div key=${r} class="qc-p"><span class="st sm done">${nameOf(D, r)} đã duyệt</span>${q && q.at ? html`<span class="meta">${fT(q.at)}</span>` : null}${r === me && w ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : null}</div>`; })
+          : html`<div class="qc-p"><span class=${'st sm '+(st.fixOn ? 'fix' : 'review')}>${st.fixOn && st.fix ? nameOf(D, st.fix.by)+' yêu cầu sửa' : 'Chờ '+st.qcBy.map(r => nameOf(D, r)).join(' hoặc ')+' duyệt'}</span>${me && w && st.qcBy.indexOf(me) >= 0 ? html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt ${curV}</button>` : null}</div>
+            ${st.qcBy.length > 1 ? html`<span class="hint">Một trong ${st.qcBy.length === 2 ? 'hai' : st.qcBy.length} người duyệt là xong.</span>` : null}`}
         ${!me && st.qcBy.length ? html`<span class="hint">Đăng nhập để duyệt.</span>` : null}
       </div></div>
       ${decCur || st.shares.length ? html`<div class="vc-sec"><span class="vc-lab">Khách</span><div class="vc-val">
@@ -2350,7 +2346,7 @@ function ProjectDetail({D, id, me}){
 
 /* ---------- QC view ---------- */
 function QCCard({q, D, me}){
-  const st = q.st, p = q.p; const mine = me === q.reviewer && canW();
+  const st = q.st, p = q.p; const mine = !!me && st.qcBy.indexOf(me) >= 0 && canW();
   const approve = () => { W.project(p.id, {steps: {[st.id]: {qc: {[me]: {ok: true, ver: st.ver, at: Date.now(), uid: S.uid || null}}}}}); toast('Đã duyệt '+st.def.no+' '+st.def.name+', '+vTag(st.ver)); };
   return html`<article class="qcard">
     <a class="pn2" href=${'#job-'+p.id} onClick=${e => { e.preventDefault(); openJob(p.id, st.id); }}>${p.name}</a>
@@ -2361,14 +2357,15 @@ function QCCard({q, D, me}){
 function QCView({D, me}){
   const isRev = !!(me && D.reviewers.some(r => r.id === me));
   const [scope, setScope] = useState(isRev ? 'mine' : 'all');
-  const cols = D.reviewers.filter(r => scope === 'all' || r.id === me).map(r => ({r, items: D.qcPending.filter(q => q.reviewer === r.id)}));
+  const pend = uniqSteps(D.qcPending.filter(q => scope === 'all' || !isRev || q.st.qcBy.indexOf(me) >= 0));
+  const revNames = D.reviewers.map(r => r.name).join(' hoặc ') || 'người duyệt';
   const fixes = D.allSteps.filter(x => x.st.state === 'fix' && (scope === 'all' || x.st.who.indexOf(me) >= 0 || (x.st.fix && x.st.fix.by === me)));
   const waiting = me && !isRev && scope === 'mine' ? uniqSteps(D.qcPending.filter(q => q.st.subBy === me)) : [];
   return html`
-    <div class="ph"><div><h1>Duyệt QC</h1><p>Người làm nộp link sau mỗi bước. ${D.reviewers.filter(r => !r.opt).map(r => r.name).join(' và ') || 'Người duyệt'} duyệt là bước xong${D.reviewers.some(r => r.opt) ? ', '+D.reviewers.filter(r => r.opt).map(r => r.name).join(', ')+' duyệt thêm nếu cần' : ''}. Nộp bản mới thì cần duyệt lại.</p></div>
+    <div class="ph"><div><h1>Duyệt QC</h1><p>Người làm nộp link sau mỗi bước. ${revNames} duyệt một bản là bước đó xong. Nộp bản mới thì cần duyệt lại.</p></div>
       <div class="seg" role="group" aria-label="Phạm vi"><button type="button" class=${scope === 'mine' ? 'on' : ''} disabled=${!me} aria-pressed=${scope === 'mine'} onClick=${() => setScope('mine')}>Của tôi</button><button type="button" class=${scope === 'all' ? 'on' : ''} aria-pressed=${scope === 'all'} onClick=${() => setScope('all')}>Cả phòng</button></div></div>
     <div class="qc-grid">
-      ${cols.map(c => html`<section key=${c.r.id} class="qc-col"><h2>${c.r.opt ? c.r.name+' có thể duyệt thêm' : 'Chờ '+c.r.name+' duyệt'} <span class=${'badge-n'+(c.items.length && !c.r.opt ? ' wait' : '')}>${c.items.length}</span></h2>${c.r.opt ? html`<p class="meta">Không bắt buộc. Bước xong khi ${D.reviewers.filter(r => !r.opt).map(r => r.name).join(', ') || 'người duyệt'} duyệt.</p>` : null}${c.items.length ? c.items.map(q => html`<${QCCard} key=${q.p.id+q.st.id} q=${q} D=${D} me=${me}/>`) : html`<p class="empty">Không có gì chờ duyệt.</p>`}</section>`)}
+      ${(isRev || scope === 'all') ? html`<section class="qc-col"><h2>Chờ duyệt <span class=${'badge-n'+(pend.length ? ' wait' : '')}>${pend.length}</span></h2>${pend.length ? pend.map(q => html`<${QCCard} key=${q.p.id+q.st.id} q=${q} D=${D} me=${me}/>`) : html`<p class="empty">Không có gì chờ duyệt.</p>`}</section>` : null}
       ${waiting.length ? html`<section class="qc-col"><h2>Bạn đã nộp, đang chờ <span class="badge-n">${waiting.length}</span></h2>${waiting.map(q => html`<article key=${q.p.id+q.st.id} class="qcard"><a class="pn2" href=${'#job-'+q.p.id}>${q.p.name}</a><p class="meta">${q.st.def.no} ${q.st.def.name}, nộp ${rel(q.st.subAt)}</p></article>`)}</section>` : null}
       <section class="qc-col"><h2>Cần sửa <span class=${'badge-n'+(fixes.length ? ' bad' : '')}>${fixes.length}</span></h2>${fixes.length ? fixes.map(x => { const c = x.st.comments.filter(c => c.kind === 'fix').slice(-1)[0]; return html`<article key=${x.p.id+x.st.id} class="qcard"><a class="pn2" href=${'#job-'+x.p.id} onClick=${e => { e.preventDefault(); openJob(x.p.id, x.st.id); }}>${x.p.name}</a><p class="meta">${x.st.def.no} ${x.st.def.name}. ${nameOf(D, x.st.fix && x.st.fix.by)} yêu cầu sửa, người làm: ${x.st.who.map(w => nameOf(D, w)).join(', ') || 'chưa giao'}.</p>${c ? html`<blockquote>${c.text}</blockquote>` : null}<div class="acts"><button type="button" class="btn sm" onClick=${() => openJob(x.p.id, x.st.id)}>Mở bước để sửa</button></div></article>`; }) : html`<p class="empty">Không có yêu cầu sửa nào đang mở.</p>`}</section>
     </div>
@@ -2574,12 +2571,12 @@ function SettingsView({D, me}){
   const lead = isLead(D, me);
   return html`
     <div class="ph"><div><h1>Cài đặt</h1><p>Nhân sự, người duyệt QC và các thông số dùng chung của phòng.</p></div></div>
-    <section class="panel flush"><div class="panel-h"><h2>Nhân sự</h2><span class="meta">Duyệt QC: người bắt buộc duyệt xong thì bước xong, người không bắt buộc duyệt thêm nếu cần. Booking credit và account do Hào duyệt.</span></div>
+    <section class="panel flush"><div class="panel-h"><h2>Nhân sự</h2><span class="meta">Duyệt QC: một người trong danh sách duyệt là bước xong. Booking credit và account do Hào duyệt.</span></div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Vai trò</th><th>Duyệt QC</th><th>Lead</th><th>Đang làm</th><th>Mã PIN</th></tr></thead><tbody>
         ${D.staffList.map(s => html`<tr key=${s.id}>
           <td style="min-width:150px"><${InlineText} value=${s.name} label="Tên" onSave=${v => v && W.staff(s.id, {name: v})}/></td>
           <td style="min-width:200px"><${InlineText} value=${s.role || ''} label="Vai trò" placeholder="Vai trò" onSave=${v => W.staff(s.id, {role: v})}/></td>
-          <td><select class="sel sm auto" value=${!s.qc ? 'no' : qcOptional(s) ? 'opt' : 'must'} disabled=${!w} aria-label=${'Duyệt QC: '+s.name} onChange=${e => { const v = e.target.value; W.staff(s.id, {qc: v !== 'no', qcOpt: v === 'opt'}); }}><option value="no">Không duyệt</option><option value="must">Bắt buộc</option><option value="opt">Không bắt buộc</option></select></td>
+          <td><label class="check"><input type="checkbox" checked=${!!s.qc} disabled=${!w} aria-label=${'Duyệt QC: '+s.name} onChange=${e => W.staff(s.id, {qc: e.target.checked, qcOpt: null})}/></label></td>
           <td><label class="check"><input type="checkbox" checked=${!!s.lead} disabled=${!w} aria-label=${'Lead: '+s.name} onChange=${e => W.staff(s.id, {lead: e.target.checked})}/></label></td>
           <td><label class="check"><input type="checkbox" checked=${s.active !== false} disabled=${!w} aria-label=${'Đang làm: '+s.name} onChange=${e => W.staff(s.id, {active: e.target.checked})}/></label></td>
           <td><${PinCell} s=${s} me=${me}/></td>
@@ -2924,7 +2921,8 @@ function ReviewPlayer({D, pid, sid, me}){
           </div>`) : html`<p class="rv-empty">${mode === 'none' ? 'Chưa có ghi chú.' : 'Chưa có ghi chú. Dừng ở khung cần sửa rồi gõ ghi chú, hoặc bấm Vẽ lên khung hình để khoanh chỗ sai.'}</p>`}
         </div>
         ${myReview && st.link ? html`<div class="rv-side-f">
-          ${iApproved ? html`<span class="st done">Bạn đã duyệt ${vTag(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm" onClick=${() => approve(false)}>Bỏ duyệt</button>`
+          ${!iApproved && st.state === 'done' ? html`<span class="st done">${st.approvedBy.map(r => nameOf(D, r)).join(', ')} đã duyệt ${vTag(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm danger" title="Mở lại bước để người làm sửa" onClick=${askFix}>Yêu cầu sửa</button>`
+            : iApproved ? html`<span class="st done">Bạn đã duyệt ${vTag(st.ver)}</span><span class="sp"></span><button type="button" class="btn sm" onClick=${() => approve(false)}>Bỏ duyệt</button>`
             : html`<button type="button" class="btn sm danger" onClick=${askFix}>Yêu cầu sửa</button><span class="sp"></span><button type="button" class="btn ok" onClick=${() => approve(true)}><${Ic} n="check" s=${17}/>Duyệt ${vTag(st.ver)}</button>`}
         </div>` : null}
       </aside>

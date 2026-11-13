@@ -12,7 +12,7 @@ Vercel deploy tự động từ nhánh `main` của repo này (https://magentx-b
 
 - Dữ liệu ở Firebase Firestore (cấu hình `FIREBASE_CONFIG` đầu file), quyền ở `firestore.rules`.
 - Đăng nhập bằng mã PIN 4 số (`staff/{id}.pin`, băm SHA-256 + salt), giữ 24 giờ trên mỗi máy. Mã PIN của Hào vào được mọi tài khoản.
-- Duyệt bước dự án: Hiếu bắt buộc, Hào không bắt buộc (`staff.qcOpt`). Booking credit và account: chỉ Hào.
+- Duyệt bước dự án: Hiếu hoặc Hào, một người duyệt bản hiện tại là bước xong (`enrichStep`: `approvedBy` khác rỗng). Lượt duyệt có trước yêu cầu sửa của cùng bản (`fix.at`) không tính. `staff.qcOpt` không còn dùng. Booking credit và account: chỉ Hào.
 - Player duyệt video (`ReviewPlayer`): video Drive phát qua `api/drive.js` (Google trả 403 nếu nhúng thẳng từ web khác). Ghi chú theo thời điểm và nét vẽ lưu ở `steps.{bước}.vn`, link video kèm theo ở `steps.{bước}.rv`.
 - Bản nộp của mỗi bước hiện là V1, V2… (`vTag`, `VChip`); lịch sử nộp từng bản lưu ở `steps.{bước}.vh.v{n}`. Góp ý và yêu cầu sửa của bản cũ gom vào "Góp ý của bản cũ" và không báo đỏ.
 - Link duyệt cho khách: `/r/<pid>/<mã>` (rewrite trong `vercel.json`) mở `public/review.html`, gọi `api/review.js` (Firestore REST, chỉ trả video, tên bước, góp ý của khách). Mã link ở `projects.shares.{mã}`; góp ý khách ở `steps.{bước}.vn` với `src: 'client'`. Thử API với Firestore emulator (biến `FIRESTORE_BASE`), không ghi vào database thật.

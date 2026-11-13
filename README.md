@@ -41,7 +41,7 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
 
 ## Duyệt
-- **Các bước dự án:** Hiếu duyệt là bắt buộc. Hiếu duyệt bản hiện tại thì bước xong, dù Hào chưa duyệt. Hào duyệt thêm nếu cần (không bắt buộc); nếu Hào duyệt trước thì bước vẫn chờ Hiếu. Đổi ai bắt buộc hay không bắt buộc ở **Cài đặt › Nhân sự › Duyệt QC**.
+- **Các bước dự án:** Hiếu hoặc Hào duyệt bản hiện tại là bước xong, chỉ cần một trong hai người. Nếu sau khi đã duyệt mà một người bấm **Yêu cầu sửa** cho cùng bản đó thì bước chuyển sang Cần sửa (quyết định mới nhất được tính). Chọn ai được duyệt ở **Cài đặt › Nhân sự › Duyệt QC**.
 - **Booking credit Higgsfield:** chỉ Hào duyệt. Chưa duyệt thì chưa được gen.
 
 ## Các bản nộp (V1, V2…)
