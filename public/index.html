@@ -972,7 +972,7 @@ const STEPS = [
   {id:'s01', short:'Brief', no:'01', name:'Brief & discovery', role:'Head + Sale', out:'Brief chuẩn, điểm go/no-go, báo giá 3 phương án', folder:'01_Brief', w:1},
   {id:'s02', short:'Treatment', no:'02', name:'Treatment', role:'Head', out:'Route sáng tạo, moodboard, script', folder:'02_Treatment', w:2},
   {id:'s03', short:'Board', no:'03', name:'Board, previs', role:'Pod Lead', out:'Storyboard, animatic, shotlist gắn độ khó S/M/L/XL', folder:'03_Board', w:2},
-  {id:'s04', short:'Identity', no:'04', name:'Identity lock', role:'AI CE', out:'Sheet nhân vật, sản phẩm, location; look test 5–8s', folder:'04_Asset', w:2},
+  {id:'s04', short:'Asset', no:'04', name:'Asset', role:'AI CE', out:'Sheet nhân vật, sản phẩm, location; look test 5–8s', folder:'04_Asset', w:2},
   {id:'s04b', short:'Shoot', no:'04B', name:'Shoot · Tier A', role:'Pod Lead', out:'Plate, clean plate, HDRI, marker, lens. Budget capture tách riêng khỏi phần AI', folder:'04B_Shoot', w:2},
   {id:'s05', short:'Gen', no:'05', name:'Generation', role:'AI CE', out:'Shot gen đủ handle; log prompt, model, seed, credit', folder:'05_Gen', w:4},
   {id:'s06', short:'Comp', no:'06', name:'Comp, VFX', role:'Editor + compositor', out:'Shot comp sạch edge, light, grain', folder:'06_Comp', w:2},
@@ -1009,7 +1009,7 @@ const QC_GROUPS = [
 const ROLES = [
   {id:'pic', name:'Chủ trì', desc:'Brief, điều phối, giao hàng (bước 01, 10)', steps:['s01','s10']},
   {id:'creative', name:'Creative', desc:'Treatment, board (bước 02, 03)', steps:['s02','s03']},
-  {id:'gen', name:'AI gen', desc:'Identity, quay, gen (bước 04, 04B, 05)', steps:['s04','s04b','s05']},
+  {id:'gen', name:'AI gen', desc:'Asset, quay, gen (bước 04, 04B, 05)', steps:['s04','s04b','s05']},
   {id:'post', name:'Hậu kỳ', desc:'Comp, edit (bước 06, 07), finish color, sound (bước 09)', steps:['s06','s07','s08']},
   {id:'qc', name:'Tự kiểm QC', desc:'Checklist 6 nhóm, gửi khách duyệt (bước 08)', steps:['s09']},
 ];
