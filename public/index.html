@@ -222,6 +222,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .tbl td.bad{color:var(--bad);font-weight:700}
 .tbl td.strong{font-weight:700}
 .tbl .cell-actions{margin-top:8px}
+.bal-now{display:flex;flex-direction:column;margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule);font-size:14px}
 @media (max-width:780px){
   .tbl-wrap,.roles-wrap{background:linear-gradient(to right,var(--surface) 30%,transparent) left / 40px 100% no-repeat local,linear-gradient(to left,var(--surface) 30%,transparent) right / 40px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,rgb(0 0 0 / .14),transparent) left / 14px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,rgb(0 0 0 / .14),transparent) right / 14px 100% no-repeat scroll}
   .tbl th{padding:10px 12px}
@@ -1607,6 +1608,11 @@ function intakeSave(id, obj, text){
 
 /* ---------- derived data ---------- */
 function reservedOf(b){ return b.status === 'open' ? Math.max(b.est, b.used) : b.used; }
+/* Credit tính theo kỳ của account: credit đã log thuộc kỳ có ngày log (không theo ngày book), cộng phần dự kiến còn lại nếu booking còn mở và book trong kỳ đó.
+   Nhờ vậy log trên booking kỳ trước (chưa tách khi reset) hay booking đặt ngày sau vẫn trừ vào kỳ đang dùng. */
+function inPer(d, per){ return !!d && d >= per.start && d < per.end; }
+function usedIn(b, per){ return sum(b.usage.filter(u => inPer(u.date || b.date, per)).map(u => +u.n || 0)); }
+function creditIn(b, per){ return usedIn(b, per) + (b.status === 'open' && inPer(b.date, per) ? Math.max(0, b.est - b.used) : 0); }
 function cmpBooking(a, b){ return (a.date||'').localeCompare(b.date||'') || (a.n||0) - (b.n||0); }
 /* Số bản nộp của một bước hiện là V1, V2… */
 const vTag = n => 'V'+(+n || 0);
@@ -1689,17 +1695,24 @@ function enrich(id, raw, t, cfg, reviewers){
 function accMetrics(a, bookings, t, cfg){
   const rd = Math.min(31, Math.max(1, toInt(a.resetDay) || 1));
   const per = periodFor(rd, t);
-  const inPer = bookings.filter(b => b.acc === a.id && b.date && b.date >= per.start && b.date < per.end);
-  const reserved = sum(inPer.map(reservedOf));
-  const used = sum(inPer.map(b => b.used));
+  const mine = bookings.filter(b => b.acc === a.id);
+  const logs = []; mine.forEach(b => b.usage.forEach(u => { if(inPer(u.date || b.date, per)) logs.push(u); }));
+  const reserved = sum(mine.map(b => creditIn(b, per)));
+  const used = sum(logs.map(u => +u.n || 0));
   const topup = a.topupFrom === per.start ? (+a.topup || 0) : 0;
   const base = (+a.perPeriod || 0) + topup;
   const cap = base - cfg.buffer;
   const balOk = a.balance !== null && a.balance !== undefined && a.balance !== '' && !!a.balanceAt && a.balanceAt >= per.start && a.balanceAt < per.end;
-  const unlogged = balOk ? Math.max(0, base - (+a.balance) - used) : 0;
+  /* Số dư Hào nhập là ảnh chụp lúc check. Chỉ credit log tới lúc đó mới nằm trong phần đã trừ trên Higgsfield;
+     credit log sau lần check trừ tiếp vào số dư, không được bù vào Dùng chưa log. Dữ liệu cũ chỉ có ngày check thì log cùng ngày tính là trước. */
+  const before = u => (a.balanceTs && u.at) ? +u.at <= +a.balanceTs : (u.date || '') <= a.balanceAt;
+  const usedAtCheck = balOk ? sum(logs.filter(before).map(u => +u.n || 0)) : 0;
+  const usedSince = balOk ? used - usedAtCheck : 0;
+  const unlogged = balOk ? Math.max(0, base - (+a.balance) - usedAtCheck) : 0;
+  const balNow = balOk ? (+a.balance) - usedSince : null;
   const bookable = cap - reserved - unlogged;
   const state = a.active === false ? 'off' : bookable <= 0 ? 'lock' : bookable < cfg.nearFull ? 'near' : 'open';
-  return {rd, per, inPer, reserved, used, topup, base, cap, balOk, unlogged, bookable, state, daysLeft: diffDays(t, per.end)};
+  return {rd, per, reserved, used, usedAtCheck, usedSince, balNow, topup, base, cap, balOk, unlogged, bookable, state, daysLeft: diffDays(t, per.end)};
 }
 function bookingCheck(b, ctx){
   const a = ctx.amap[b.acc];
@@ -1708,8 +1721,11 @@ function bookingCheck(b, ctx){
   if(!a) return {k:'CHƯA CHỌN ACC'};
   const per = periodFor(a.m.rd, b.date);
   b.per = per;
-  const list = ctx.bookings.filter(x => x.acc === a.id && x.date && x.date >= per.start && x.date < per.end).sort(cmpBooking);
-  let cum = 0; for(const x of list){ cum += reservedOf(x); if(x.pid === b.pid && x.bid === b.bid) break; }
+  const mine = ctx.bookings.filter(x => x.acc === a.id);
+  const list = mine.filter(x => inPer(x.date, per)).sort(cmpBooking);
+  /* credit đã log trong kỳ trên booking của kỳ khác là số thật, luôn tính trước */
+  let cum = sum(mine.filter(x => !inPer(x.date, per)).map(x => creditIn(x, per)));
+  for(const x of list){ cum += creditIn(x, per); if(x.pid === b.pid && x.bid === b.bid) break; }
   b.cum = cum;
   if(b.status === 'done') return {k:'ĐÃ XONG'};
   if(b.status === 'cancelled') return {k:'ĐÃ HỦY'};
@@ -1727,9 +1743,9 @@ function suggestAcc(D, useCase, need, date, excl){
     if(a.active === false) return;
     const per = periodFor(a.m.rd, date || D.t);
     const isCur = per.start === a.m.per.start;
-    const list = D.bookings.filter(x => x.acc === a.id && x.date && x.date >= per.start && x.date < per.end && !(excl && x.pid === excl.pid && x.bid === excl.bid));
+    const list = D.bookings.filter(x => x.acc === a.id && !(excl && x.pid === excl.pid && x.bid === excl.bid));
     const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0) - D.cfg.buffer;
-    const room = cap - sum(list.map(reservedOf)) - (isCur ? a.m.unlogged : 0);
+    const room = cap - sum(list.map(x => creditIn(x, per))) - (isCur ? a.m.unlogged : 0);
     const okScope = !(a.scope === 'ext' && useCase === 'INT');
     const fits = okScope && room >= (need || 0) && room > 0;
     const r = {a, room, per, okScope, fits};
@@ -1964,8 +1980,8 @@ function usageRows(D){
   return rows;
 }
 function accountsRows(D){
-  const rows = [['Mã account','Email','Dành cho','Đang dùng','Kỳ từ','Kỳ đến','Credit/kỳ','Top-up','Cap','Giữ chỗ','Đã dùng (đã log)','Dùng chưa log','Còn book được','Số dư trên Higgsfield','Ngày check số dư','Ghi chú']];
-  D.accounts.forEach(a => { const m = a.m; rows.push([a.code || a.id, a.email || '', a.scope === 'ext' ? 'Chỉ job khách' : 'Mọi job', a.active === false ? 'Ngưng' : 'Có', fDY(m.per.start), fDY(m.per.end), +a.perPeriod || 0, m.topup, m.cap, m.reserved, m.used, m.balOk ? m.unlogged : '', m.bookable, a.balance === null || a.balance === undefined || a.balance === '' ? '' : +a.balance, fDY(a.balanceAt), a.note || '']); });
+  const rows = [['Mã account','Email','Dành cho','Đang dùng','Kỳ từ','Kỳ đến','Credit/kỳ','Top-up','Cap','Giữ chỗ','Đã dùng (đã log)','Dùng chưa log','Còn book được','Số dư trên Higgsfield','Ngày check số dư','Log sau lần check','Số dư ước tính','Ghi chú']];
+  D.accounts.forEach(a => { const m = a.m; rows.push([a.code || a.id, a.email || '', a.scope === 'ext' ? 'Chỉ job khách' : 'Mọi job', a.active === false ? 'Ngưng' : 'Có', fDY(m.per.start), fDY(m.per.end), +a.perPeriod || 0, m.topup, m.cap, m.reserved, m.used, m.balOk ? m.unlogged : '', m.bookable, a.balance === null || a.balance === undefined || a.balance === '' ? '' : +a.balance, fDY(a.balanceAt), m.balOk ? m.usedSince : '', m.balOk ? m.balNow : '', a.note || '']); });
   return rows;
 }
 let XLSX_P = null;
@@ -3026,7 +3042,7 @@ function CapBar({m}){
 function AccRow({a, D}){
   const m = a.m; const [edit, setEdit] = useState(false); const w = canCredit();
   const stx = {open:['done','Mở'], near:['review','Sắp đầy'], lock:['fix','Khóa'], off:['todo','Ngưng']}[m.state];
-  const saveBal = v => { setEdit(false); if(v === ''){ if(a.balance !== null && a.balance !== undefined) W.account(a.id, {balance: null, balanceAt: null}); return; } const n = toInt(v); if(n === null){ toast('Cần nhập số.', 'warn'); return; } W.account(a.id, {balance: n, balanceAt: today(), balanceBy: meId() || null}); toast('Đã cập nhật số dư '+(a.code || a.id)+': '+fN(n)+' credit'); };
+  const saveBal = v => { setEdit(false); if(v === ''){ if(a.balance !== null && a.balance !== undefined) W.account(a.id, {balance: null, balanceAt: null, balanceTs: null}); return; } const n = toInt(v); if(n === null){ toast('Cần nhập số.', 'warn'); return; } W.account(a.id, {balance: n, balanceAt: today(), balanceTs: Date.now(), balanceBy: meId() || null}); toast('Đã cập nhật số dư '+(a.code || a.id)+': '+fN(n)+' credit'); };
   return html`<tr>
     <td><div class="acts" style="gap:6px 12px"><b class="code" style="font-size:16px">${a.code || a.id}</b><span class=${'st sm '+stx[0]}>${stx[1]}</span></div><div class="acc-mail"><span class="code">${a.email || '—'}</span>${a.email ? html`<${CopyBtn} text=${a.email} label="Copy email đăng nhập"/>` : null}</div>${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => openModal({type:'account', aid: a.id})}><${Ic} n="edit" s=${14}/>Sửa account</button></div>` : null}</td>
     <td class="nw">${fD(m.per.start)} – ${fD(m.per.end)}<div class="meta">reset ngày ${m.rd}, còn ${m.daysLeft} ngày</div></td>
@@ -3035,7 +3051,7 @@ function AccRow({a, D}){
     <td class=${'n'+(m.unlogged > D.cfg.unloggedWarn ? ' bad' : '')}>${m.balOk ? fN(m.unlogged) : '—'}</td>
     <td class=${'n strong'+(m.bookable <= 0 ? ' bad' : '')}>${fN(m.bookable)}<${CapBar} m=${m}/></td>
     <td>${edit ? html`<${InlineEdit} value=${a.balance === null || a.balance === undefined ? '' : String(a.balance)} placeholder="Số dư" onDone=${saveBal}/>`
-      : html`<div>${a.balance === null || a.balance === undefined || a.balance === '' ? html`<span class="faint">Chưa nhập</span>` : html`<b class="num">${fN(a.balance)}</b>`}</div>${a.balanceAt ? html`<div class="meta">check ${fD(a.balanceAt)}${a.balanceBy && S.staff[a.balanceBy] ? ', '+S.staff[a.balanceBy].name : ''}${m.balOk ? '' : ', kỳ cũ'}</div>` : null}${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => setEdit(true)}><${Ic} n="edit" s=${14}/>Điều chỉnh số dư</button></div>` : null}`}</td>
+      : html`<div>${a.balance === null || a.balance === undefined || a.balance === '' ? html`<span class="faint">Chưa nhập</span>` : html`<b class="num">${fN(a.balance)}</b>`}</div>${a.balanceAt ? html`<div class="meta">check ${fD(a.balanceAt)}${a.balanceBy && S.staff[a.balanceBy] ? ', '+S.staff[a.balanceBy].name : ''}${m.balOk ? '' : ', kỳ cũ'}</div>` : null}${m.balOk && m.usedSince ? html`<div class="bal-now"><span>Còn khoảng <b class="num">${fN(m.balNow)}</b></span><span class="meta">đã trừ ${fN(m.usedSince)} credit log sau lần check</span></div>` : null}${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => setEdit(true)}><${Ic} n="edit" s=${14}/>Điều chỉnh số dư</button></div>` : null}`}</td>
   </tr>`;
 }
 function CreditView({D, me}){
@@ -3071,7 +3087,8 @@ function CreditView({D, me}){
       <li>Chọn account theo gợi ý. Chỉ bắt đầu gen khi Check là OK, tức Hào đã duyệt.</li>
       <li>Cuối mỗi ngày gen, ai gen người đó ghi số credit trong trang dự án; app tự cộng tổng cho job.</li>
       <li>Còn lại âm là job đã vượt dự kiến: tăng credit dự kiến ngay và xem lại Check.</li>
-      <li>Hào check số dư từng account trên Higgsfield và cập nhật ở bảng trên. Phần chênh hiện ở Dùng chưa log và trừ thẳng vào Còn book.</li>
+      <li>Hào check số dư từng account trên Higgsfield và cập nhật ở bảng trên. Phần đã trừ trên Higgsfield mà chưa ai log tới lúc check hiện ở Dùng chưa log và trừ thẳng vào Còn book. Credit log sau lần check trừ tiếp vào số dư (dòng Còn khoảng).</li>
+      <li>Credit log tính vào kỳ có ngày log, kể cả khi log trên booking của kỳ trước.</li>
       <li>Xong job: chuyển dự án sang Hoàn thành, giữ chỗ về đúng số thực tế. Hủy job: credit đã ghi vẫn được tính.</li>
       <li>Tới ngày reset, account tự mở lại đủ Cap. Job chưa xong lúc reset: bấm “Tách phần còn lại sang kỳ mới” trong booking.</li>
     </ol></details>`;
