@@ -878,6 +878,15 @@ a.lg-pn:hover{color:var(--action)}
 .signup-cta > div{display:flex;flex-direction:column;gap:2px}
 .cl-last{padding-bottom:20px}
 .jid-seq{display:flex;flex-direction:column;gap:4px}
+/* dự án mới giao */
+.nf{border-color:color-mix(in oklab,var(--d-review) 55%,var(--rule));box-shadow:inset 4px 0 0 var(--d-review)}
+.nf-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.nf-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:12px 0;border-top:1px solid var(--rule)}
+.nf-main{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;min-width:0}
+.nf-meta{grid-column:1;display:flex;flex-wrap:wrap;gap:2px 16px;font-size:13.5px;color:var(--ink-2)}
+.nf-list .acts{grid-column:2;grid-row:1 / span 2;flex-wrap:nowrap}
+.nf-tag{flex:none}
+@media (max-width:640px){.nf-list li{grid-template-columns:minmax(0,1fr)}.nf-list .acts{grid-column:1;grid-row:auto}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -1187,10 +1196,42 @@ function writeErr(e){
   else toast('Không lưu được ('+(c||'lỗi')+').', 'bad');
   emit();
 }
+/* ---------- giao việc ----------
+   Ai được thêm vào dự án (team) hoặc nhận thêm bước (steps.who) do người khác giao thì ghi projects.asg.{người} = {at, by, steps}.
+   Người đó mở dự án hoặc bấm Đã xem thì ghi projects.seen.{người} = thời điểm; asg.at mới hơn seen nghĩa là chưa xem. */
+function asgMembers(team, steps){
+  const m = {};
+  Object.keys(team || {}).forEach(k => { if(team[k]) m[k] = m[k] || []; });
+  Object.keys(steps || {}).forEach(id => { const st = steps[id]; if(st && st.on && Array.isArray(st.who)) st.who.forEach(w => { if(w){ m[w] = m[w] || []; if(m[w].indexOf(id) < 0) m[w].push(id); } }); });
+  return m;
+}
+function asgPatch(raw, patch){
+  const me = meId(); if(!me || !patch || (!patch.steps && !patch.team)) return null;
+  const before = asgMembers(raw.team, raw.steps);
+  const steps = {}; Object.keys(raw.steps || {}).forEach(k => { steps[k] = Object.assign({}, raw.steps[k]); });
+  Object.keys(patch.steps || {}).forEach(k => { const v = patch.steps[k]; if(v === null) delete steps[k]; else if(v && typeof v === 'object') steps[k] = Object.assign({}, steps[k] || {}, v); });
+  const team = Object.assign({}, raw.team || {}); Object.keys(patch.team || {}).forEach(k => { if(patch.team[k] === null) delete team[k]; else team[k] = patch.team[k]; });
+  const after = asgMembers(team, steps), now = Date.now(), out = {};
+  Object.keys(after).forEach(w => {
+    if(w === me || !S.staff[w] || isReq(w)) return;
+    const was = before[w], fresh = after[w].filter(id => !was || was.indexOf(id) < 0);
+    if(!was || fresh.length) out[w] = {at: now, by: me, steps: was ? fresh : after[w]};
+  });
+  return Object.keys(out).length ? out : null;
+}
+function asgLog(ag, pid){
+  return Object.keys(ag || {}).map(w => ({t: 'step', pid, text: 'giao '+(ag[w].steps && ag[w].steps.length ? 'bước '+ag[w].steps.map(id => STEP[id] ? STEP[id].no : id).join(', ') : 'dự án')+' cho '+((S.staff[w] && S.staff[w].name) || w)}));
+}
+function asgNew(p, me){ const a = me && p.asg && p.asg[me]; if(!a || p.closed) return null; return (+a.at || 0) > (+((p.seen || {})[me]) || 0) ? a : null; }
+function markSeen(pid){ const me = meId(); if(!me || !canW() || !S.projects[pid]) return; wdoc('projects/'+pid, r => r.update({seen: {[me]: Date.now()}})); }
+function notifyOS(title, body, pid){
+  try { if(typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden){ const n = new Notification(title, {body, tag: 'mx-'+pid}); n.onclick = () => { window.focus(); openJob(pid); n.close(); }; } } catch(e){}
+}
+
 /* Mọi lần ghi đi qua W; mô tả thao tác lấy trước khi ghi (so với dữ liệu cũ), ghi xong mới vào nhật ký. */
 const W = {
-  project: (pid, patch) => { const lg = logDescProject(pid, patch); return logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); },
-  newProject: (pid, doc) => logAfter(wdoc('projects/'+pid, r => r.set(doc)), [{t: 'project', text: 'tạo dự án', pid, pn: doc.name}]),
+  project: (pid, patch) => { const ag = asgPatch(S.projects[pid] || {}, patch); if(ag) patch = Object.assign({}, patch, {asg: ag}); const lg = logDescProject(pid, patch).concat(asgLog(ag, pid)); return logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); },
+  newProject: (pid, doc) => { const ag = asgPatch({}, doc); if(ag) doc = Object.assign({}, doc, {asg: ag}); return logAfter(wdoc('projects/'+pid, r => r.set(doc)), [{t: 'project', text: 'tạo dự án', pid, pn: doc.name}].concat(asgLog(ag, pid).map(x => Object.assign(x, {pn: doc.name})))); },
   delProject: pid => { const pr = S.projects[pid]; const lg = [{t: 'project', text: 'xóa dự án '+((pr && (pr.name || pr.code)) || pid)}]; return logAfter(wdoc('projects/'+pid, r => r.delete()), lg); },
   delStaff: sid => { const st = S.staff[sid]; const lg = [{t: 'admin', text: 'xóa người dùng '+((st && st.name) || sid)}]; return logAfter(wdoc('staff/'+sid, r => r.delete()), lg); },
   staff: (sid, patch) => { const lg = logDescStaff(sid, patch); return logAfter(wdoc('staff/'+sid, r => S.staff[sid] ? r.update(patch) : r.set(patch)), lg); },
@@ -1323,7 +1364,7 @@ function logDescProject(pid, patch){
   const add = (t, text, sid) => out.push({t, text, pid, sid});
   Object.keys(patch || {}).forEach(k => {
     const v = patch[k];
-    if(k === 'updatedAt' || k === 'updatedBy' || k === 'c') return;
+    if(k === 'updatedAt' || k === 'updatedBy' || k === 'c' || k === 'asg' || k === 'seen') return;
     if(k === 'steps'){ Object.keys(v || {}).forEach(sid => logDescStep(sid, v[sid], (raw.steps || {})[sid] || {}, add, bk)); return; }
     if(k === 'gates'){ Object.keys(v || {}).forEach(g => { const o = v[g], lb = GATES[g] ? GATES[g].label : g, was = (raw.gates || {})[g] || {}; if(!o) return; if('ok' in o && !logSame(!!o.ok, !!was.ok)) add('project', (o.ok ? 'xác nhận ' : 'bỏ xác nhận ')+lb); if('paid' in o && !logSame(!!o.paid, !!was.paid)) add('project', (o.paid ? 'đánh dấu đã thu tiền ' : 'bỏ đánh dấu thu tiền ')+lb); }); return; }
     if(k === 'bookings'){ Object.keys(v || {}).forEach(b => logDescBooking(v[b], (raw.bookings || {})[b], add)); return; }
@@ -1657,7 +1698,9 @@ function derive(){
   const qcPending = [];
   allSteps.forEach(x => { if(!x.st.link || x.st.state === 'done' || x.st.state === 'fix') return; x.st.qcBy.forEach(r => { if(x.st.approvedBy.indexOf(r) < 0) qcPending.push({p:x.p, st:x.st, reviewer:r}); }); });
   qcPending.sort((a,b) => (a.st.subAt||0) - (b.st.subAt||0));
-  return {t, cfg, staffList, reqList, staffMap, reviewers, projects, pmap, bookings, accounts, amap, allSteps, qcPending, activity: buildActivity(projects)};
+  const meNow = meId();
+  const myNew = meNow ? projects.filter(p => asgNew(p, meNow)).sort((a, b) => b.asg[meNow].at - a.asg[meNow].at) : [];
+  return {t, cfg, myNew, staffList, reqList, staffMap, reviewers, projects, pmap, bookings, accounts, amap, allSteps, qcPending, activity: buildActivity(projects)};
 }
 function nameOf(D, id){ return (id && D.staffMap[id] && D.staffMap[id].name) || 'Ai đó'; }
 function isLead(D, me){ return !!(me && D.staffMap[me] && D.staffMap[me].lead); }
@@ -2059,7 +2102,7 @@ function TopBar({D, route, me}){
   const s = me && D.staffMap[me];
   return html`<header class="top"><div class="top-in">
     <a class="brand" href="#lich">${Clapper()}<span>MagentX <span class="sub">Production</span></span></a>
-    <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}</a>`)}</nav>
+    <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}${t[0] === 'du-an' && D.myNew.length ? html`<span class="cnt" title="Dự án mới giao cho bạn">${D.myNew.length}</span>` : null}</a>`)}</nav>
     <div class="top-r">
       ${req ? null : html`<a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>`}
       ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
@@ -2289,6 +2332,7 @@ function AttnBar({D, me}){
   const fixes = D.allSteps.filter(x => x.st.state === 'fix' && (!me || x.st.who.indexOf(me) >= 0)).length;
   const pendB = me === 'hao' ? D.bookings.filter(b => b.status === 'open' && b.chk.k === 'CHỜ DUYỆT').length : 0;
   const items = [];
+  if(D.myNew.length) items.push(['#du-an', D.myNew.length, 'dự án mới giao cho bạn', 'wait']);
   if(qc) items.push(['#qc', qc, isRev ? 'bước chờ bạn duyệt' : 'bước đang chờ QC', 'wait']);
   if(fixes) items.push(['#qc', fixes, me ? 'bước bạn cần sửa' : 'bước cần sửa', 'bad']);
   if(late) items.push(['#du-an', late, 'dự án quá hạn', 'bad']);
@@ -2358,7 +2402,7 @@ function ProjectRow({p, D}){
   const ss = p.cur ? stepStatus(p.cur, D) : null;
   return html`<div class=${'pr'+(p.closed ? ' closed' : '')} onClick=${go}>
     <div class="pc">
-      <div class="nm-row"><a class="nm" href=${'#job-'+p.id}>${p.name}</a>${safeUrl(p.folder) ? html`<a class="btn xs" href=${p.folder} target="_blank" rel="noopener" title="Mở folder dự án"><${Ic} n="folder" s=${14}/>Folder</a>` : null}</div>
+      <div class="nm-row"><a class="nm" href=${'#job-'+p.id}>${p.name}</a>${asgNew(p, meId()) ? html`<span class="st sm doing nf-tag">Mới giao cho bạn</span>` : null}${safeUrl(p.folder) ? html`<a class="btn xs" href=${p.folder} target="_blank" rel="noopener" title="Mở folder dự án"><${Ic} n="folder" s=${14}/>Folder</a>` : null}</div>
       <div class="facts">${p.code ? html`<span class="code">${p.code}</span>` : html`<span>Chưa có mã job</span>`}${p.useCase === 'INT' ? (p.kind ? html`<span>${p.kind}</span>` : null) : (p.client ? html`<span>${p.client}</span>` : null)}<span>${p.tier ? TIERS[p.tier].label : 'Job nhanh'}</span><span>${p.useCase === 'INT' ? 'Nội bộ' : 'Job khách'}</span></div>
       ${p.alerts.length && !p.closed ? html`<div class=${'al '+worst}>${p.alerts.slice(0,2).map(a => a.text).join('; ')}${p.alerts.length > 2 ? '; và '+(p.alerts.length - 2)+' việc khác' : ''}</div>` : null}
     </div>
@@ -2386,6 +2430,7 @@ function ProjectsView({D}){
   });
   return html`
     <div class="ph"><div><h1>Dự án</h1><p>Bấm vào một dự án để nộp link, duyệt QC và ghi credit.</p></div><button type="button" class="btn" onClick=${() => copyText(projectsTSV(D))}><${Ic} n="copy" s=${17}/>Copy bảng sang Google Sheets</button><${XlsxBtn} D=${D}/></div>
+    <${NewForMe} D=${D}/>
     <${RegJobsPanel} D=${D}/>
     <div class="toolbar">
       <div class="search"><${Ic} n="search" s=${18}/><input class="inp" type="search" placeholder="Tìm theo tên, mã job, khách hàng" value=${q} onInput=${e => setQ(e.target.value)} aria-label="Tìm dự án"/></div>
@@ -2761,6 +2806,8 @@ function NoteCard({p}){
 }
 function ProjectDetail({D, id, me}){
   const p = D.pmap[id];
+  const newAt = p && asgNew(p, me) ? p.asg[me].at : 0;
+  useEffect(() => { if(newAt) markSeen(id); }, [id, newAt]);
   const [open, setOpen] = useState(() => { const s = new Set(); const f = S.focus && S.focus.pid === id && S.focus.step; if(f) s.add(f); else if(p && p.cur) s.add(p.cur.id); return s; });
   const [tool, setTool] = useState('');
   const inited = useRef(!!p);
@@ -4085,10 +4132,26 @@ function RegBox({p, D}){
       <div class="acts"><button type="button" class="btn sm primary" onClick=${() => { W.project(p.id, {reg: {how: 'manual', at: Date.now(), by: meId() || null}}); setOpen(false); }}><${Ic} n="check" s=${16}/>Đã nhập xong</button>${D.cfg.registerUrl ? html`<a class="btn sm" href=${D.cfg.registerUrl} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở Job Register</a>` : null}</div>` : null}
   </div>`;
 }
+/* Trang Dự án: dự án người khác vừa giao cho mình, chưa mở */
+function NewForMe({D}){
+  const [, force] = useState(0);
+  const me = meId(), list = D.myNew;
+  if(!me || !list.length) return null;
+  const canAsk = typeof Notification !== 'undefined' && Notification.permission === 'default';
+  const roleText = p => { const r = (p.team || {})[me] || []; return r.length ? 'Vai trò: '+r.map(id => (ROLES.find(x => x.id === id) || {}).name || id).join(', ') : ''; };
+  return html`<section class="panel nf" aria-label="Dự án mới giao cho bạn">
+    <div class="panel-h"><div><h2>Dự án mới giao cho bạn <span class="badge-n wait">${list.length}</span></h2><p class="meta">Mở dự án để xem các bước và lịch của bạn. Mở rồi hoặc bấm Đã xem thì dự án rời khỏi mục này.</p></div>${canAsk ? html`<button type="button" class="btn xs" onClick=${() => { try { Notification.requestPermission().then(() => force(x => x + 1)); } catch(e){} }}><${Ic} n="alert" s=${14}/>Bật thông báo trên máy này</button>` : null}</div>
+    <ul class="nf-list">${list.map(p => { const a = p.asg[me], mine = p.steps.filter(st => a.steps && a.steps.length ? a.steps.indexOf(st.id) >= 0 : st.who.indexOf(me) >= 0); return html`<li key=${p.id}>
+      <div class="nf-main"><a class="pn2" href=${'#job-'+p.id} onClick=${e => { e.preventDefault(); openJob(p.id, mine[0] ? mine[0].id : null); }}>${p.name}</a>${p.code ? html`<span class="code meta">${p.code}</span>` : null}</div>
+      <div class="nf-meta"><span><b>${nameOf(D, a.by)}</b> giao ${rel(a.at)}</span>${mine.length ? html`<span>Bước giao cho bạn: ${mine.map(st => st.def.no+' '+st.def.name+(st.start ? ' ('+fD(st.start)+(st.end && st.end !== st.start ? '–'+fD(st.end) : '')+')' : '')).join(', ')}</span>` : roleText(p) ? html`<span>${roleText(p)}</span>` : null}<span>Deadline ${fD(p.deadline)}</span></div>
+      <div class="acts"><button type="button" class="btn sm primary" onClick=${() => openJob(p.id, mine[0] ? mine[0].id : null)}>Mở dự án</button><button type="button" class="btn sm" onClick=${() => markSeen(p.id)}>Đã xem</button></div>
+    </li>`; })}</ul>
+  </section>`;
+}
 /* Trang Dự án: job trong Register đang chạy mà bảng chưa có */
 function RegJobsPanel({D}){
   const [all, setAll] = useState(false);
-  if(S.reg.state !== 'ok') return null;
+  if(S.reg.state !== 'ok' || meId() !== 'hao') return null;
   const list = S.reg.jobs.filter(j => REG_LIVE.indexOf(j.status) >= 0 && JOB_RE.test(j.id) && !D.projects.some(p => p.code === j.id)).sort((a, b) => b.id.localeCompare(a.id));
   if(!list.length) return null;
   const shown = all ? list : list.slice(0, 4);
@@ -4226,6 +4289,18 @@ function App(){
   const req = isReq(me);
   useEffect(() => { if(me && !req && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
   useEffect(() => { if(req && route.view !== 'noi-bo') location.hash = 'noi-bo'; }, [req, route.view]);
+  useEffect(() => {
+    /* giao trước lúc mở bảng: gom một thông báo; giao trong lúc đang mở: báo từng dự án */
+    if(me && S.asgFor !== me){ S.asgFor = me; S.asgBase = Date.now(); }
+    if(!me || req || !S.firstData) return;
+    S.asgToasted = S.asgToasted || {};
+    const fresh = D.myNew.filter(p => !S.asgToasted[me+':'+p.id+':'+p.asg[me].at]);
+    if(!fresh.length) return;
+    fresh.forEach(p => { S.asgToasted[me+':'+p.id+':'+p.asg[me].at] = 1; });
+    const old = fresh.filter(p => p.asg[me].at < S.asgBase);
+    if(old.length) toast('Bạn có '+old.length+' dự án mới được giao. Xem ở trang Dự án.');
+    fresh.filter(p => p.asg[me].at >= S.asgBase).forEach(p => { const a = p.asg[me], msg = nameOf(D, a.by)+' vừa giao '+(a.steps && a.steps.length ? 'bước '+a.steps.map(x => STEP[x] ? STEP[x].no : x).join(', ')+' trong ' : '')+'dự án '+p.name+' cho bạn'; toast(msg); notifyOS('Dự án mới giao cho bạn', msg, p.id); });
+  });
   const free = route.view === 'dat-ten';
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;

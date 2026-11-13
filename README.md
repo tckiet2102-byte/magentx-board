@@ -40,6 +40,15 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Mã PIN của **Hào** vào được mọi tài khoản. Ai quên mã PIN thì Hào vào **Cài đặt › Nhân sự › Mã PIN › Đặt lại**, người đó tạo mã mới ở lần đăng nhập tới.
 - Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
 
+## Giao việc và thông báo
+- Khi Hào (hoặc ai khác) thêm một người vào dự án hay giao thêm bước cho họ, người đó thấy:
+  - số dự án mới trên tab **Dự án** và mục "dự án mới giao cho bạn" ở trang Lịch;
+  - khung **Dự án mới giao cho bạn** đầu trang Dự án: ai giao, lúc nào, bước nào và lịch từng bước, deadline, nút **Mở dự án** và **Đã xem**; dòng dự án trong danh sách có nhãn "Mới giao cho bạn";
+  - một thông báo khi mở bảng (gom các dự án giao trong lúc vắng), và thông báo riêng từng dự án nếu được giao trong lúc đang mở bảng.
+- Mở dự án hoặc bấm Đã xem thì dự án rời khỏi khung. Tự giao cho mình thì không báo.
+- Bấm **Bật thông báo trên máy này** trong khung để trình duyệt hiện thông báo cả khi đang ở tab khác (chỉ khi bảng đang mở).
+- Khung "Job Register có N job chưa lên bảng" chỉ hiện với tài khoản Hào.
+
 ## Người dùng phòng ban khác
 - Người ngoài phòng Production (Marketing, Sale, Học viện…) đăng nhập để **gửi yêu cầu việc nội bộ** và theo dõi tình trạng. Họ chỉ thấy tab **Booking nội bộ** với yêu cầu của chính mình: chờ nhận, đã giao (người làm, hạn giao, tiến độ từng bước), tạm hoãn hay từ chối kèm lý do. Họ không thấy lịch, dự án, credit, cài đặt, và không có trong lịch hay danh sách giao việc.
 - **Tự tạo tài khoản:** ở màn hình đăng nhập bấm **Tạo tài khoản mới**, nhập họ tên, bộ phận, mã PIN 4 số (hai lần). Nếu Hào đặt **mã mời** ở Cài đặt thì phải gõ đúng mã đó.
