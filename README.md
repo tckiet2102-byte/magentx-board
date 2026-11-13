@@ -72,6 +72,14 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Player (cả nội bộ và khách) vừa phát trực tiếp vừa tải sẵn cả file về máy theo khúc 8 MB, 3 khúc song song, mỗi khúc tự thử lại khi rớt mạng. Tải xong thì tua tức thì (khoảng 0,1 giây), không phụ thuộc mạng. File lớn hơn 900 MB (260 MB trên điện thoại) chỉ phát trực tiếp.
 - Mỗi lần Google Drive trả dữ liệu mất khoảng 1,5–2 giây, nên nộp bản xem nhẹ: MP4 H.264, 1080p khoảng 8–15 Mbps, bật **Fast Start / Web optimized** khi xuất để video bắt đầu phát nhanh hơn.
 
+## Job ID, folder và tên file
+- Quy tắc nằm ở [`docs/naming-convention.md`](docs/naming-convention.md) (bản rút gọn; bản đầy đủ có danh sách khách và Drive ID nằm trong Drive của phòng).
+- **Job ID** dạng `YYMM_CLIENTCODE_Project-Name`, ví dụ `2611_ACME_Demo-TVC`. Form tạo dự án ghép sẵn từ tháng kick-off, client code của khách và tên dự án (bỏ dấu, nối bằng gạch ngang); thêm dòng Job Register với đúng ba giá trị đó. Job nội bộ dùng `MX`. Có PO hoặc báo giá mới thì tạo job mới và chọn **Job gốc**.
+- Dự án cũ giữ mã cũ (dạng `MX-2611-…`); sửa thông tin dự án để dán Job ID từ Job Register khi cần.
+- **Cài đặt › Khách hàng và Job Register**: danh sách client code (giữ giống tab Clients, có nút dán cả bảng), link Job Register, link folder MAGENTX_PRODUCTION, model code cho tên file 05_Gen. Chỉ leader sửa.
+- Pipeline theo thứ tự folder: 07 Edit → **08 QC** (gửi khách R1, R2…) → **09 Finish** → 10 Giao. Dự án lập lịch theo thứ tự cũ có nút **Đổi lịch hai bước** trong trang dự án.
+- Trang **Đặt tên file**: chọn job và folder (01_Brief … 99_Admin), điền vài ô là ra tên đúng chuẩn, kèm prompt sidecar và folder shot ở 05_Gen, cảnh báo round vượt số vòng sửa trong HĐ ở 08_QC. Ô **Kiểm tra tên file** soát ký tự, chữ cấm, cấu trúc, model code và Job ID.
+
 ## Nhật ký thao tác
 - Đăng nhập là Hào sẽ thấy thêm tab **Nhật ký**. Trang này ghi lại ai làm gì, lúc nào: nộp bản, sửa link, duyệt, yêu cầu sửa, góp ý, ghi chú video, lịch và giao việc, gate, booking và log credit, số credit còn, link gửi khách, nhân sự, cài đặt, đăng nhập, đăng xuất, nhập sai và đổi mã PIN.
 - Khi Hào dùng mã PIN của mình để vào tài khoản người khác, các thao tác trong phiên đó có thêm dòng **Hào đăng nhập hộ**.

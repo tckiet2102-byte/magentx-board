@@ -773,6 +773,57 @@ a.lg-pn:hover{color:var(--action)}
   .lg-day{padding:14px 16px 4px}.lg-empty{padding:4px 16px 18px}.lg-more{padding:6px 16px 16px}
   .lg-q{width:100%}
 }
+/* Job ID trong form dự án */
+.jid-parts{display:grid;grid-template-columns:136px 104px minmax(0,1fr);gap:10px;align-items:end}
+.jid-parts label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.jid-fixed{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:10px;background:var(--tint);color:var(--ink);font-size:15px}
+.nc-row{margin-top:8px}
+@media (max-width:560px){.jid-parts{grid-template-columns:1fr 1fr}.jid-parts .grow{grid-column:1 / -1}}
+/* danh sách khách trong Cài đặt */
+.cl-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 18px;padding:0 22px 16px}
+.cl-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 22px 0}
+.cl-add .inp{width:auto;flex:1 1 160px}
+.cl-add .inp.code{flex:0 0 96px}
+.cl-bulk{display:flex;flex-direction:column;gap:10px;padding:12px 22px 0}
+.cl-models{display:flex;flex-direction:column;gap:10px;padding:18px 22px 20px;border-top:1px solid var(--rule);margin-top:16px}
+.cl-models h3{font-size:15px}
+.cl-models .cl-add{padding:0}
+.mc-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.mc-list li{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 11px;border-radius:9px;background:var(--tint);font-size:14px}
+/* trang Đặt tên file */
+.nm-job-pick{display:grid;grid-template-columns:minmax(260px,420px) minmax(0,1fr);gap:16px 24px;align-items:start}
+.nm-job-pick .field .inp{margin-top:8px}
+.nm-job-info{display:flex;flex-direction:column;gap:10px;min-width:0;padding-top:26px}
+.nm-path{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nm-path .code{font-size:13.5px;font-weight:500;overflow-wrap:anywhere}
+.nm-rail{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin}
+.nm-f{flex:none;height:40px;padding:0 13px;border:1.5px solid var(--rule);border-radius:10px;background:var(--surface);color:var(--ink-2);font:inherit;cursor:pointer}
+.nm-f .code{font-size:14px}
+.nm-f:hover{border-color:var(--field-hover);color:var(--ink)}
+.nm-f[aria-pressed="true"]{border-color:var(--action);background:var(--action);color:var(--on-action)}
+.nm-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (min-width:1001px){.nm-grid2 > section:last-child{position:sticky;top:88px}}
+.nm-fmt{display:flex;flex-direction:column;gap:6px}
+.nm-fmt code{font:600 14px var(--f-code);padding:10px 12px;border-radius:10px;background:var(--action-soft);color:var(--action);overflow-wrap:anywhere}
+.nm-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nm-chip{display:flex;align-items:baseline;gap:6px;min-height:36px;padding:6px 11px;border:1.5px solid var(--field);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.nm-chip small{font-size:12.5px;color:var(--ink-2)}
+.nm-chip[aria-pressed="true"]{border-color:var(--action);background:var(--action-soft)}
+.nm-out{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:420px;overflow:auto}
+.nm-out li{display:flex;align-items:center;gap:8px;min-width:0}
+.nm-out code{flex:1 1 auto;min-width:0;padding:7px 10px;border-radius:8px;background:var(--tint);font:600 13.5px var(--f-code);color:var(--ink);overflow-wrap:anywhere}
+.nm-out.dirs code{font-weight:500}
+.nm-chk{min-height:96px;height:auto;padding:10px 12px;font:500 14px var(--f-code);resize:vertical}
+.nm-res{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.nm-res li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:9px;background:var(--subtle)}
+.nm-res li.ok svg{color:var(--ok)}
+.nm-res li.bad{background:var(--bad-soft)}
+.nm-res li.bad svg{color:var(--bad)}
+.nm-res li > div{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13.5px}
+.nm-res code{font:600 13.5px var(--f-code);overflow-wrap:anywhere}
+.nm-rules ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:90ch}
+.sb-folder{display:block;margin-top:4px}
+@media (max-width:900px){.nm-grid2,.nm-job-pick{grid-template-columns:minmax(0,1fr)}.nm-job-info{padding-top:0}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -864,23 +915,24 @@ const html = window.htm.bind(h);
 
 /* ---------- Quy trình của phòng (Mục 4) ---------- */
 const STEPS = [
-  {id:'s01', short:'Brief', no:'01', name:'Brief & discovery', role:'Head + Sale', out:'Brief chuẩn, điểm go/no-go, báo giá 3 phương án', code:'BRIEF', w:1},
-  {id:'s02', short:'Treatment', no:'02', name:'Treatment', role:'Head', out:'Route sáng tạo, moodboard, script', code:'REF', w:2},
-  {id:'s03', short:'Board', no:'03', name:'Board, previs', role:'Pod Lead', out:'Storyboard, animatic, shotlist gắn độ khó S/M/L/XL', code:'BOARD', w:2},
-  {id:'s04', short:'Identity', no:'04', name:'Identity lock', role:'AI CE', out:'Sheet nhân vật, sản phẩm, location; look test 5–8s', code:'ASSET', w:2},
-  {id:'s04b', short:'Shoot', no:'04B', name:'Shoot · Tier A', role:'Pod Lead', out:'Plate, clean plate, HDRI, marker, lens. Budget capture tách riêng khỏi phần AI', code:'SHOOT', w:2},
-  {id:'s05', short:'Gen', no:'05', name:'Generation', role:'AI CE', out:'Shot gen đủ handle; log prompt, model, seed, credit', code:'GEN', w:4},
-  {id:'s06', short:'Comp', no:'06', name:'Comp, VFX', role:'Editor + compositor', out:'Shot comp sạch edge, light, grain', code:'COMP', w:2},
-  {id:'s07', short:'Edit', no:'07', name:'Edit', role:'Editor', out:'Offline V1, sau đó online', code:'EDIT', w:2},
-  {id:'s08', short:'Color', no:'08', name:'Color, sound, mix', role:'Colorist, sound', out:'Master đã grade và mix theo spec', code:'FINISH', w:1},
-  {id:'s09', short:'QC', no:'09', name:'QC', role:'QC lớp 1 + lớp 2', out:'Tự kiểm 6 nhóm, QC lớp 1 và lớp 2 trước khi gửi khách', code:'QC', w:1},
-  {id:'s10', short:'Delivery', no:'10', name:'Delivery, closeout', role:'Coordinator', out:'Deliverable, biên bản nghiệm thu, P&L đóng job', code:'DELIVER', w:1},
+  {id:'s01', short:'Brief', no:'01', name:'Brief & discovery', role:'Head + Sale', out:'Brief chuẩn, điểm go/no-go, báo giá 3 phương án', folder:'01_Brief', w:1},
+  {id:'s02', short:'Treatment', no:'02', name:'Treatment', role:'Head', out:'Route sáng tạo, moodboard, script', folder:'02_Treatment', w:2},
+  {id:'s03', short:'Board', no:'03', name:'Board, previs', role:'Pod Lead', out:'Storyboard, animatic, shotlist gắn độ khó S/M/L/XL', folder:'03_Board', w:2},
+  {id:'s04', short:'Identity', no:'04', name:'Identity lock', role:'AI CE', out:'Sheet nhân vật, sản phẩm, location; look test 5–8s', folder:'04_Asset', w:2},
+  {id:'s04b', short:'Shoot', no:'04B', name:'Shoot · Tier A', role:'Pod Lead', out:'Plate, clean plate, HDRI, marker, lens. Budget capture tách riêng khỏi phần AI', folder:'04B_Shoot', w:2},
+  {id:'s05', short:'Gen', no:'05', name:'Generation', role:'AI CE', out:'Shot gen đủ handle; log prompt, model, seed, credit', folder:'05_Gen', w:4},
+  {id:'s06', short:'Comp', no:'06', name:'Comp, VFX', role:'Editor + compositor', out:'Shot comp sạch edge, light, grain', folder:'06_Comp', w:2},
+  {id:'s07', short:'Edit', no:'07', name:'Edit', role:'Editor', out:'Offline V1, sau đó online', folder:'07_Edit', w:2},
+  /* Từ 13/11/2026: QC trước Finish, khớp folder 08_QC rồi 09_Finish. Giữ id s09 = QC, s08 = Finish để dữ liệu cũ không lệch bước. */
+  {id:'s09', short:'QC', no:'08', name:'QC, gửi khách duyệt', role:'QC lớp 1 + lớp 2', out:'Tự kiểm 6 nhóm, QC lớp 1 và lớp 2, gửi bản review R1, R2… cho khách', folder:'08_QC', w:1},
+  {id:'s08', short:'Finish', no:'09', name:'Finish: color, sound, mix', role:'Colorist, sound', out:'Master đã grade và mix theo spec', folder:'09_Finish', w:1},
+  {id:'s10', short:'Giao', no:'10', name:'Giao, closeout', role:'Coordinator', out:'Bản giao, biên bản nghiệm thu, P&L đóng job', folder:'10_Giao', w:1},
 ];
 const STEP = {}; STEPS.forEach(s => { STEP[s.id] = s; });
 const STEP_ORDER = STEPS.map(s => s.id);
 const TIERS = {
-  A:{label:'Tier A', desc:'có quay 04B, 11 bước', steps:['s01','s02','s03','s04','s04b','s05','s06','s07','s08','s09','s10'], gates:['g0','g1','g2','g3','g4','g5']},
-  B:{label:'Tier B', desc:'pipeline đầy đủ, 10 bước', steps:['s01','s02','s03','s04','s05','s06','s07','s08','s09','s10'], gates:['g0','g1','g2','g3','g4','g5']},
+  A:{label:'Tier A', desc:'có quay 04B, 11 bước', steps:['s01','s02','s03','s04','s04b','s05','s06','s07','s09','s08','s10'], gates:['g0','g1','g2','g3','g4','g5']},
+  B:{label:'Tier B', desc:'pipeline đầy đủ, 10 bước', steps:['s01','s02','s03','s04','s05','s06','s07','s09','s08','s10'], gates:['g0','g1','g2','g3','g4','g5']},
   C:{label:'Tier C', desc:'social, series, 6 bước', steps:['s01','s02','s05','s07','s09','s10'], gates:['g0','g1','g45']},
 };
 const GATES = {
@@ -904,8 +956,8 @@ const ROLES = [
   {id:'pic', name:'Chủ trì', desc:'Brief, điều phối, giao hàng (bước 01, 10)', steps:['s01','s10']},
   {id:'creative', name:'Creative', desc:'Treatment, board (bước 02, 03)', steps:['s02','s03']},
   {id:'gen', name:'AI gen', desc:'Identity, quay, gen (bước 04, 04B, 05)', steps:['s04','s04b','s05']},
-  {id:'post', name:'Hậu kỳ', desc:'Comp, edit, color, sound (bước 06–08)', steps:['s06','s07','s08']},
-  {id:'qc', name:'Tự kiểm QC', desc:'Checklist 6 nhóm (bước 09)', steps:['s09']},
+  {id:'post', name:'Hậu kỳ', desc:'Comp, edit (bước 06, 07), finish color, sound (bước 09)', steps:['s06','s07','s08']},
+  {id:'qc', name:'Tự kiểm QC', desc:'Checklist 6 nhóm, gửi khách duyệt (bước 08)', steps:['s09']},
 ];
 const ALL_ROLES = ROLES.map(r => r.id);
 const KINDS = [
@@ -914,14 +966,41 @@ const KINDS = [
   {id:'other', name:'Khác', code:''},
 ];
 function kindSelOf(k){ return k === 'Content ads' ? 'ads' : k === 'TVC khóa học' ? 'course' : 'other'; }
-const FOLDERS = ['01_Brief','02_Ref','03_Board','04_Asset','05_Gen','06_Comp','07_Edit','08_Finish','09_QC','10_Deliver','99_Admin'];
+/* Folder, Job ID và tên file theo docs/naming-convention.md (bản đầy đủ nằm trong Drive của phòng). */
+const FOLDERS = ['01_Brief','02_Treatment','03_Board','04_Asset','04B_Shoot','05_Gen','06_Comp','07_Edit','08_QC','09_Finish','10_Giao','99_Admin'];
+/* Model code trong tên file 05_Gen. Model mới phải được thêm (Cài đặt) trước khi dùng, không tự đặt code. */
+const MODELS = {GPTI: 'GPT Image 2.5', SDR5: 'Seedream 5.0 Pro', NB2: 'Nano Banana 2.1', SD25: 'Seedance 2.5'};
+function modelList(D){ const m = Object.assign({}, MODELS), c = (D && D.cfg && D.cfg.models) || {}; Object.keys(c).forEach(k => { if(c[k]) m[k] = c[k]; }); return m; }
+const JOB_RE = /^\d{4}_[A-Z0-9]{2,5}_[A-Za-z0-9-]+$/;
+const INT_CODE = 'MX';
+const unaccent = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+/* "Phim Tết 2027 - Teaser" thành "PhimTet2027-Teaser": bỏ dấu, viết hoa đầu từ, các phần nối bằng "-" */
+function pnameOf(name){
+  return unaccent(name).split(/\s*[-–—·|/:,()+&]+\s*/).map(seg => seg.split(/[^A-Za-z0-9]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join('')).filter(Boolean).join('-').slice(0, 60);
+}
+const cleanPname = v => unaccent(v).replace(/\s+/g, '-').replace(/[^A-Za-z0-9-]/g, '').replace(/-{2,}/g, '-').slice(0, 60);
+const cleanCC = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+const ymOf = d => String(d || '').slice(2, 4)+String(d || '').slice(5, 7);
+function parseJob(code){ const m = /^(\d{4})_([A-Z0-9]{2,5})_([A-Za-z0-9-]+)$/.exec(code || ''); return m ? {yymm: m[1], cc: m[2], pn: m[3]} : null; }
+/* danh sách khách: config.clients (Cài đặt, đồng bộ với tab Clients của Job Register) cộng mã đã dùng trong dự án */
+function clientList(D){
+  const c = (D.cfg && D.cfg.clients) || {}, out = {};
+  Object.keys(c).forEach(k => { if(c[k] && k !== INT_CODE) out[k] = {code: k, name: c[k].name || k, note: c[k].note || '', saved: true}; });
+  D.projects.forEach(p => { const j = parseJob(p.code); if(j && j.cc !== INT_CODE && !out[j.cc]) out[j.cc] = {code: j.cc, name: p.client || j.cc, note: '', saved: false}; });
+  return Object.keys(out).sort().map(k => out[k]);
+}
+function clientFolder(D, cc, fallback){ const c = (D.cfg.clients || {})[cc]; return (c && c.name) || fallback || cc; }
+function drivePath(D, p){
+  const j = parseJob(p.code); if(!j) return '';
+  return 'MAGENTX_PRODUCTION/'+(j.cc === INT_CODE ? '02_INTERNAL' : '01_CLIENTS/'+clientFolder(D, j.cc, p.client))+'/'+p.code+'/';
+}
 const P_STATUS = {planned:'Sắp tới', active:'Đang chạy', hold:'Tạm dừng', done:'Hoàn thành', cancelled:'Hủy'};
 const P_STATUS_CLS = {planned:'todo', active:'doing', hold:'review', done:'done', cancelled:'todo'};
 const ST_ORDER = ['todo','doing','review','fix','done'];
 const ST_LABEL = {todo:'Chưa tới', doing:'Đang làm', review:'Chờ QC', fix:'Cần sửa', done:'Đã duyệt'};
 const CHECK_CLS = {'OK':'done', 'CHỜ DUYỆT':'review', 'VƯỢT CAP':'fix', 'ACC CHỈ CHO EXT':'fix', 'QUA KỲ RESET':'review', 'ĐÃ XONG':'todo', 'ĐÃ HỦY':'todo', 'THIẾU ƯỚC LƯỢNG':'review', 'THIẾU NGÀY BOOK':'review', 'CHƯA CHỌN ACC':'review'};
 const CHECK_TXT = {'OK':'OK · được gen', 'CHỜ DUYỆT':'Chờ Hào duyệt', 'VƯỢT CAP':'Vượt cap account', 'ACC CHỈ CHO EXT':'Account chỉ cho job EXT', 'QUA KỲ RESET':'Account đã qua kỳ reset', 'ĐÃ XONG':'Đã chốt', 'ĐÃ HỦY':'Đã hủy', 'THIẾU ƯỚC LƯỢNG':'Thiếu credit dự kiến', 'THIẾU NGÀY BOOK':'Thiếu ngày book', 'CHƯA CHỌN ACC':'Chưa chọn account'};
-const DEF_CFG = {prefix:'MX', buffer:300, nearFull:1000, unloggedWarn:200, revDefault:2, payMin:300};
+const DEF_CFG = {prefix:'MX', buffer:300, nearFull:1000, unloggedWarn:200, revDefault:2, payMin:300, clients:{}, models:{}, registerUrl:'', driveUrl:''};
 const WD = ['CN','T2','T3','T4','T5','T6','T7'];
 
 /* ---------- utils ---------- */
@@ -954,8 +1033,6 @@ function periodFor(resetDay, s){
 function hashSlot(s){ let x = 0; for(const c of String(s)) x = (x*31 + c.charCodeAt(0)) | 0; return (Math.abs(x) % 7) + 1; }
 function safeUrl(u){ return !!u && /^https?:\/\//i.test(String(u).trim()); }
 function shortUrl(u){ const s = String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,''); return s.length > 48 ? s.slice(0,46)+'…' : s; }
-function fileName(code, shot, step, ver){ return [code, shot, step, 'v'+pad3(Math.max(1, ver||1))].filter(Boolean).join('_'); }
-function mkdirCmd(code){ return 'mkdir -p "'+(code||'MA-JOB')+'"/{'+FOLDERS.join(',')+'}'; }
 function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
 function lsSet(k, v){ try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} }
 function cleanShot(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
@@ -1121,7 +1198,7 @@ function logPut(list, by){
 }
 const logAfter = (pr, list, by) => { if(list && list.length) pr.then(ok => { if(ok) logPut(list, by); }); return pr; };
 
-const LOG_PF = {name:'tên', client:'khách hàng', kind:'loại nội bộ', clientCode:'mã khách', code:'mã job', useCase:'nội bộ hay khách ngoài', workflow:'workflow', duration:'thời lượng', value:'giá trị HĐ', pic:'PIC', team:'team', start:'ngày bắt đầu', folder:'link folder', revAllowed:'số vòng sửa', tier:'tier'};
+const LOG_PF = {parent:'job gốc', name:'tên', client:'khách hàng', kind:'loại nội bộ', clientCode:'mã khách', code:'mã job', useCase:'nội bộ hay khách ngoài', workflow:'workflow', duration:'thời lượng', value:'giá trị HĐ', pic:'PIC', team:'team', start:'ngày bắt đầu', folder:'link folder', revAllowed:'số vòng sửa', tier:'tier'};
 function logDescStep(sid, o, old, add, bk){
   const nm = logStep(sid);
   if(o === null){ add('step', 'xóa dữ liệu bước '+nm, sid); return; }
@@ -1221,11 +1298,24 @@ function logDescAccount(aid, patch){
   if(f.length) out.push({t: 'credit', text: 'sửa account '+code+': '+f.join(', ')});
   return out;
 }
-const LOG_CF = {prefix:'tiền tố mã job', revDefault:'vòng sửa mặc định', payMin:'ngưỡng thu 50/30/20', buffer:'buffer mỗi account', nearFull:'ngưỡng sắp đầy', unloggedWarn:'cảnh báo dùng chưa log'};
+const LOG_CF = {registerUrl:'link Job Register', driveUrl:'link folder MAGENTX_PRODUCTION', prefix:'tiền tố mã job', revDefault:'vòng sửa mặc định', payMin:'ngưỡng thu 50/30/20', buffer:'buffer mỗi account', nearFull:'ngưỡng sắp đầy', unloggedWarn:'cảnh báo dùng chưa log'};
 function logDescConfig(patch){
-  const old = S.config || {};
-  const f = Object.keys(patch || {}).filter(k => !logSame(patch[k], old[k])).map(k => (LOG_CF[k] || k)+' = '+patch[k]);
-  return f.length ? [{t: 'admin', text: 'sửa thông số: '+f.join(', ')}] : [];
+  const old = S.config || {}, out = [], f = [];
+  Object.keys(patch || {}).forEach(k => {
+    const v = patch[k];
+    if(k === 'clients' || k === 'models'){
+      const lb = k === 'clients' ? 'khách' : 'model code';
+      Object.keys(v || {}).forEach(c => { const x = v[c], was = (old[k] || {})[c], nm = x && (typeof x === 'string' ? x : x.name);
+        if(x === null){ if(was) out.push({t: 'admin', text: 'xóa '+lb+' '+c}); }
+        else if(!was) out.push({t: 'admin', text: 'thêm '+lb+' '+c+(nm ? ': '+nm : '')});
+        else if(!logSame(typeof x === 'object' ? Object.assign({}, was, x) : x, was)) out.push({t: 'admin', text: 'sửa '+lb+' '+c+(nm ? ': '+nm : '')}); });
+      return;
+    }
+    if(logSame(v, old[k])) return;
+    f.push((LOG_CF[k] || k)+(/Url$/.test(k) ? '' : ' = '+v));
+  });
+  if(f.length) out.unshift({t: 'admin', text: 'sửa thông số: '+f.join(', ')});
+  return out;
 }
 
 /* ---------- derived data ---------- */
@@ -1265,7 +1355,8 @@ function enrich(id, raw, t, cfg, reviewers){
   p.tier = TIERS[raw.tier] ? raw.tier : '';
   p.code = raw.code || '';
   p.name = raw.name || 'Dự án chưa đặt tên';
-  p.tag = p.code ? p.code.split('-').slice(2).join('-') : p.name;
+  const pj = parseJob(p.code); p.jobOk = !!pj; p.tag = pj ? pj.cc+'_'+pj.pn : p.code ? p.code.split('-').slice(2).join('-') : p.name;
+  p.parent = raw.parent || '';
   p.color = (raw.c >= 1 && raw.c <= 7) ? raw.c : hashSlot(id);
   const sr = raw.steps || {};
   p.steps = STEPS.filter(d => sr[d.id] && sr[d.id].on).map(d => enrichStep(d, sr[d.id], t, reviewers));
@@ -1359,12 +1450,6 @@ function suggestAcc(D, useCase, need, date, excl){
     if(fits && (!best || room > best.room)) best = r;
   });
   return {best, rows};
-}
-function nextSeq(D, yymm, cc, exclPid){
-  const pre = D.cfg.prefix+'-'+yymm+'-'+cc+'-';
-  let mx = 0;
-  D.projects.forEach(p => { if(p.id !== exclPid && p.code && p.code.indexOf(pre) === 0){ const n = parseInt(p.code.slice(pre.length), 10); if(n > mx) mx = n; } });
-  return mx + 1;
 }
 function finishAlerts(p, codeCount){
   const al = [];
@@ -2316,7 +2401,7 @@ function StepBody({p, st, D, me}){
 
   const prev = st.prev;
   return html`<div class="sbody">
-    <div class="sb-head"><p class="meta">${st.def.out}</p>${w ? html`<button type="button" class="btn xs" aria-pressed=${editing} onClick=${() => setEditing(!editing)}><${Ic} n=${editing ? 'check' : 'edit'} s=${14}/>${editing ? 'Xong' : 'Sửa bước'}</button>` : null}</div>
+    <div class="sb-head"><p class="meta">${st.def.out}${st.def.folder ? html`<span class="sb-folder">Lưu trong <span class="code">${st.def.folder}</span>. <a href="#dat-ten" onClick=${e => { e.preventDefault(); goNaming(p.id, st.def.folder); }}>Đặt tên file</a></span>` : null}</p>${w ? html`<button type="button" class="btn xs" aria-pressed=${editing} onClick=${() => setEditing(!editing)}><${Ic} n=${editing ? 'check' : 'edit'} s=${14}/>${editing ? 'Xong' : 'Sửa bước'}</button>` : null}</div>
     ${editing ? html`<${StepEditor} p=${p} st=${st} D=${D}/>` : null}
     ${submitBar}
     ${card}
@@ -2459,21 +2544,19 @@ function RevCard({p, me}){
       </div>` : html`<div><button type="button" class="btn sm" onClick=${() => setF({to: 's05', note: ''})}><${Ic} n="plus" s=${16}/>Thêm vòng sửa</button></div>`) : null}
   </section>`;
 }
-function NamingCard({p}){
-  const [shot, setShot] = useState('SH010');
-  const [step, setStep] = useState(p.cur ? p.cur.id : 's05');
-  const [ver, setVer] = useState(1);
-  if(!p.code) return html`<section class="panel"><h3>Tên file chuẩn</h3><p class="meta">Dự án chưa có mã job.</p>${canW() ? html`<div><button type="button" class="btn sm" onClick=${() => openModal({type:'project', pid: p.id})}><${Ic} n="edit" s=${16}/>Đặt mã job</button></div>` : null}</section>`;
-  const name = fileName(p.code, shot, STEP[step].code, ver);
-  return html`<section class="panel" aria-label="Tên file chuẩn">
-    <h3>Tên file chuẩn</h3>
-    <div class="field"><span class="lab">Bước</span><select class="sel" value=${step} onChange=${e => setStep(e.target.value)}>${STEPS.map(s => html`<option key=${s.id} value=${s.id}>${s.no} ${s.name} (${s.code})</option>`)}</select></div>
-    <div class="grid2">
-      <div class="field"><span class="lab">Shot</span><input class="inp code" value=${shot} placeholder="Để trống nếu không có" aria-label="Shot" onInput=${e => setShot(cleanShot(e.target.value))}/></div>
-      <div class="field"><span class="lab">Version</span><div class="stepper"><button type="button" aria-label="Giảm version" onClick=${() => setVer(Math.max(1, ver - 1))}>−</button><span>v${pad3(ver)}</span><button type="button" aria-label="Tăng version" onClick=${() => setVer(ver + 1)}>+</button></div></div>
+function NamingCard({p, D}){
+  const path = drivePath(D, p);
+  if(!p.jobOk) return html`<section class="panel" aria-label="Folder và tên file"><h3>Folder và tên file</h3>
+    <p class="meta">${p.code ? html`Mã <span class="code">${p.code}</span> là mã cũ, chưa theo Job Register (YYMM_CLIENTCODE_Project-Name).` : 'Dự án chưa có Job ID.'}</p>
+    ${canW() ? html`<div><button type="button" class="btn sm" onClick=${() => openModal({type:'project', pid: p.id})}><${Ic} n="edit" s=${16}/>${p.code ? 'Sửa Job ID' : 'Đặt Job ID'}</button></div>` : null}</section>`;
+  return html`<section class="panel" aria-label="Folder và tên file">
+    <h3>Folder và tên file</h3>
+    <div class="nm-path"><span class="meta">Folder trên Drive</span><span class="code">${path}</span></div>
+    <div class="acts">
+      ${safeUrl(p.folder) ? html`<a class="btn xs" href=${p.folder} target="_blank" rel="noopener"><${Ic} n="folder" s=${14}/>Mở folder</a>` : html`<span class="meta">Chưa có link folder. Tạo bằng menu MagentX trong Job Register rồi dán link vào thông tin dự án.</span>`}
+      ${D.cfg.registerUrl ? html`<a class="btn xs" href=${D.cfg.registerUrl} target="_blank" rel="noopener"><${Ic} n="ext" s=${14}/>Job Register</a>` : null}
     </div>
-    <div class="out"><code>${name}</code><button type="button" class="btn sm" onClick=${() => copyText(name)}><${Ic} n="copy" s=${16}/>Copy</button></div>
-    <div><button type="button" class="btn xs" onClick=${() => copyText(mkdirCmd(p.code))}><${Ic} n="folder" s=${14}/>Copy lệnh tạo folder chuẩn (Mac)</button></div>
+    <div><button type="button" class="btn sm" onClick=${() => goNaming(p.id, p.cur && p.cur.def ? p.cur.def.folder : '')}><${Ic} n="copy" s=${16}/>Đặt tên file cho job này</button></div>
   </section>`;
 }
 function NoteCard({p}){
@@ -2512,6 +2595,7 @@ function ProjectDetail({D, id, me}){
     </div>
     <div class="facts-grid">
       ${p.useCase === 'INT' ? html`<div class="fact"><span>Loại dự án</span><b>${p.kind || 'Nội bộ'}</b></div>` : html`<div class="fact"><span>Khách hàng</span><b>${p.client || '—'}</b></div>`}
+      ${p.parent ? html`<div class="fact"><span>Job gốc</span><b>${(() => { const q = D.projects.find(x => x.code === p.parent); return q ? html`<a class="code" href=${'#job-'+q.id}>${p.parent}</a>` : html`<span class="code">${p.parent}</span>`; })()}</b></div>` : null}
       <div class="fact"><span>Quy trình</span><b>${p.tier ? TIERS[p.tier].label : 'Job nhanh'}</b></div>
       <div class="fact"><span>Loại job</span><b>${p.useCase === 'INT' ? 'Nội bộ' : 'Job khách'}</b></div>
       ${p.workflow || p.duration ? html`<div class="fact"><span>Workflow</span><b>${[p.workflow, p.duration].filter(Boolean).join(', ')}</b></div>` : null}
@@ -2526,6 +2610,11 @@ function ProjectDetail({D, id, me}){
       <section class="panel" aria-label="Pipeline">
         <div class="panel-h"><div><h2>Pipeline</h2>${p.steps.length ? html`<p class="meta">${p.tier ? TIERS[p.tier].label+', ' : ''}xong ${p.doneN}/${p.total} bước</p>` : null}</div><${ToolMenu} p=${p} setTool=${setTool}/></div>
         ${tool ? html`<${ToolStrip} key=${tool} p=${p} D=${D} tool=${tool} done=${() => setTool('')}/>` : null}
+        ${(() => { /* dự án lập lịch theo thứ tự cũ (Finish trước QC): cho đổi lịch hai bước, không tự ghi */
+          const a = p.steps.find(x => x.id === 's09'), b = p.steps.find(x => x.id === 's08');
+          if(!a || !b || a.link || b.link || !a.start || !b.start || a.start <= b.start || !canW()) return null;
+          return html`<div class="tool-strip"><span>Quy trình mới làm <b>08 QC</b> trước <b>09 Finish</b>. Lịch hai bước này đang theo thứ tự cũ.</span><span class="sp"></span><button type="button" class="btn sm primary" onClick=${() => { W.project(p.id, {steps: {s09: {start: b.start, end: b.end}, s08: {start: a.start, end: a.end}}}); toast('Đã đổi lịch: QC '+fD(b.start)+', Finish '+fD(a.start)); }}>Đổi lịch hai bước</button></div>`;
+        })()}
         ${seq.length
           ? html`<ol class="track">${seq.map((x, i) => { const c = (i > 0 && dn[i-1] ? ' pd' : '')+(dn[i] ? ' rd' : '')+(x.type === 'step' && p.cur && x.st.id === p.cur.id ? ' cur' : ''); return x.type === 'step' ? html`<${StepItem} key=${x.st.id} p=${p} st=${x.st} D=${D} me=${me} cls=${c} open=${open.has(x.st.id)} onToggle=${() => toggle(x.st.id)}/>` : html`<${GateRow} key=${x.g.id} p=${p} g=${x.g} me=${me} cls=${c} next=${x.g.id === 'g0' || (i > 0 && dn[i-1])}/>`; })}</ol>`
           : html`<div class="empty"><span>${p.source ? 'Job này nhập từ sheet BOOKING nên chưa có pipeline.' : 'Dự án chưa có pipeline.'}</span>${canW() ? html`<div class="acts">${['A','B','C'].map(k => html`<button key=${k} type="button" class="btn sm" onClick=${() => { W.project(p.id, applyTier(p, k)); toast('Đã lập pipeline '+TIERS[k].label); }}><${Ic} n="plus" s=${16}/>Lập pipeline ${TIERS[k].label}</button>`)}</div>` : null}</div>`}
@@ -2533,7 +2622,7 @@ function ProjectDetail({D, id, me}){
       <aside class="side">
         <${CreditCard} p=${p} D=${D} me=${me}/>
         <${RevCard} p=${p} me=${me}/>
-        <${NamingCard} key=${p.id+(p.code || '')} p=${p}/>
+        <${NamingCard} key=${p.id+(p.code || '')} p=${p} D=${D}/>
         <${NoteCard} p=${p}/>
       </aside>
     </div>`;
@@ -2657,51 +2746,206 @@ function AccountForm({D, aid}){
 }
 
 /* ---------- naming view ---------- */
+/* Quy tắc tên file theo từng folder (docs/naming-convention.md, mục 4). */
+const NM_BAN = ['final', 'final2', 'new', 'sua', 'latest', 'copy'];
+const NM_KIND = {KF: 'Keyframe, frame đầu', EF: 'Frame cuối', VID: 'Video', PLT: 'Plate nền'};
+const NM_ATYPE = {CHR: 'Nhân vật', LOC: 'Bối cảnh', PRD: 'Sản phẩm', PRP: 'Đạo cụ'};
+const NM_SUF = {UPS: 'Upscale', RF: 'Reframe', EXT: 'Extend', FIX: 'Sửa cục bộ'};
+const NM_RATIO = ['16x9', '9x16', '1x1', '4x5'];
+const NM_LANG = ['VN', 'EN'];
+const NM_J = '\\d{4}_[A-Z0-9]{2,5}_[A-Za-z0-9-]+', NM_W = '[A-Za-z0-9-]+', NM_X = '\\.[a-z0-9]+$';
+const NM_STAGES = {
+  '01_Brief': {cap: 'Brief', fmt: 'YYMMDD_[Loại]_[Nguồn]', ext: 'pdf', exts: ['pdf', 'md', 'docx', 'png', 'mp4'], re: [new RegExp('^\\d{6}_'+NM_W+'(_'+NM_W+')?'+NM_X)], note: 'Ngày ở đầu để xếp theo thời gian. Nguồn có thể bỏ trống.'},
+  '02_Treatment': {cap: 'Treatment', fmt: '[JobID]_[Loại]_v[NN]', ext: 'pdf', exts: ['pdf', 'docx', 'pptx', 'key'], job: true, re: [new RegExp('^'+NM_J+'_'+NM_W+'_v\\d{2}'+NM_X)], note: 'Gửi ra ngoài nên bắt buộc có Job ID đầy đủ.'},
+  '03_Board': {cap: 'Board', fmt: '[ShotID]_BRD_v[NN], animatic: [JobID]_Animatic_v[NN]', ext: 'png', exts: ['png', 'jpg', 'pdf', 'mp4'], re: [/^(EP\d{2}_)?SH\d{3}_BRD_v\d{2}\.[a-z0-9]+$/, new RegExp('^'+NM_J+'_Animatic_v\\d{2}'+NM_X)], note: 'Frame board không cần Job ID. Animatic gửi khách nên có Job ID.'},
+  '04_Asset': {cap: 'Asset', fmt: '[Type]_[Tên]_[Góc]_v[NN]', ext: 'png', exts: ['png', 'jpg', 'psd', 'mp4'], re: [new RegExp('^(CHR|LOC|PRD|PRP)_'+NM_W+'_'+NM_W+'_v\\d{2}'+NM_X)], note: 'Asset dùng chung nhiều job của một khách để trong _BRAND_ASSETS của khách.'},
+  '04B_Shoot': {cap: 'Shoot', fmt: 'Giữ nguyên tên file camera, xếp theo DAYxx/CAM-x/', ext: '', exts: [], re: null, note: 'Không bao giờ đổi tên file camera gốc.'},
+  '05_Gen': {cap: 'Gen', fmt: '[EPxx_][ShotID]_[Kind]_[Model]_v[NN]_t[NN][_Suffix]', ext: 'mp4', exts: ['mp4', 'png', 'jpg', 'webp'], re: [/^(EP\d{2}_)?SH\d{3}_(KF|EF|VID|PLT)_[A-Z0-9]+_v\d{2}_t\d{2}(_(UPS|RF|EXT|FIX))*\.[a-z0-9]+$/, /^(EP\d{2}_)?SH\d{3}_(KF|EF|VID|PLT)_[A-Z0-9]+_v\d{2}\.(txt|json)$/], note: 'Version là mỗi lần đổi input, mỗi lần chỉ đổi 1 biến. Take là các lần gen từ cùng input. Take được duyệt copy vào _SELECTS, giữ nguyên tên.'},
+  '06_Comp': {cap: 'Comp', fmt: '[ShotID]_COMP_v[NN]', ext: 'aep', exts: ['aep', 'mov', 'nk', 'mp4'], re: [/^(EP\d{2}_)?SH\d{3}_COMP_v\d{2}\.[a-z0-9]+$/], note: 'Project và file render dùng chung tên, khác đuôi.'},
+  '07_Edit': {cap: 'Edit', fmt: '[JobID]_[Deliverable]_EDIT_v[NN]', ext: 'prproj', exts: ['prproj', 'mp4', 'mov', 'drp'], job: true, re: [new RegExp('^'+NM_J+'_'+NM_W+'_EDIT_v\\d{2}'+NM_X)], note: 'EDIT_v là version nội bộ, tách riêng với số round gửi khách.'},
+  '08_QC': {cap: 'QC', fmt: '[JobID]_[Deliverable]_R[N]', ext: 'mp4', exts: ['mp4', 'mov'], job: true, re: [new RegExp('^'+NM_J+'_'+NM_W+'_R\\d+'+NM_X)], note: 'R là round gửi khách: R1, R2… Vượt số vòng sửa trong HĐ là căn cứ tính phí thêm.'},
+  '09_Finish': {cap: 'Finish', fmt: '[JobID]_[Deliverable]_MASTER_v[NN]', ext: 'mov', exts: ['mov', 'mxf', 'wav'], job: true, re: [new RegExp('^'+NM_J+'_'+NM_W+'_MASTER_v\\d{2}'+NM_X)], note: 'Master đã grade và mix theo spec.'},
+  '10_Giao': {cap: 'Giao', fmt: '[JobID]_[Deliverable]_[Thời lượng]_[Tỉ lệ]_[Ngôn ngữ]', ext: 'mp4', exts: ['mp4', 'mov'], job: true, re: [new RegExp('^'+NM_J+'_'+NM_W+'_\\d+s_\\d+x\\d+_[A-Z]{2}(_v\\d{2})?'+NM_X)], note: 'Không có chữ final. Giao lại sau khi sửa thì thêm _v02 vào cuối.'},
+  '99_Admin': {cap: 'Admin', fmt: 'YYMMDD_[Loại]_[Đối tác]_v[NN]', ext: 'pdf', exts: ['pdf', 'docx', 'xlsx'], re: [new RegExp('^\\d{6}_'+NM_W+'_'+NM_W+'(_v\\d{2}|_Signed)?'+NM_X)], note: 'Báo giá, HĐ, PO, invoice. Bản đã ký thêm _Signed.'},
+};
+const nmWord = v => unaccent(v).trim().replace(/\s+/g, '-').replace(/[^A-Za-z0-9-]/g, '').replace(/-{2,}/g, '-').replace(/^-|-$/g, '');
+const nmV = n => 'v'+pad(Math.max(1, Math.min(99, +n || 1)));
+const nmShots = (start, n) => { const a = []; for(let i = 0; i < Math.max(1, Math.min(60, +n || 1)); i++) a.push('SH'+pad3(Math.max(0, +start || 0) + i * 10)); return a; };
+const yymmdd = d => String(d || '').slice(2, 4)+String(d || '').slice(5, 7)+String(d || '').slice(8, 10);
+/* Kiểm một tên file theo folder: lỗi chung (ký tự, chữ cấm), cấu trúc, model code, Job ID */
+function nmCheck(name, f, job, models){
+  const n = String(name || '').trim(); if(!n) return null;
+  const st = NM_STAGES[f], errs = [], warns = [];
+  if(f === '04B_Shoot') return {n, ok: true, errs, warns: ['04B_Shoot giữ nguyên tên file camera, không kiểm.']};
+  if(/\s/.test(n)) errs.push('có khoảng trắng');
+  if(/[^\x00-\x7F]/.test(n)) errs.push('có dấu tiếng Việt hoặc ký tự đặc biệt');
+  const parts = n.split('.');
+  if(parts.length < 2) errs.push('thiếu đuôi file');
+  if(parts.length > 2) errs.push('có dấu chấm ngoài phần đuôi file');
+  const stem = parts[0];
+  if(/[^A-Za-z0-9_-]/.test(stem.replace(/[^\x00-\x7F]|\s/g, ''))) errs.push('chỉ được dùng chữ không dấu, số, _ và -');
+  const toks = stem.toLowerCase().split(/[_-]/);
+  const ban = toks.filter(t => NM_BAN.indexOf(t) >= 0);
+  if(ban.length) errs.push('có chữ cấm: '+ban.join(', '));
+  if(toks.indexOf('fix') >= 0 && !(f === '05_Gen' && /_FIX(_|\.)/.test(n))) errs.push('"fix" chỉ dùng làm hậu tố _FIX ở 05_Gen');
+  if(!errs.length && st.re && !st.re.some(r => r.test(n))){
+    errs.push('sai cấu trúc '+st.fmt);
+    if(/(^|_)SH\d{1,2}(_|\.)|_[vtR]\d(_|\.)|(^|_)EP\d(_|\.)/.test(n) && !/_R\d+\./.test(n)) warns.push('Số cần đệm 0: SH010, v01, t01, EP03.');
+    const other = FOLDERS.filter(k => k !== f && NM_STAGES[k] && NM_STAGES[k].re && NM_STAGES[k].re.some(r => r.test(n)));
+    if(other.length) warns.push('Tên này khớp quy tắc của '+other.join(', ')+'. Kiểm tra lại folder.');
+  }
+  if(f === '05_Gen'){ const m = /_(KF|EF|VID|PLT)_([A-Z0-9]+)_v\d{2}/.exec(n); if(m && !models[m[2]]) errs.push('model code '+m[2]+' chưa có trong bảng'); }
+  if(job && st.job && !errs.length && n.indexOf(job+'_') !== 0) warns.push('Job ID khác job đang chọn ('+job+').');
+  if(job && f === '03_Board' && /_Animatic_/.test(n) && n.indexOf(job+'_') !== 0) warns.push('Job ID khác job đang chọn ('+job+').');
+  return {n, ok: !errs.length, errs, warns};
+}
+/* Dựng tên theo folder và các ô đang điền */
+function nmBuild(f, v, job, rev, client){
+  const J = job || 'YYMM_CODE_Project', st = NM_STAGES[f], ext = '.'+(v.ext && st.exts.indexOf(v.ext) >= 0 ? v.ext : st.ext);
+  const deliv = v.deliv === '_' ? (nmWord(v.delivOther) || 'Deliverable') : v.deliv;
+  const out = {names: [], side: [], dirs: [], warn: []};
+  if(f === '01_Brief') out.names.push([yymmdd(v.date), nmWord(v.kind) || 'Brief', nmWord(v.src)].filter(Boolean).join('_')+ext);
+  if(f === '02_Treatment') out.names.push(J+'_'+(nmWord(v.tkind) || 'Treatment')+'_'+nmV(v.ver)+ext);
+  if(f === '03_Board'){
+    if(v.anim) out.names.push(J+'_Animatic_'+nmV(v.ver)+(v.ext === 'mp4' || !v.ext ? '.mp4' : ext));
+    else nmShots(v.shot, v.n).forEach(sh => out.names.push((v.ep ? 'EP'+pad(v.ep)+'_' : '')+sh+'_BRD_'+nmV(v.ver)+ext));
+  }
+  if(f === '04_Asset') out.names.push(v.atype+'_'+(nmWord(v.aname) || 'Ten')+'_'+(nmWord(v.angle) || 'Sheet')+'_'+nmV(v.ver)+ext);
+  if(f === '04B_Shoot'){ for(let d = 1; d <= Math.max(1, Math.min(9, +v.days || 1)); d++) (v.cams || 'A').split('').forEach(c => out.dirs.push('04B_Shoot/DAY'+pad(d)+'/CAM-'+c+'/')); }
+  if(f === '05_Gen'){
+    const gext = v.ext && st.exts.indexOf(v.ext) >= 0 ? '.'+v.ext : (v.gk === 'VID' ? '.mp4' : '.png');
+    const suf = v.suf.map(x => '_'+x).join('');
+    nmShots(v.shot, v.n).forEach(sh => {
+      const base = (v.ep ? 'EP'+pad(v.ep)+'_' : '')+sh+'_'+v.gk+'_'+v.model+'_'+nmV(v.ver);
+      for(let t = 1; t <= Math.max(1, Math.min(20, +v.takes || 1)); t++) out.names.push(base+'_t'+pad(t)+suf+gext);
+      out.side.push(base+'.txt');
+      out.dirs.push('05_Gen/'+sh+'/');
+    });
+  }
+  if(f === '06_Comp') nmShots(v.shot, v.n).forEach(sh => out.names.push((v.ep ? 'EP'+pad(v.ep)+'_' : '')+sh+'_COMP_'+nmV(v.ver)+ext));
+  if(f === '07_Edit') out.names.push(J+'_'+deliv+'_EDIT_'+nmV(v.ver)+ext);
+  if(f === '08_QC'){
+    out.names.push(J+'_'+deliv+'_R'+Math.max(1, +v.r || 1)+ext);
+    if(rev !== null && rev !== undefined && v.r > rev) out.warn.push('HĐ có '+rev+' vòng sửa. R'+v.r+' vượt số vòng đã ký, là căn cứ tính phí thêm.');
+  }
+  if(f === '09_Finish') out.names.push(J+'_'+deliv+'_MASTER_'+nmV(v.ver)+ext);
+  if(f === '10_Giao'){
+    const dur = (String(v.dur).replace(/\D/g, '') || '30')+'s';
+    (v.ratios.length ? v.ratios : ['16x9']).forEach(r => (v.langs.length ? v.langs : ['VN']).forEach(l => out.names.push(J+'_'+deliv+'_'+dur+'_'+r+'_'+l+(v.redo > 1 ? '_'+nmV(v.redo) : '')+ext)));
+  }
+  if(f === '99_Admin') out.names.push(yymmdd(v.date)+'_'+(nmWord(v.akind) || 'Quote')+'_'+(nmWord(v.partner) || nmWord(client) || 'DoiTac')+(v.signed ? '_Signed' : '_'+nmV(v.ver))+ext);
+  if(st.job && !job) out.warn.push('Chọn job để có Job ID thật trong tên file.');
+  return out;
+}
+function NmStepper({value, onChange, fmt, label, min}){
+  const lo = min === undefined ? 1 : min;
+  return html`<div class="stepper"><button type="button" aria-label=${'Giảm '+label} onClick=${() => onChange(Math.max(lo, value - 1))}>−</button><span>${fmt ? fmt(value) : value}</span><button type="button" aria-label=${'Tăng '+label} onClick=${() => onChange(value + 1)}>+</button></div>`;
+}
+function NmChips({opts, value, multi, onChange, label}){
+  const keys = Array.isArray(opts) ? opts : Object.keys(opts);
+  const on = k => multi ? value.indexOf(k) >= 0 : value === k;
+  const tog = k => onChange(multi ? (on(k) ? value.filter(x => x !== k) : value.concat([k])) : k);
+  return html`<div class="nm-chips" role="group" aria-label=${label}>${keys.map(k => html`<button key=${k} type="button" class="nm-chip" aria-pressed=${on(k)} title=${Array.isArray(opts) ? '' : opts[k]} onClick=${() => tog(k)}><span class="code">${k}</span>${Array.isArray(opts) ? null : html`<small>${opts[k]}</small>`}</button>`)}</div>`;
+}
+function goNaming(pid, f){ S.nm = {pid: pid || '', f: f || ''}; location.hash = 'dat-ten'; }
 function NamingView({D}){
-  const prefix = D.cfg.prefix || 'MX';
-  const [yymm, setYymm] = useState(D.t.slice(2,4)+D.t.slice(5,7));
-  const [cc, setCc] = useState('');
-  const seq = cc ? nextSeq(D, yymm, cc) : 1;
-  const code = prefix+'-'+(yymm || 'YYMM')+'-'+(cc || 'KHACH')+'-'+pad(seq);
-  const clients = Array.from(new Set(D.projects.map(p => p.code ? p.code.split('-').slice(2, -1).join('-') : '').filter(Boolean))).sort();
-  const withCode = D.projects.filter(p => p.code);
-  const [pid, setPid] = useState(withCode[0] ? withCode[0].id : '');
+  const pre = S.nm || {}; S.nm = null;
+  const jobs = D.projects.filter(p => p.code).sort((a, b) => b.code.localeCompare(a.code));
+  const [pid, setPid] = useState(pre.pid || (jobs.find(p => p.jobOk && !p.closed) || {}).id || '');
   const [free, setFree] = useState('');
-  const base = (pid && D.pmap[pid] && D.pmap[pid].code) || free.trim() || code;
-  const [stepCode, setStepCode] = useState('GEN'), [ver, setVer] = useState(1);
-  const [useShot, setUseShot] = useState(true), [shot, setShot] = useState(10), [count, setCount] = useState(1);
-  const names = []; for(let i = 0; i < Math.min(200, Math.max(1, count)); i++) names.push(fileName(base, useShot ? 'SH'+pad3(shot + i*10) : '', stepCode, ver));
+  const [f, setF] = useState(pre.f && NM_STAGES[pre.f] ? pre.f : '05_Gen');
+  const [v, setV] = useState({date: D.t, kind: 'Brief', src: '', tkind: 'Treatment', ver: 1, shot: 10, n: 1, ep: 0, gk: 'VID', model: 'SD25', takes: 3, suf: [], ext: '', atype: 'CHR', aname: '', angle: 'Sheet', deliv: 'Main', delivOther: '', r: 1, dur: '30', ratios: ['16x9'], langs: ['VN'], redo: 1, akind: 'Quote', partner: '', signed: false, days: 1, cams: 'A', anim: false});
+  const [chk, setChk] = useState('');
+  const up = o => setV(x => Object.assign({}, x, o));
+  const p = pid ? D.pmap[pid] : null;
+  const jobRaw = p ? p.code : free.trim();
+  const job = JOB_RE.test(jobRaw) ? jobRaw : '';
+  const pj = parseJob(job);
+  const models = modelList(D);
+  const st = NM_STAGES[f];
+  const path = job ? (p ? drivePath(D, p) : 'MAGENTX_PRODUCTION/'+(pj.cc === INT_CODE ? '02_INTERNAL' : '01_CLIENTS/'+clientFolder(D, pj.cc))+'/'+job+'/') : '';
+  const client = pj && pj.cc !== INT_CODE ? clientFolder(D, pj.cc, p && p.client) : 'MagentX';
+  const res = nmBuild(f, v, job, p && p.revAllowed !== null && p.revAllowed !== undefined ? p.revAllowed : null, client);
+  const all = res.names.concat(res.side);
+  const checks = chk.split(/\r?\n/).map(x => nmCheck(x, f, job, models)).filter(Boolean);
+  const bad = checks.filter(x => !x.ok).length;
+  const field = (lab, body, hint) => html`<div class="field"><span class="lab">${lab}</span>${body}${hint ? html`<span class="hint">${hint}</span>` : null}</div>`;
+  const ver = lab => field(lab || 'Version', html`<${NmStepper} value=${v.ver} label="version" fmt=${nmV} onChange=${x => up({ver: x})}/>`);
+  const shots = () => html`<div class="grid3">
+      ${field('Shot đầu', html`<input class="inp code" inputmode="numeric" value=${'SH'+pad3(v.shot)} aria-label="Shot đầu" onInput=${e => up({shot: Math.min(999, toInt(e.target.value) || 0)})}/>`)}
+      ${field('Số shot', html`<input class="inp" inputmode="numeric" value=${v.n} aria-label="Số shot" onInput=${e => up({n: Math.max(1, Math.min(60, toInt(e.target.value) || 1))})}/>`)}
+      ${field('Tập (series)', html`<input class="inp code" inputmode="numeric" value=${v.ep ? 'EP'+pad(v.ep) : ''} placeholder="Không" aria-label="Số tập EP, bỏ trống nếu không phải series" onInput=${e => up({ep: Math.min(99, toInt(e.target.value) || 0)})}/>`)}
+    </div><span class="hint">Shot bước 10 (SH010, SH020). Chèn giữa thì dùng số lẻ, VD SH015. Shot phải có trong shot table.</span>`;
+  const delivField = () => html`${field('Deliverable', html`<${NmChips} opts=${['Main', 'Cutdown', 'Teaser', '_']} value=${v.deliv} label="Deliverable" onChange=${x => up({deliv: x})}/>`)}${v.deliv === '_' ? html`<input class="inp sm" value=${v.delivOther} placeholder="VD EP01, Bumper" aria-label="Tên deliverable khác" onInput=${e => up({delivOther: e.target.value})}/>` : null}`;
+  const extField = () => st.exts.length ? field('Đuôi file', html`<select class="sel sm auto" value=${v.ext && st.exts.indexOf(v.ext) >= 0 ? v.ext : (f === '05_Gen' ? (v.gk === 'VID' ? 'mp4' : 'png') : f === '03_Board' && v.anim ? 'mp4' : st.ext)} aria-label="Đuôi file" onChange=${e => up({ext: e.target.value})}>${st.exts.map(x => html`<option key=${x} value=${x}>.${x}</option>`)}</select>`) : null;
+  const form = {
+    '01_Brief': () => html`<div class="grid2">${field('Ngày', html`<input class="inp" type="date" value=${v.date} aria-label="Ngày" onInput=${e => up({date: e.target.value})}/>`)}${field('Loại', html`<input class="inp" value=${v.kind} list="nm-bk" aria-label="Loại" onInput=${e => up({kind: e.target.value})}/>`)}</div><datalist id="nm-bk"><option value="Brief"/><option value="Meeting-Notes"/><option value="Ref"/><option value="Feedback"/><option value="Spec"/></datalist>${field('Nguồn', html`<input class="inp" value=${v.src} placeholder=${client} aria-label="Nguồn" onInput=${e => up({src: e.target.value})}/>`, 'Ai gửi, VD tên khách. Bỏ trống nếu là ghi chú nội bộ.')}`,
+    '02_Treatment': () => html`<div class="grid2">${field('Loại', html`<input class="inp" value=${v.tkind} list="nm-tk" aria-label="Loại" onInput=${e => up({tkind: e.target.value})}/>`)}${ver()}</div><datalist id="nm-tk"><option value="Treatment"/><option value="Script"/><option value="Moodboard"/><option value="Deck"/></datalist>`,
+    '03_Board': () => html`${field('Loại', html`<${NmChips} opts=${{BRD: 'Frame board theo shot', Animatic: 'Animatic cả phim'}} value=${v.anim ? 'Animatic' : 'BRD'} label="Loại board" onChange=${x => up({anim: x === 'Animatic', ext: ''})}/>`)}${v.anim ? null : shots()}${ver()}`,
+    '04_Asset': () => html`${field('Loại asset', html`<${NmChips} opts=${NM_ATYPE} value=${v.atype} label="Loại asset" onChange=${x => up({atype: x})}/>`)}<div class="grid3">${field('Tên', html`<input class="inp" value=${v.aname} placeholder="VD Lan" aria-label="Tên asset" onInput=${e => up({aname: e.target.value})}/>`)}${field('Góc', html`<input class="inp" value=${v.angle} list="nm-ag" aria-label="Góc" onInput=${e => up({angle: e.target.value})}/>`)}${ver()}</div><datalist id="nm-ag"><option value="Sheet"/><option value="Front"/><option value="34Front"/><option value="Side"/><option value="Wide"/><option value="Close"/></datalist>`,
+    '04B_Shoot': () => html`<div class="grid2">${field('Số ngày quay', html`<input class="inp" inputmode="numeric" value=${v.days} aria-label="Số ngày quay" onInput=${e => up({days: Math.max(1, Math.min(9, toInt(e.target.value) || 1))})}/>`)}${field('Máy quay', html`<input class="inp code" value=${v.cams} aria-label="Ký hiệu máy, VD AB" onInput=${e => up({cams: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'A'})}/>`, 'Gõ AB nếu có hai máy A và B.')}</div>`,
+    '05_Gen': () => html`${shots()}
+      ${field('Kind', html`<${NmChips} opts=${NM_KIND} value=${v.gk} label="Kind" onChange=${x => up({gk: x, ext: ''})}/>`)}
+      ${field('Model', html`<${NmChips} opts=${models} value=${models[v.model] ? v.model : Object.keys(models)[0]} label="Model" onChange=${x => up({model: x})}/>`)}
+      <div class="grid2">${ver('Version (mỗi lần đổi input)')}${field('Số take', html`<${NmStepper} value=${v.takes} label="số take" fmt=${x => 't01'+(x > 1 ? '–t'+pad(x) : '')} onChange=${x => up({takes: Math.min(20, x)})}/>`)}</div>
+      ${field('File phái sinh', html`<${NmChips} opts=${NM_SUF} value=${v.suf} multi=${true} label="Hậu tố" onChange=${x => up({suf: x})}/>`, 'Hậu tố nối vào cuối theo thứ tự bấm, VD upscale rồi reframe là _UPS_RF.')}`,
+    '06_Comp': () => html`${shots()}${ver()}`,
+    '07_Edit': () => html`${delivField()}${ver('Version EDIT (nội bộ)')}`,
+    '08_QC': () => html`${delivField()}${field('Round gửi khách', html`<${NmStepper} value=${v.r} label="round" fmt=${x => 'R'+x} onChange=${x => up({r: x})}/>`, p && p.revAllowed !== null && p.revAllowed !== undefined ? 'HĐ của job này có '+p.revAllowed+' vòng sửa.' : null)}`,
+    '09_Finish': () => html`${delivField()}${ver()}`,
+    '10_Giao': () => html`${delivField()}<div class="grid2">${field('Thời lượng (giây)', html`<input class="inp" inputmode="numeric" value=${v.dur} aria-label="Thời lượng giây" onInput=${e => up({dur: e.target.value.replace(/\D/g, '').slice(0, 4)})}/>`)}${field('Lần giao', html`<${NmStepper} value=${v.redo} label="lần giao" fmt=${x => x > 1 ? 'Giao lại '+nmV(x) : 'Lần đầu'} onChange=${x => up({redo: x})}/>`)}</div>
+      ${field('Tỉ lệ', html`<${NmChips} opts=${NM_RATIO} value=${v.ratios} multi=${true} label="Tỉ lệ" onChange=${x => up({ratios: x})}/>`)}${field('Ngôn ngữ', html`<${NmChips} opts=${NM_LANG} value=${v.langs} multi=${true} label="Ngôn ngữ" onChange=${x => up({langs: x})}/>`)}`,
+    '99_Admin': () => html`<div class="grid2">${field('Ngày', html`<input class="inp" type="date" value=${v.date} aria-label="Ngày" onInput=${e => up({date: e.target.value})}/>`)}${field('Loại', html`<input class="inp" value=${v.akind} list="nm-ak" aria-label="Loại giấy tờ" onInput=${e => up({akind: e.target.value})}/>`)}</div><datalist id="nm-ak"><option value="Quote"/><option value="Contract"/><option value="PO"/><option value="Invoice"/><option value="Acceptance"/></datalist>
+      <div class="grid2">${field('Đối tác', html`<input class="inp" value=${v.partner} placeholder=${client} aria-label="Đối tác" onInput=${e => up({partner: e.target.value})}/>`)}${v.signed ? field('Bản', html`<span class="jid-fixed code">Signed</span>`) : ver()}</div>
+      <label class="check"><input type="checkbox" checked=${v.signed} onChange=${e => up({signed: e.target.checked})}/>Bản đã ký (thêm _Signed thay cho version)</label>`,
+  };
   return html`
-    <div class="ph"><div><h1>Đặt tên file</h1><p>Tên file và folder theo một chuẩn để ai cũng tìm và reproduce được.</p></div></div>
-    <div class="nm-grid">
-      <section class="panel"><h2>Mã job</h2>
-        <div class="codebox">
-          <div><span class="fixed">${prefix}</span><small>MagentX</small></div>
-          <div><input class="inp" value=${yymm} maxlength="4" aria-label="Năm tháng YYMM" onInput=${e => setYymm(e.target.value.replace(/\D/g, '').slice(0,4))}/><small>Năm tháng</small></div>
-          <div><input class="inp" list="mx-clients" value=${cc} placeholder="KHACH" aria-label="Mã khách" onInput=${e => setCc(codeify(e.target.value))}/><small>Mã khách</small></div>
-          <div><span class="fixed">${pad(seq)}</span><small>Số thứ tự</small></div>
+    <div class="ph"><div><h1>Đặt tên file</h1><p>Chọn job và folder, điền vài ô là ra tên đúng chuẩn. Dán tên file vào ô kiểm tra để soát trước khi đưa vào <span class="code">_SELECTS</span> hay gửi khách.</p></div>
+      ${D.cfg.registerUrl ? html`<a class="btn sm" href=${D.cfg.registerUrl} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở Job Register</a>` : null}</div>
+    <section class="panel nm-job" aria-label="Job">
+      <div class="nm-job-pick">
+        <div class="field"><label class="lab" for="nm-job">Job</label><select id="nm-job" class="sel" value=${pid} onChange=${e => setPid(e.target.value)}><option value="">Nhập Job ID khác…</option>${jobs.map(x => html`<option key=${x.id} value=${x.id}>${x.code}${x.jobOk ? '' : ' (mã cũ)'}, ${x.name}</option>`)}</select>
+          ${!pid ? html`<input class="inp code" value=${free} placeholder="VD 2611_ACME_Demo-TVC" aria-label="Job ID" onInput=${e => setFree(e.target.value.trim())}/>` : null}</div>
+        <div class="nm-job-info">
+          ${job ? html`<div class="out"><code>${job}</code><${CopyBtn} text=${job} label="Copy Job ID"/></div><div class="nm-path"><span class="meta">Folder trên Drive</span><span class="code">${path}</span></div>`
+            : html`<p class=${jobRaw ? 'warn-t' : 'meta'}>${jobRaw ? (p ? 'Job này còn mã cũ ('+jobRaw+'), chưa theo Job Register. Sửa Job ID trong thông tin dự án.' : 'Job ID cần dạng YYMM_CLIENTCODE_Project-Name.') : 'Chọn job để tên file có Job ID và đường dẫn folder.'}</p>`}
+          <div class="acts">${p && safeUrl(p.folder) ? html`<a class="btn xs" href=${p.folder} target="_blank" rel="noopener"><${Ic} n="folder" s=${14}/>Mở folder job</a>` : null}${p && !p.jobOk && canW() ? html`<button type="button" class="btn xs" onClick=${() => openModal({type: 'project', pid: p.id})}><${Ic} n="edit" s=${14}/>Sửa Job ID</button>` : null}</div>
         </div>
-        <datalist id="mx-clients">${clients.map(c => html`<option key=${c} value=${c}></option>`)}</datalist>
-        <div class="out"><code>${code}</code><button type="button" class="btn sm" disabled=${!cc} onClick=${() => copyText(code)}><${Ic} n="copy" s=${16}/>Copy</button></div>
-        <p class="meta">Gõ mã khách vào ô giữa. Số thứ tự tự tăng theo khách và tháng.</p>
+      </div>
+    </section>
+    <nav class="nm-rail" aria-label="Folder trong job">${FOLDERS.map(k => html`<button key=${k} type="button" class="nm-f" aria-pressed=${f === k} onClick=${() => { setF(k); up({ext: ''}); }}><span class="code">${k}</span></button>`)}</nav>
+    ${f === '99_Admin' || NM_STAGES[f] ? html`<div class="nm-grid2">
+      <section class="panel" aria-label=${'Tạo tên cho '+f}>
+        <div class="nm-fmt"><span class="meta">Cấu trúc</span><code>${st.fmt}</code></div>
+        ${form[f]()}
+        ${extField()}
+        <p class="meta">${st.note}</p>
       </section>
-      <section class="panel"><h2>Tên file</h2>
-        <div class="field"><span class="lab">Dự án</span><select class="sel" value=${pid} onChange=${e => setPid(e.target.value)}><option value="">Nhập mã khác…</option>${withCode.map(p => html`<option key=${p.id} value=${p.id}>${p.code}, ${p.name}</option>`)}</select>${!pid ? html`<input class="inp code" value=${free} placeholder=${code} aria-label="Mã job" onInput=${e => setFree(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}/>` : null}</div>
-        <div class="grid2">
-          <div class="field"><span class="lab">Bước</span><select class="sel" value=${stepCode} onChange=${e => setStepCode(e.target.value)}>${STEPS.map(s => html`<option key=${s.id} value=${s.code}>${s.no} ${s.code}</option>`)}</select></div>
-          <div class="field"><span class="lab">Version</span><div class="stepper"><button type="button" aria-label="Giảm version" onClick=${() => setVer(Math.max(1, ver - 1))}>−</button><span>v${pad3(ver)}</span><button type="button" aria-label="Tăng version" onClick=${() => setVer(ver + 1)}>+</button></div></div>
-        </div>
-        <label class="check"><input type="checkbox" checked=${useShot} onChange=${e => setUseShot(e.target.checked)}/>Đặt theo shot (SH010, SH020…)</label>
-        ${useShot ? html`<div class="grid2"><div class="field"><span class="lab">Shot bắt đầu</span><input class="inp" inputmode="numeric" value=${shot} onInput=${e => setShot(toInt(e.target.value) || 0)}/></div><div class="field"><span class="lab">Số shot cần tên</span><input class="inp" inputmode="numeric" value=${count} onInput=${e => setCount(toInt(e.target.value) || 1)}/></div></div>` : null}
-        ${names.length === 1 ? html`<div class="out"><code>${names[0]}</code><button type="button" class="btn sm" onClick=${() => copyText(names[0])}><${Ic} n="copy" s=${16}/>Copy</button></div>`
-          : html`<ul class="names">${names.map(n => html`<li key=${n}>${n}</li>`)}</ul><div><button type="button" class="btn sm" onClick=${() => copyText(names.join('\n'))}><${Ic} n="copy" s=${16}/>Copy ${names.length} tên</button></div>`}
+      <section class="panel" aria-label="Tên file">
+        <div class="panel-h"><h2>${f === '04B_Shoot' ? 'Folder' : 'Tên file'}</h2>${all.length > 1 || res.dirs.length > 1 ? html`<button type="button" class="btn sm" onClick=${() => copyText((res.dirs.length && !all.length ? res.dirs : all).join('\n'))}><${Ic} n="copy" s=${16}/>Copy ${(res.dirs.length && !all.length ? res.dirs : all).length} dòng</button>` : null}</div>
+        ${res.warn.map(x => html`<p key=${x} class="hint warn-t">${x}</p>`)}
+        ${res.names.length ? html`<ul class="nm-out">${res.names.slice(0, 200).map(x => html`<li key=${x}><code>${x}</code><${CopyBtn} text=${x} label=${'Copy '+x}/></li>`)}</ul>` : null}
+        ${res.side.length ? html`<div class="field"><span class="lab">Prompt sidecar (một file mỗi version)</span><ul class="nm-out">${res.side.map(x => html`<li key=${x}><code>${x}</code><${CopyBtn} text=${x} label=${'Copy '+x}/></li>`)}</ul></div>` : null}
+        ${res.dirs.length ? html`<div class="field"><span class="lab">${f === '04B_Shoot' ? 'Xếp file camera vào' : 'Lưu trong'}</span><ul class="nm-out dirs">${res.dirs.map(x => html`<li key=${x}><code>${x}</code></li>`)}</ul>${f === '05_Gen' ? html`<span class="hint">Take được duyệt copy sang <span class="code">05_Gen/_SELECTS/</span>, giữ nguyên tên. Editor chỉ import từ _SELECTS.</span>` : null}</div>` : null}
+        ${!res.dirs.length && f !== '04B_Shoot' ? html`<p class="meta">Lưu trong <span class="code">${f === '04_Asset' ? '04_Asset/ hoặc _BRAND_ASSETS/ của khách' : f+'/'}</span></p>` : null}
       </section>
-      <section class="panel"><h2>Folder chuẩn mỗi job</h2>
-        <ul class="folders">${FOLDERS.map(x => html`<li key=${x}>${x}${x === '99_Admin' ? html` <span class="meta" style="font-family:var(--f)">(báo giá, HĐ, PO)</span>` : null}</li>`)}</ul>
-        <div class="acts"><button type="button" class="btn sm" onClick=${() => copyText(mkdirCmd(base))}><${Ic} n="folder" s=${16}/>Copy lệnh tạo folder (Mac)</button><button type="button" class="btn sm" onClick=${() => copyText(FOLDERS.join('\n'))}><${Ic} n="copy" s=${16}/>Copy danh sách</button></div>
-        <p class="meta">Số folder trùng số bước pipeline. Drive phân quyền theo job; freelancer chỉ thấy folder job mình làm.</p>
-      </section>
-    </div>`;
+    </div>` : null}
+    <section class="panel" aria-label="Kiểm tra tên file">
+      <div class="panel-h"><div><h2>Kiểm tra tên file</h2><p class="meta">Dán tên file (mỗi dòng một tên) để kiểm theo quy tắc của <span class="code">${f}</span>${job ? ' và Job ID '+job : ''}.</p></div>${checks.length ? html`<span class=${'badge-n'+(bad ? ' bad' : '')}>${bad ? bad+' lỗi' : 'Đạt'}</span>` : null}</div>
+      <textarea class="inp nm-chk" rows="4" value=${chk} placeholder=${'VD\nSH010_VID_SD25_v03_t01.mp4\nSH010 final.mp4'} aria-label="Danh sách tên file cần kiểm" onInput=${e => setChk(e.target.value)}></textarea>
+      ${checks.length ? html`<ul class="nm-res">${checks.slice(0, 300).map((x, i) => html`<li key=${i} class=${x.ok ? 'ok' : 'bad'}><${Ic} n=${x.ok ? 'check' : 'alert'} s=${16}/><div><code>${x.n}</code>${x.errs.length ? html`<span class="bad-t">${x.errs.join('; ')}.</span>` : null}${x.warns.map(w => html`<span key=${w} class="warn-t">${w}</span>`)}</div></li>`)}</ul>` : null}
+    </section>
+    <section class="panel nm-rules" aria-label="Quy tắc chung">
+      <h2>Quy tắc chung</h2>
+      <ul>
+        <li>Chỉ dùng chữ không dấu, số, gạch dưới và gạch ngang: gạch dưới <span class="code">_</span> ngăn các phần, gạch ngang <span class="code">-</span> nối chữ trong một phần. Không khoảng trắng, không dấu chấm ngoài đuôi file.</li>
+        <li>Số luôn đệm 0: <span class="code">SH010</span>, <span class="code">v01</span>, <span class="code">t01</span>, <span class="code">EP03</span>.</li>
+        <li>Không dùng chữ: <span class="code">final</span>, <span class="code">new</span>, <span class="code">fix</span>, <span class="code">sua</span>, <span class="code">latest</span>, <span class="code">copy</span>.</li>
+        <li>Ngày (YYMMDD) chỉ dùng ở 01_Brief và 99_Admin. File gửi ra ngoài công ty bắt buộc có Job ID đầy đủ.</li>
+        <li>Không đổi tên file camera gốc và file đã import vào Premiere/After Effects. Không xoá file: chuyển vào <span class="code">_to_delete/</span> và báo lại.</li>
+        <li>Không tạo folder job bằng tay: dùng menu MagentX trong Job Register. Job ID lấy từ cột A của Job Register.</li>
+      </ul>
+    </section>`;
 }
 
 /* ---------- settings ---------- */
@@ -2785,9 +3029,9 @@ function SettingsView({D, me}){
       <p>${me ? html`Bạn đang đăng nhập là <b>${nameOf(D, me)}</b>.` : 'Bạn chưa đăng nhập, đang ở chế độ chỉ xem.'} Mỗi người có mã PIN 4 số riêng, máy đã đăng nhập được giữ trong 24 giờ. Hào có thể dùng mã PIN của mình để vào mọi tài khoản và đặt lại mã PIN cho người quên.</p>
       ${uids.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nhân sự</th><th>Tài khoản Claude đã chọn</th></tr></thead><tbody>${uids.map(u => html`<tr key=${u}><td>${nameOf(D, S.members[u].staff)}</td><td>${(profiles[u] && profiles[u].name) || (u === S.uid ? 'Bạn' : 'Một thành viên')}</td></tr>`)}</tbody></table></div>` : null}
     </section>
+    <${ClientsPanel} D=${D} me=${me}/>
     <section class="panel"><div class="panel-h"><h2>Thông số</h2>${!lead ? html`<span class="meta">Thông số credit chỉ leader sửa.</span>` : null}</div>
       <div class="grid3">
-        <div class="field"><span class="lab">Tiền tố mã job</span><${InlineText} value=${c.prefix} cls="code" label="Tiền tố mã job" onSave=${v => v && W.config({prefix: codeify(v)})}/></div>
         <div class="field"><span class="lab">Vòng sửa mặc định</span><${InlineNum} value=${c.revDefault} label="Vòng sửa mặc định" onSave=${v => W.config({revDefault: v || 0})}/></div>
         <div class="field"><span class="lab">Thu 50/30/20 khi HĐ từ (triệu)</span><${InlineNum} value=${c.payMin} label="Ngưỡng giá trị HĐ" onSave=${v => W.config({payMin: v || 0})}/></div>
         <div class="field"><span class="lab">Buffer mỗi account</span><${InlineNum} value=${c.buffer} disabled=${!lead} label="Buffer" onSave=${v => W.config({buffer: v || 0})}/></div>
@@ -2801,6 +3045,59 @@ function SettingsView({D, me}){
       <p class="meta">Dán thẳng vào Google Sheets để báo cáo hoặc lưu trữ.</p>
     </section>
     <${BackupPanel} D=${D}/>`;
+}
+
+function ClientsPanel({D, me}){
+  const c = D.cfg, lead = canW() && isLead(D, me);
+  const list = clientList(D), models = modelList(D), custom = c.models || {};
+  const used = {}; D.projects.forEach(p => { const j = parseJob(p.code); if(j) used[j.cc] = (used[j.cc] || 0) + 1; });
+  const [nc, setNc] = useState({code: '', name: '', note: ''});
+  const [bulk, setBulk] = useState(null);
+  const [nm, setNm] = useState({code: '', name: ''});
+  const add = () => {
+    const k = cleanCC(nc.code);
+    if(k.length < 2 || !nc.name.trim()){ toast('Cần client code 2–5 ký tự và tên folder khách.', 'warn'); return; }
+    if(k === INT_CODE){ toast('MX dành cho job nội bộ.', 'warn'); return; }
+    W.config({clients: {[k]: {name: nc.name.trim(), note: nc.note.trim()}}}); setNc({code: '', name: '', note: ''});
+  };
+  const rows = (bulk || '').split(/\r?\n/).map(l => (l.indexOf('\t') >= 0 ? l.split('\t') : l.split(/\s*,\s*/)).map(x => x.trim()))
+    .filter(a => a[0] && a[1] && /^[A-Za-z0-9]{2,5}$/.test(a[0]) && a[0].toUpperCase() !== INT_CODE && a[0].toUpperCase() !== 'CODE');
+  const importBulk = () => { if(!rows.length) return; const o = {}; rows.forEach(a => { o[a[0].toUpperCase()] = {name: a[1], note: a[2] || ''}; }); W.config({clients: o}); setBulk(null); toast('Đã cập nhật '+rows.length+' khách'); };
+  const addModel = () => { const k = nm.code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if(k.length < 2 || !nm.name.trim()){ toast('Cần code 2–6 ký tự và tên model.', 'warn'); return; } if(MODELS[k]){ toast('Code '+k+' đã có.', 'warn'); return; } W.config({models: {[k]: nm.name.trim()}}); setNm({code: '', name: ''}); };
+  return html`<section class="panel flush" aria-label="Khách hàng và Job Register">
+    <div class="panel-h"><div><h2>Khách hàng và Job Register</h2><p class="meta">Client code dùng trong Job ID. Giữ giống tab Clients của Job Register.</p></div>${!lead ? html`<span class="meta">Chỉ leader sửa.</span>` : null}</div>
+    <div class="cl-links">
+      <div class="field"><span class="lab">Link Job Register</span><${InlineText} value=${c.registerUrl || ''} placeholder="https://docs.google.com/spreadsheets/…" label="Link Job Register" disabled=${!lead} onSave=${v => W.config({registerUrl: safeUrl(v) ? v.trim() : ''})}/></div>
+      <div class="field"><span class="lab">Link folder MAGENTX_PRODUCTION</span><${InlineText} value=${c.driveUrl || ''} placeholder="https://drive.google.com/drive/folders/…" label="Link folder MAGENTX_PRODUCTION" disabled=${!lead} onSave=${v => W.config({driveUrl: safeUrl(v) ? v.trim() : ''})}/></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Code</th><th>Tên folder khách</th><th>Ghi chú</th><th class="num">Job</th><th></th></tr></thead><tbody>
+      <tr><td><b class="code">${INT_CODE}</b></td><td>MagentX, lưu trong <span class="code">02_INTERNAL</span></td><td class="meta">Job nội bộ, cố định</td><td class="num">${used[INT_CODE] || 0}</td><td></td></tr>
+      ${list.map(k => html`<tr key=${k.code}>
+        <td><b class="code">${k.code}</b></td>
+        <td>${k.saved ? html`<${InlineText} value=${k.name} label=${'Tên folder của '+k.code} disabled=${!lead} onSave=${v => v.trim() && W.config({clients: {[k.code]: {name: v.trim()}}})}/>` : html`<span>${k.name}</span> <span class="meta">(chỉ có trong dự án)</span>`}</td>
+        <td>${k.saved ? html`<${InlineText} value=${k.note} placeholder="—" label=${'Ghi chú '+k.code} disabled=${!lead} onSave=${v => W.config({clients: {[k.code]: {note: v.trim()}}})}/>` : null}</td>
+        <td class="num">${used[k.code] || 0}</td>
+        <td>${!lead ? null : k.saved ? html`<button type="button" class="icon-btn sm bare" disabled=${!!used[k.code]} title=${used[k.code] ? 'Đang có job dùng mã này' : 'Xóa khỏi danh sách'} aria-label=${'Xóa khách '+k.code} onClick=${() => W.config({clients: {[k.code]: null}})}><${Ic} n="trash" s=${15}/></button>` : html`<button type="button" class="btn xs" onClick=${() => W.config({clients: {[k.code]: {name: k.name, note: ''}}})}>Lưu vào danh sách</button>`}</td>
+      </tr>`)}
+    </tbody></table></div>
+    ${lead ? html`<div class="cl-add">
+        <input class="inp sm code" value=${nc.code} maxlength="5" placeholder="Code" aria-label="Client code mới" onInput=${e => setNc(Object.assign({}, nc, {code: cleanCC(e.target.value)}))}/>
+        <input class="inp sm" value=${nc.name} placeholder="Tên folder khách, viết đầy đủ" aria-label="Tên folder khách mới" onInput=${e => setNc(Object.assign({}, nc, {name: e.target.value}))}/>
+        <input class="inp sm" value=${nc.note} placeholder="Ghi chú" aria-label="Ghi chú khách mới" onInput=${e => setNc(Object.assign({}, nc, {note: e.target.value}))} onKeyDown=${e => { if(e.key === 'Enter') add(); }}/>
+        <button type="button" class="btn sm" onClick=${add}><${Ic} n="plus" s=${16}/>Thêm khách</button>
+        <button type="button" class="btn sm" aria-expanded=${bulk !== null} onClick=${() => setBulk(bulk === null ? '' : null)}>Dán từ tab Clients</button>
+      </div>` : null}
+    ${lead && bulk !== null ? html`<div class="cl-bulk">
+        <textarea class="inp" rows="5" value=${bulk} placeholder=${'Copy các cột Code, Client, Ghi chú trong tab Clients rồi dán vào đây\nVD: ACME\tAcme_Corp\tghi chú'} aria-label="Dán danh sách khách" onInput=${e => setBulk(e.target.value)}></textarea>
+        <div class="acts"><button type="button" class="btn sm primary" disabled=${!rows.length} onClick=${importBulk}>Cập nhật ${rows.length || ''} khách</button><span class="meta">${rows.length ? rows.map(a => a[0].toUpperCase()).join(', ') : 'Mỗi dòng một khách. Dòng tiêu đề và mã MX được bỏ qua.'}</span></div>
+      </div>` : null}
+    <div class="cl-models">
+      <h3>Model code dùng trong tên file 05_Gen</h3>
+      <ul class="mc-list">${Object.keys(models).map(k => html`<li key=${k}><b class="code">${k}</b><span>${models[k]}</span>${lead && custom[k] && !MODELS[k] ? html`<button type="button" class="icon-btn sm bare" aria-label=${'Xóa model '+k} title="Xóa" onClick=${() => W.config({models: {[k]: null}})}><${Ic} n="trash" s=${14}/></button>` : null}</li>`)}</ul>
+      ${lead ? html`<div class="cl-add"><input class="inp sm code" value=${nm.code} maxlength="6" placeholder="Code" aria-label="Model code mới" onInput=${e => setNm(Object.assign({}, nm, {code: e.target.value.toUpperCase()}))}/><input class="inp sm" value=${nm.name} placeholder="Tên model, VD Kling 3.0" aria-label="Tên model mới" onInput=${e => setNm(Object.assign({}, nm, {name: e.target.value}))} onKeyDown=${e => { if(e.key === 'Enter') addModel(); }}/><button type="button" class="btn sm" onClick=${addModel}><${Ic} n="plus" s=${16}/>Thêm model</button></div>` : null}
+      <p class="meta">Thêm model mới vào đây và vào tài liệu chuẩn trước khi dùng. Không tự đặt code.</p>
+    </div>
+  </section>`;
 }
 
 /* ---------- video review player ---------- */
@@ -3149,14 +3446,14 @@ function ProjectForm({D, pid}){
   const p0 = pid ? D.pmap[pid] : null; const editing = !!p0;
   const [f, setF] = useState(() => {
     if(p0){
-      const parts = (p0.code || '').split('-'); const ok = parts.length >= 4;
-      return {name: p0.name || '', client: p0.client || '', clientCode: ok ? parts.slice(2, -1).join('-') : (p0.clientCode || codeify(p0.client || '')), yymm: ok ? parts[1] : (p0.start || D.t).slice(2,4)+(p0.start || D.t).slice(5,7), seq: ok ? (parseInt(parts[parts.length-1], 10) || 0) : 0,
+      const pj = parseJob(p0.code), known = clientList(D).some(c => c.code === (pj ? pj.cc : cleanCC(p0.clientCode)));
+      return {name: p0.name || '', client: p0.client || '', clientCode: pj ? pj.cc : (p0.useCase === 'INT' ? '' : cleanCC(p0.clientCode || codeify(p0.client || ''))), newClient: p0.useCase !== 'INT' && !known,
+        yymm: pj ? pj.yymm : ymOf(D.t), pn: pj ? pj.pn : pnameOf(p0.name), pnTouched: !!pj, jidMode: p0.code && !pj ? 'manual' : 'auto', jidText: p0.code || '', parent: p0.parent || '',
         useCase: p0.useCase || 'EXT', tier: p0.tier || '', workflow: p0.workflow || 'Full AI', duration: p0.duration || '', value: p0.value ? String(p0.value) : '', pic: p0.pic || '', start: p0.start || D.t, deadline: p0.deadline || addDays(D.t, 14), folder: p0.folder || '', revAllowed: p0.revAllowed === null ? '' : String(p0.revAllowed), note: p0.note || '', status: p0.status, kindSel: kindSelOf(p0.kind), kindOther: kindSelOf(p0.kind) === 'other' ? (p0.kind || '') : ''};
     }
-    return {name: '', client: '', clientCode: '', yymm: '', seq: 0, useCase: 'EXT', tier: 'B', workflow: 'Full AI', duration: '', value: '', pic: meId() || '', start: D.t, deadline: addDays(D.t, 14), folder: '', revAllowed: String(D.cfg.revDefault), note: '', est: '', acc: '', kindSel: 'ads', kindOther: ''};
+    return {name: '', client: '', clientCode: '', newClient: false, yymm: ymOf(D.t), pn: '', pnTouched: false, jidMode: 'auto', jidText: '', parent: '', useCase: 'EXT', tier: 'B', workflow: 'Full AI', duration: '', value: '', pic: meId() || '', start: D.t, deadline: addDays(D.t, 14), folder: '', revAllowed: String(D.cfg.revDefault), note: '', est: '', acc: '', kindSel: 'ads', kindOther: ''};
   });
   const [more, setMore] = useState(editing);
-  const [codeEdit, setCodeEdit] = useState(false);
   const [accEdit, setAccEdit] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [tm, setTm] = useState(() => {
@@ -3192,11 +3489,18 @@ function ProjectForm({D, pid}){
   const teamChanged = JSON.stringify(normTeam(tm.team)) !== tm.team0 || tm.pic !== tm.pic0;
   const set = (k, v) => setF(x => Object.assign({}, x, {[k]: v}));
   const kindName = f.kindSel === 'ads' ? 'Content ads' : f.kindSel === 'course' ? 'TVC khóa học' : (f.kindOther || '').trim();
-  const cc = f.clientCode || (f.useCase === 'INT' ? ((KINDS.find(k => k.id === f.kindSel) || {}).code || codeify(kindName) || 'NOIBO') : codeify(f.client));
-  const yymm = f.yymm || (f.start ? f.start.slice(2,4)+f.start.slice(5,7) : '');
-  const seq = f.seq || (cc && yymm ? nextSeq(D, yymm, cc, pid) : 1);
-  const code = cc && /^\d{4}$/.test(yymm) ? D.cfg.prefix+'-'+yymm+'-'+cc+'-'+pad(seq) : '';
+  /* Job ID = YYMM_CLIENTCODE_Project-Name, phải khớp cột A của Job Register */
+  const clients = clientList(D);
+  const isExt = f.useCase === 'EXT';
+  const cc = isExt ? cleanCC(f.clientCode) : INT_CODE;
+  const pnEff = f.pnTouched ? cleanPname(f.pn) : pnameOf(f.name);
+  const autoCode = /^\d{4}$/.test(f.yymm) && cc.length >= 2 && pnEff ? f.yymm+'_'+cc+'_'+pnEff : '';
+  const code = f.jidMode === 'manual' ? f.jidText.trim() : autoCode;
+  const legacy = editing && f.jidMode === 'manual' && !!code && code === (p0.code || '');
+  const codeOk = !!code && (JOB_RE.test(code) || legacy);
+  const codeCc = (parseJob(code) || {}).cc;
   const dup = !!code && D.projects.some(p => p.code === code && p.id !== pid);
+  const parents = D.projects.filter(p => p.id !== pid && p.jobOk && parseJob(p.code).cc === cc && p.code !== code);
   const need = toInt(f.est) || 0;
   const bdate = f.start && f.start > D.t ? f.start : D.t;
   const sg = !editing ? suggestAcc(D, f.useCase, need, bdate) : null;
@@ -3208,7 +3512,10 @@ function ProjectForm({D, pid}){
   const save = () => {
     if(!valid) return;
     if(f.folder.trim() && !/^https?:\/\//i.test(f.folder.trim())){ toast('Link folder cần bắt đầu bằng http:// hoặc https://', 'warn'); return; }
-    const base = {name: f.name.trim(), client: f.useCase === 'INT' ? '' : f.client.trim(), kind: f.useCase === 'INT' ? kindName : '', clientCode: cc, code: code || '', useCase: f.useCase, workflow: f.workflow, duration: f.duration.trim(), value: f.useCase === 'EXT' && f.value ? +f.value : null, pic: tm.pic || members[0] || null, team: tm.team, start: f.start, deadline: f.deadline, folder: f.folder.trim(), revAllowed: f.revAllowed === '' ? null : +f.revAllowed, note: f.note.trim()};
+    if(code && !codeOk){ toast('Job ID cần dạng YYMM_CLIENTCODE_Project-Name, VD 2611_ACME_Demo-TVC.', 'warn'); return; }
+    if(dup){ toast('Job ID trùng với dự án khác.', 'warn'); return; }
+    if(isExt && f.newClient && f.addClient && cc.length >= 2 && f.client.trim() && !(D.cfg.clients || {})[cc]) W.config({clients: {[cc]: {name: f.client.trim(), note: ''}}});
+    const base = {name: f.name.trim(), client: f.useCase === 'INT' ? '' : f.client.trim(), kind: f.useCase === 'INT' ? kindName : '', clientCode: cc, code: code || '', parent: f.parent || null, useCase: f.useCase, workflow: f.workflow, duration: f.duration.trim(), value: f.useCase === 'EXT' && f.value ? +f.value : null, pic: tm.pic || members[0] || null, team: tm.team, start: f.start, deadline: f.deadline, folder: f.folder.trim(), revAllowed: f.revAllowed === '' ? null : +f.revAllowed, note: f.note.trim()};
     if(editing){
       const patch = Object.assign({}, base);
       const team = Object.assign({}, tm.team); Object.keys(p0.team || {}).forEach(k => { if(!tm.team[k]) team[k] = null; }); patch.team = team;
@@ -3243,16 +3550,17 @@ function ProjectForm({D, pid}){
   };
   const del = () => { W.delProject(pid); closeModal(); location.hash = 'du-an'; toast('Đã xóa dự án'); };
   const ext = f.useCase === 'EXT';
-  const okInfo = !!f.name.trim() && (ext ? !!f.client.trim() : (f.kindSel !== 'other' || !!(f.kindOther || '').trim()));
+  const okInfo = !!f.name.trim() && (ext ? (!!f.client.trim() && cc.length >= 2) : (f.kindSel !== 'other' || !!(f.kindOther || '').trim()));
   const okTime = !!(f.start && f.deadline && !badDates);
   const okTeam = members.length > 0;
   const missing = [];
   if(!f.name.trim()) missing.push('tên dự án');
-  if(ext && !f.client.trim()) missing.push('khách hàng');
+  if(ext && (!f.client.trim() || cc.length < 2)) missing.push('khách hàng');
+  if(!editing && !(codeOk && !dup)) missing.push('Job ID');
   if(!ext && f.kindSel === 'other' && !(f.kindOther || '').trim()) missing.push('loại dự án');
   if(!okTime) missing.push('thời gian');
   if(!okTeam) missing.push('người làm');
-  const canSave = editing ? valid : (valid && okInfo && okTime && okTeam);
+  const canSave = editing ? (valid && (!code || codeOk) && !dup) : (valid && okInfo && okTime && okTeam && codeOk && !dup);
   const optTag = html`<em class="opt-tag">không bắt buộc</em>`;
   const cols = n => n <= 4 ? n : n <= 8 ? Math.min(4, Math.ceil(n / 2)) : 4;
   const roleBlock = members.length > 1 ? (() => {
@@ -3276,7 +3584,11 @@ function ProjectForm({D, pid}){
         <div class="grid2 al-top">
           <div class="field"><span class="lab">Loại job</span><div class="opts c2">${[['EXT','Job khách','Job làm cho khách (EXT)'],['INT','Nội bộ','Dự án nội bộ MagentX (INT)']].map(o => html`<label key=${o[0]} class=${'opt'+(f.useCase === o[0] ? ' on' : '')} title=${o[2]}><input type="radio" name="pf-use" checked=${f.useCase === o[0]} onChange=${() => set('useCase', o[0])}/><span><b>${o[1]}</b></span></label>`)}</div></div>
           ${ext
-            ? html`<div class="field"><label class="lab" for="pf-client">Khách hàng</label><input id="pf-client" class="inp" value=${f.client} placeholder="VD: MoMo" onInput=${e => set('client', e.target.value)}/></div>`
+            ? html`<div class="field"><label class="lab" for="pf-client">Khách hàng</label>
+                <select id="pf-client" class="sel" value=${f.newClient ? '__new' : f.clientCode} onChange=${e => { const v = e.target.value; if(v === '__new') setF(x => Object.assign({}, x, {newClient: true, addClient: true, clientCode: '', client: ''})); else { const c = clients.find(k => k.code === v); setF(x => Object.assign({}, x, {newClient: false, clientCode: v, client: c ? c.name : ''})); } }}>
+                  <option value="">Chọn khách…</option>${clients.map(c => html`<option key=${c.code} value=${c.code}>${c.name} (${c.code})</option>`)}<option value="__new">Khách mới…</option></select>
+                ${f.newClient ? html`<div class="grid2 nc-row"><input class="inp code" value=${f.clientCode} maxlength="5" placeholder="Mã, VD ACME" aria-label="Client code (2–5 ký tự)" onInput=${e => setF(x => Object.assign({}, x, {clientCode: cleanCC(e.target.value), addClient: true}))}/><input class="inp" value=${f.client} placeholder="Tên folder khách, viết đầy đủ" aria-label="Tên folder khách" onInput=${e => setF(x => Object.assign({}, x, {client: e.target.value, addClient: true}))}/></div><span class="hint">Khách mới phải có trong tab Clients của Job Register trước khi tạo job. Mã 2–5 chữ in hoa hoặc số.</span>` : !clients.length ? html`<span class="hint">Chưa có danh sách khách. Thêm ở Cài đặt, hoặc chọn Khách mới.</span>` : null}
+              </div>`
             : html`<div class="field"><label class="lab" for="pf-kindsel">Loại dự án</label><select id="pf-kindsel" class="sel" value=${f.kindSel} onChange=${e => set('kindSel', e.target.value)}>${KINDS.map(k => html`<option key=${k.id} value=${k.id}>${k.id === 'other' ? 'Khác (tự ghi)' : k.name}</option>`)}</select>${f.kindSel === 'other' ? html`<input id="pf-kind" class="inp" value=${f.kindOther} placeholder="Ghi loại dự án, VD: Showcase, R&D" aria-label="Loại dự án khác" onInput=${e => set('kindOther', e.target.value)}/>` : null}</div>`}
         </div>
         ${editing ? html`<div class="field"><label class="lab" for="pf-status">Trạng thái</label><select id="pf-status" class="sel" value=${f.status} onChange=${e => set('status', e.target.value)}>${Object.keys(P_STATUS).map(k => html`<option key=${k} value=${k}>${P_STATUS[k]}</option>`)}</select></div>` : null}
@@ -3292,11 +3604,28 @@ function ProjectForm({D, pid}){
         ${roleBlock}
         ${reassignBox}
       <//>
-      <${FormSec} n="4" title=${editing ? 'Mã job' : 'Mã job và credit'} desc=${html`Mã job tự tạo theo chuẩn <span class="nw">MX-YYMM-KHÁCH-NN</span>.`} done=${!!code && !dup}>
-        <div class="field"><span class="lab">Mã job</span>
-          <div class="acts">${code ? html`<span class=${'code'+(dup ? ' bad-t' : '')} style="font-size:17px">${code}</span>` : html`<span class="meta">${ext ? 'Điền khách hàng để tạo mã' : 'Chọn loại dự án để tạo mã'}</span>`}${!codeEdit ? html`<button type="button" class="btn xs" onClick=${() => setCodeEdit(true)}><${Ic} n="edit" s=${14}/>Sửa mã</button>` : null}</div>
-          ${codeEdit ? html`<div class="grid3"><div class="field"><span class="hint">Năm tháng</span><input class="inp code" value=${yymm} maxlength="4" aria-label="YYMM" onInput=${e => set('yymm', e.target.value.replace(/\D/g, '').slice(0,4))}/></div><div class="field"><span class="hint">Mã khách</span><input class="inp code" value=${cc} placeholder="KHACH" aria-label="Mã khách" onInput=${e => set('clientCode', codeify(e.target.value))}/></div><div class="field"><span class="hint">Số thứ tự</span><input class="inp code" value=${pad(seq)} aria-label="Số thứ tự" onInput=${e => set('seq', toInt(e.target.value) || 0)}/></div></div>` : null}
-          ${dup ? html`<span class="hint bad-t">Trùng mã với dự án khác, đổi số thứ tự.</span>` : null}
+      <${FormSec} n="4" title=${editing ? 'Job ID' : 'Job ID và credit'} desc=${html`Theo Job Register: <span class="nw code">YYMM_CLIENTCODE_Project-Name</span>.`} done=${codeOk && !dup}>
+        ${f.jidMode === 'auto' ? html`<div class="field"><span class="lab">Job ID</span>
+            <div class="jid-parts">
+              <label><span class="hint">Kick-off YYMM</span><input class="inp code" value=${f.yymm} maxlength="4" inputmode="numeric" aria-label="Kick-off YYMM" onInput=${e => set('yymm', e.target.value.replace(/\D/g, '').slice(0, 4))}/></label>
+              <label><span class="hint">Client code</span><span class="jid-fixed code">${cc || '—'}</span></label>
+              <label class="grow"><span class="hint">Project</span><input class="inp code" value=${f.pnTouched ? f.pn : pnEff} placeholder="VD Demo-TVC" aria-label="Project, không dấu, nối bằng gạch ngang" onInput=${e => setF(x => Object.assign({}, x, {pn: cleanPname(e.target.value), pnTouched: true}))}/></label>
+            </div>
+            <div class="out"><code class=${dup ? 'bad-t' : ''}>${code || (ext ? 'Chọn khách hàng và nhập tên dự án' : 'Nhập tên dự án')}</code>${code ? html`<${CopyBtn} text=${code} label="Copy Job ID"/>` : null}</div>
+            <span class="hint">Kick-off là tháng ký quote hoặc confirm job, không lấy tháng giao. Thêm dòng Job Register với đúng ba giá trị này để cột A ra cùng Job ID.${editing && p0.code && p0.code !== code ? html` <span class="warn-t">Folder đã tạo theo Job ID cũ thì chạy Đồng bộ trong Job Register.</span>` : null}</span>
+            <div><button type="button" class="btn xs" onClick=${() => setF(x => Object.assign({}, x, {jidMode: 'manual', jidText: code || x.jidText}))}><${Ic} n="edit" s=${14}/>Dán Job ID có sẵn</button></div>
+          </div>`
+          : html`<div class="field"><label class="lab" for="pf-jid">Job ID</label>
+            <input id="pf-jid" class="inp code" value=${f.jidText} placeholder="VD 2611_ACME_Demo-TVC" onInput=${e => set('jidText', e.target.value.trim())}/>
+            ${legacy ? html`<span class="hint warn-t">Mã cũ, chưa theo Job Register. Dán Job ID từ cột A của Job Register, hoặc tạo theo chuẩn mới.</span>`
+              : code && !JOB_RE.test(code) ? html`<span class="hint bad-t">Job ID cần dạng YYMM_CLIENTCODE_Project-Name, chỉ chữ không dấu, số và gạch ngang.</span>`
+              : codeCc && isExt && cc && codeCc !== cc ? html`<span class="hint warn-t">Client code trong Job ID (${codeCc}) khác khách đã chọn (${cc}).</span>` : null}
+            <div><button type="button" class="btn xs" onClick=${() => set('jidMode', 'auto')}>Tạo theo chuẩn mới</button></div>
+          </div>`}
+        ${dup ? html`<span class="hint bad-t">Job ID trùng với dự án khác.</span>` : null}
+        <div class="field"><label class="lab" for="pf-parent">Job gốc${optTag}</label>
+          <select id="pf-parent" class="sel" value=${f.parent} onChange=${e => set('parent', e.target.value)}><option value="">Không có, đây là job mới</option>${parents.map(x => html`<option key=${x.id} value=${x.code}>${x.code}</option>`)}${f.parent && !parents.some(x => x.code === f.parent) ? html`<option value=${f.parent}>${f.parent}</option>` : null}</select>
+          <span class="hint">Chỉ chọn khi khách có PO hoặc báo giá mới (extend, book lại). Revision trong cùng báo giá thì nộp version mới, không tạo job.</span>
         </div>
         ${!editing ? html`<div class="field"><label class="lab" for="pf-est">Credit Higgsfield dự kiến${optTag}</label><input id="pf-est" class="inp" inputmode="numeric" value=${f.est} placeholder="Tổng cho cả dự án" onInput=${e => set('est', e.target.value.replace(/[^\d]/g, ''))}/>
           ${!need ? html`<span class="hint">Để trống nếu chưa gen. Có thể book credit sau trong trang dự án.</span>` : null}
