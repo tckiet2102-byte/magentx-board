@@ -40,6 +40,12 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Mã PIN của **Hào** vào được mọi tài khoản. Ai quên mã PIN thì Hào vào **Cài đặt › Nhân sự › Mã PIN › Đặt lại**, người đó tạo mã mới ở lần đăng nhập tới.
 - Mã PIN lưu dạng băm SHA-256 kèm salt trong `staff/{id}.pin`, không lưu số gốc.
 
+## Người dùng phòng ban khác
+- Người ngoài phòng Production (Marketing, Sale, Học viện…) đăng nhập để **gửi yêu cầu việc nội bộ** và theo dõi tình trạng. Họ chỉ thấy tab **Booking nội bộ** với yêu cầu của chính mình: chờ nhận, đã giao (người làm, hạn giao, tiến độ từng bước), tạm hoãn hay từ chối kèm lý do. Họ không thấy lịch, dự án, credit, cài đặt, và không có trong lịch hay danh sách giao việc.
+- **Tự tạo tài khoản:** ở màn hình đăng nhập bấm **Tạo tài khoản mới**, nhập họ tên, bộ phận, mã PIN 4 số (hai lần). Nếu Hào đặt **mã mời** ở Cài đặt thì phải gõ đúng mã đó.
+- **Hào hoặc Hiếu tạo hộ:** Cài đặt › **Người dùng phòng ban khác** › nhập họ tên và bộ phận. Lần đầu đăng nhập họ tự tạo mã PIN. Ở đây cũng sửa tên, bộ phận, khóa tài khoản (bỏ tick Đang dùng), xóa tài khoản chưa gửi yêu cầu nào, và Hào đặt lại mã PIN.
+- Tên tài khoản không được trùng. Mã PIN của Hào vẫn vào được mọi tài khoản.
+
 ## Duyệt
 - **Các bước dự án:** Hiếu hoặc Hào duyệt bản hiện tại là bước xong, chỉ cần một trong hai người. Nếu sau khi đã duyệt mà một người bấm **Yêu cầu sửa** cho cùng bản đó thì bước chuyển sang Cần sửa (quyết định mới nhất được tính). Chọn ai được duyệt ở **Cài đặt › Nhân sự › Duyệt QC**.
 - **Booking credit Higgsfield:** chỉ Hào duyệt. Chưa duyệt thì chưa được gen.

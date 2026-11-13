@@ -868,6 +868,15 @@ a.lg-pn:hover{color:var(--action)}
 .in-form{display:flex;flex-direction:column;gap:16px}
 .in-form textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 @media (max-width:760px){.in-flow{grid-template-columns:minmax(0,1fr)}.in-card,.in-done li{padding:14px 16px}.reg-conn{margin:0 16px 14px}}
+/* người dùng phòng ban khác */
+.who-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto}
+.who-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 14px;border:1.5px solid var(--field);border-radius:11px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.who-row:hover{border-color:var(--field-hover);background:var(--subtle)}
+.who-row.on{border-color:var(--action);background:var(--action-soft)}
+.field > .inp.sm[type="search"]{margin-bottom:6px}
+.signup-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:14px 16px;border-radius:12px;background:var(--action-soft)}
+.signup-cta > div{display:flex;flex-direction:column;gap:2px}
+.cl-last{padding-bottom:20px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -1106,6 +1115,8 @@ function toast(msg, tone){ const id = rid('t'); S.toasts = S.toasts.concat([{id,
 function openModal(m){ S.modal = m; emit(); }
 function closeModal(){ S.modal = null; emit(); }
 function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId(); }
+/* Người dùng phòng ban khác (staff.kind 'req'): chỉ vào tab Booking nội bộ, không thuộc team Production */
+function isReq(id){ const st = id && S.staff[id]; return !!(st && st.kind === 'req'); }
 /* credit balances and account settings: only Hào */
 function canApproveBooking(){ return canW() && meId() === 'hao'; }
 function canCredit(){ return canW() && !!S.isOwner && meId() === 'hao'; }
@@ -1133,18 +1144,26 @@ async function boot(){
     S[name] = o;
     if(!snap.metadata.fromCache) S.got[name] = true;
     if(name === 'projects') S.firstData = true;
+    if(name === 'staff' && meId() && !S.bootPriv){ S.bootPriv = true; S.startPrivate(); }
     settle(); emit();
   }, onErr(name));
+  /* người đặt booking chỉ theo dõi dự án lập từ yêu cầu của mình, không tải cả bảng */
+  const pw = {};
+  const watchMine = () => {
+    const me = meId(); if(!me || !isReq(me) || S.privOn) return;
+    Object.keys(S.intake || {}).forEach(k => { const b = S.intake[k]; if(b && b.by === me && b.pid && !pw[b.pid]) pw[b.pid] = db.doc('projects/'+b.pid).onSnapshot(d => { if(S.privOn) return; const o = Object.assign({}, S.projects); if(d.exists) o[b.pid] = d.data(); else delete o[b.pid]; S.projects = o; emit(); }, () => {}); });
+  };
+  const startIntake = () => { if(S.intakeOn) return; S.intakeOn = true; db.doc('config/intake').onSnapshot(d => { S.intake = (d.exists && (d.data() || {}).b) || {}; S.intakeExists = !!d.exists; watchMine(); emit(); }, () => {}); };
   ['staff','members'].forEach(sub);
   db.doc('config/main').onSnapshot(d => { S.config = d.exists ? d.data() : null; S.configExists = !!d.exists; if(!d.metadata.fromCache) S.got.config = true; emit(); }, onErr('config'));
   S.startPrivate = () => {
+    startIntake();
+    if(isReq(meId())){ watchMine(); return; }
     if(S.privOn) return; S.privOn = true;
     timer = setTimeout(() => { if(!S.got.projects || !S.got.staff){ S.stale = true; emit(); } }, 10000);
     ['accounts','projects'].forEach(sub);
-    db.doc('config/intake').onSnapshot(d => { S.intake = (d.exists && (d.data() || {}).b) || {}; S.intakeExists = !!d.exists; emit(); }, () => {});
     regLoad();
   };
-  if(meId()) S.startPrivate();
 }
 
 const wq = {};
@@ -1172,6 +1191,7 @@ const W = {
   project: (pid, patch) => { const lg = logDescProject(pid, patch); return logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); },
   newProject: (pid, doc) => logAfter(wdoc('projects/'+pid, r => r.set(doc)), [{t: 'project', text: 'tạo dự án', pid, pn: doc.name}]),
   delProject: pid => { const pr = S.projects[pid]; const lg = [{t: 'project', text: 'xóa dự án '+((pr && (pr.name || pr.code)) || pid)}]; return logAfter(wdoc('projects/'+pid, r => r.delete()), lg); },
+  delStaff: sid => { const st = S.staff[sid]; const lg = [{t: 'admin', text: 'xóa người dùng '+((st && st.name) || sid)}]; return logAfter(wdoc('staff/'+sid, r => r.delete()), lg); },
   staff: (sid, patch) => { const lg = logDescStaff(sid, patch); return logAfter(wdoc('staff/'+sid, r => S.staff[sid] ? r.update(patch) : r.set(patch)), lg); },
   account: (aid, patch) => { const lg = logDescAccount(aid, patch); return logAfter(wdoc('accounts/'+aid, r => S.accounts[aid] ? r.update(patch) : r.set(patch)), lg); },
   config: patch => { const lg = logDescConfig(patch); return logAfter(wdoc('config/main', r => S.configExists ? r.update(patch) : r.set(Object.assign({}, DEF_CFG, patch))), lg); },
@@ -1324,7 +1344,7 @@ function logDescProject(pid, patch){
 }
 function logDescStaff(sid, patch){
   const old = S.staff[sid], nm = (old && old.name) || patch.name || sid, out = [], add = (t, text) => out.push({t, text});
-  if(!old){ add('admin', 'thêm nhân sự '+nm); return out; }
+  if(!old){ add('admin', patch.kind === 'req' ? 'thêm người dùng '+nm+(patch.dept ? ', bộ phận '+patch.dept : '')+' (đặt booking nội bộ)' : 'thêm nhân sự '+nm); return out; }
   Object.keys(patch || {}).forEach(k => {
     const v = patch[k];
     if(k === 'off'){ Object.keys(v || {}).forEach(d => { if(!logSame(!!v[d], !!(old.off || {})[d])) add('step', v[d] ? 'đánh dấu '+nm+' nghỉ ngày '+fD(d) : 'bỏ ngày nghỉ '+fD(d)+' của '+nm); }); return; }
@@ -1334,7 +1354,8 @@ function logDescStaff(sid, patch){
     else if(k === 'role') add('admin', 'sửa vai trò của '+nm+(v ? ': '+v : ''));
     else if(k === 'qc') add('admin', v ? 'cho '+nm+' duyệt QC' : 'bỏ quyền duyệt QC của '+nm);
     else if(k === 'lead') add('admin', v ? 'đặt '+nm+' làm Lead' : 'bỏ Lead của '+nm);
-    else if(k === 'active') add('admin', v ? 'đánh dấu '+nm+' đang làm' : 'đánh dấu '+nm+' không còn làm');
+    else if(k === 'active') add('admin', old.kind === 'req' ? (v ? 'mở khóa tài khoản '+nm : 'khóa tài khoản '+nm) : v ? 'đánh dấu '+nm+' đang làm' : 'đánh dấu '+nm+' không còn làm');
+    else if(k === 'dept') add('admin', 'đổi bộ phận của '+nm+' thành '+v);
     else add('admin', 'sửa thông tin nhân sự '+nm);
   });
   return out;
@@ -1348,7 +1369,7 @@ function logDescAccount(aid, patch){
   if(f.length) out.push({t: 'credit', text: 'sửa account '+code+': '+f.join(', ')});
   return out;
 }
-const LOG_CF = {registerUrl:'link Job Register', driveUrl:'link folder MAGENTX_PRODUCTION', prefix:'tiền tố mã job', revDefault:'vòng sửa mặc định', payMin:'ngưỡng thu 50/30/20', buffer:'buffer mỗi account', nearFull:'ngưỡng sắp đầy', unloggedWarn:'cảnh báo dùng chưa log'};
+const LOG_CF = {inviteCode:'mã mời tạo tài khoản', registerUrl:'link Job Register', driveUrl:'link folder MAGENTX_PRODUCTION', prefix:'tiền tố mã job', revDefault:'vòng sửa mặc định', payMin:'ngưỡng thu 50/30/20', buffer:'buffer mỗi account', nearFull:'ngưỡng sắp đầy', unloggedWarn:'cảnh báo dùng chưa log'};
 function logDescConfig(patch){
   const old = S.config || {}, out = [], f = [];
   Object.keys(patch || {}).forEach(k => {
@@ -1387,7 +1408,7 @@ function regLoad(force){
 function regJob(code){ return S.reg.state === 'ok' && code ? S.reg.jobs.find(j => j.id === code) || null : null; }
 /* Register status sang trạng thái dự án trên bảng */
 function regBoardStatus(st){ return ['Delivered', 'Invoiced', 'Paid'].indexOf(st) >= 0 ? 'done' : st === 'Cancelled' ? 'cancelled' : ['Lead', 'Quoting'].indexOf(st) >= 0 ? 'planned' : 'active'; }
-function regPicId(name){ const n = logFold(String(name || '').split(',')[0].trim()); if(!n) return ''; const s = Object.keys(S.staff).find(id => logFold(S.staff[id].name) === n); return s || ''; }
+function regPicId(name){ const n = logFold(String(name || '').split(',')[0].trim()); if(!n) return ''; const s = Object.keys(S.staff).find(id => !isReq(id) && logFold(S.staff[id].name) === n); return s || ''; }
 const dmy = s => s ? s.slice(8, 10)+'/'+s.slice(5, 7)+'/'+s.slice(0, 4) : '';
 /* Giá trị cho các cột nhập tay của tab Jobs. A, D, N là công thức nên tách làm ba khối dán. */
 function regFields(p){
@@ -1595,8 +1616,10 @@ function derive(){
   const t = today();
   const cfg = Object.assign({}, DEF_CFG, S.config || {});
   ['buffer','nearFull','unloggedWarn','revDefault','payMin'].forEach(k => { cfg[k] = +cfg[k] || 0; });
-  const staffList = Object.keys(S.staff).map(id => Object.assign({id}, S.staff[id])).sort((a,b) => (a.order||99) - (b.order||99) || String(a.name).localeCompare(String(b.name)));
-  const staffMap = {}; staffList.forEach(s => { staffMap[s.id] = s; });
+  const allStaff = Object.keys(S.staff).map(id => Object.assign({id}, S.staff[id])).sort((a,b) => (a.order||99) - (b.order||99) || String(a.name).localeCompare(String(b.name)));
+  const staffList = allStaff.filter(s => s.kind !== 'req');
+  const reqList = allStaff.filter(s => s.kind === 'req');
+  const staffMap = {}; allStaff.forEach(s => { staffMap[s.id] = s; });
   const reviewers = staffList.filter(s => s.qc && s.active !== false);
   const projects = Object.keys(S.projects).map(id => enrich(id, S.projects[id], t, cfg, reviewers));
   const pmap = {}; projects.forEach(p => { pmap[p.id] = p; });
@@ -1614,7 +1637,7 @@ function derive(){
   const qcPending = [];
   allSteps.forEach(x => { if(!x.st.link || x.st.state === 'done' || x.st.state === 'fix') return; x.st.qcBy.forEach(r => { if(x.st.approvedBy.indexOf(r) < 0) qcPending.push({p:x.p, st:x.st, reviewer:r}); }); });
   qcPending.sort((a,b) => (a.st.subAt||0) - (b.st.subAt||0));
-  return {t, cfg, staffList, staffMap, reviewers, projects, pmap, bookings, accounts, amap, allSteps, qcPending, activity: buildActivity(projects)};
+  return {t, cfg, staffList, reqList, staffMap, reviewers, projects, pmap, bookings, accounts, amap, allSteps, qcPending, activity: buildActivity(projects)};
 }
 function nameOf(D, id){ return (id && D.staffMap[id] && D.staffMap[id].name) || 'Ai đó'; }
 function isLead(D, me){ return !!(me && D.staffMap[me] && D.staffMap[me].lead); }
@@ -2008,7 +2031,8 @@ function DateRange({start, end, onChange, labels}){
 
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
-  const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
+  const req = isReq(me);
+  const tabs = req ? [['noi-bo','Booking nội bộ']] : [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
   const inNew = me && isLead(D, me) ? Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].status === 'new').length : 0;
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
@@ -2017,9 +2041,9 @@ function TopBar({D, route, me}){
     <a class="brand" href="#lich">${Clapper()}<span>MagentX <span class="sub">Production</span></span></a>
     <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}</a>`)}</nav>
     <div class="top-r">
-      <a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>
+      ${req ? null : html`<a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>`}
       ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
-      ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
+      ${canW() && !req ? html`<button type="button" class="btn primary" onClick=${() => openModal({type:'project'})}><${Ic} n="plus" s=${18}/>Tạo dự án</button>` : null}
     </div>
   </div></header>`;
 }
@@ -2031,6 +2055,9 @@ function PinInput({value, onChange, onDone, label, autoFocus}){
 }
 function IdentityModal({D, me}){
   const list = D.staffList.filter(s => s.active !== false);
+  const reqs = D.reqList.filter(s => s.active !== false);
+  const [nf, setNf] = useState({name: '', dept: '', code: ''});
+  const [qr, setQr] = useState('');
   const [step, setStep] = useState(me ? 'home' : 'pick');
   const [sel, setSel] = useState('');
   const [pin, setPin] = useState(''); const [pin2, setPin2] = useState('');
@@ -2059,7 +2086,33 @@ function IdentityModal({D, me}){
     if(!np) return setErr('Chưa lưu được mã PIN. Kiểm tra mạng rồi thử lại.');
     after(np);
   };
+  /* tự tạo tài khoản đặt booking nội bộ: tên, bộ phận, mã mời (nếu Hào đặt), mã PIN */
+  const signup = async () => {
+    const nm = nf.name.trim().replace(/\s+/g, ' '), dp = nf.dept.trim();
+    if(nm.length < 2) return setErr('Nhập họ tên của bạn.');
+    if(!dp) return setErr('Nhập bộ phận, VD Marketing.');
+    if(D.cfg.inviteCode && nf.code.trim() !== String(D.cfg.inviteCode).trim()) return setErr('Mã mời chưa đúng. Hỏi Hào mã mời của công ty.');
+    if(Object.keys(S.staff).some(k => logFold(S.staff[k].name) === logFold(nm))) return setErr('Đã có tài khoản tên '+nm+'. Chọn tên đó trong danh sách, hoặc ghi thêm chữ để phân biệt.');
+    if(!/^\d{4}$/.test(pin)) return setErr('Mã PIN cần đúng 4 chữ số.');
+    if(pin !== pin2) return setErr('Hai lần nhập mã PIN chưa khớp.');
+    setBusy(true);
+    const id = 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2, 5);
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
+    const np = {h: await pinHash(id, salt, pin), s: salt, at: Date.now()};
+    const doc = {name: nm, dept: dp, kind: 'req', role: dp, active: true, at: Date.now(), by: 'self', pin: np};
+    const ok = await wdoc('staff/'+id, r => r.set(doc), true);
+    setBusy(false);
+    if(!ok) return setErr('Chưa tạo được tài khoản. Kiểm tra mạng rồi thử lại.');
+    S.staff = Object.assign({}, S.staff, {[id]: doc}); emit();
+    logPut([{t: 'login', text: 'tự tạo tài khoản đặt booking nội bộ, bộ phận '+dp}], id);
+    login(id);
+  };
   const ss = sessGet();
+  const fq = logFold(qr.trim());
+  const reqShown = reqs.filter(s => !fq || logFold(s.name+' '+(s.dept || '')).indexOf(fq) >= 0);
+  const reqCards = reqs.length ? html`<div class="field"><span class="lab">Phòng ban khác</span>
+    ${reqs.length > 6 ? html`<input class="inp sm" type="search" value=${qr} placeholder="Tìm tên hoặc bộ phận" aria-label="Tìm người dùng" onInput=${e => setQr(e.target.value)}/>` : null}
+    <div class="who-list">${reqShown.slice(0, 40).map(s => html`<button key=${s.id} type="button" class=${'who-row'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><b>${s.name}</b><span class="meta">${s.dept || 'Phòng ban khác'}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</span></button>`)}${!reqShown.length ? html`<p class="meta">Không thấy tên khớp.</p>` : null}</div></div>` : null;
   const cards = html`<div class="opts who-grid">${list.map(s => html`<button key=${s.id} type="button" class=${'opt who'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><span><b>${s.name}</b><small>${s.role || 'Nhân sự'}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</small></span></button>`)}</div>`;
   const pinBox = (lab, v, set, done, af) => html`<div class="field"><span class="lab">${lab}</span><${PinInput} value=${v} onChange=${x => { set(x); setErr(''); }} onDone=${done} label=${lab} autoFocus=${af}/></div>`;
   const back = html`<button type="button" class="btn" onClick=${() => go(me ? 'home' : 'pick', '')}><${Ic} n="left" s=${16}/>Quay lại</button>`;
@@ -2069,7 +2122,7 @@ function IdentityModal({D, me}){
     title = 'Tài khoản của bạn';
     body = html`<p>Bạn đang đăng nhập là <b>${name(me)}</b>.${ss ? html` Máy này giữ đăng nhập đến <b>${fT(ss.exp)}</b>.` : null}</p>
       <div class="acts"><button type="button" class="btn sm" onClick=${() => go('change', me)}><${Ic} n="edit" s=${16}/>Đổi mã PIN</button><button type="button" class="btn sm danger" onClick=${() => { logout(); go('pick', ''); }}>Đăng xuất</button></div>
-      <div class="field"><span class="lab">Vào tài khoản khác</span>${cards}</div>
+      <div class="field"><span class="lab">Vào tài khoản khác</span>${cards}</div>${reqCards}
       <div class="form-foot"><span class="sp"></span><button type="button" class="btn" onClick=${closeModal}>Đóng</button></div>`;
   } else if(step === 'pin'){
     title = 'Đăng nhập: '+name(sel);
@@ -2086,8 +2139,23 @@ function IdentityModal({D, me}){
   } else {
     title = 'Đăng nhập';
     body = html`<p class="meta">Chọn tên của bạn. Lần đầu bạn sẽ tạo mã PIN 4 số, lần sau chỉ cần gõ 4 số đó.</p>
-      ${list.length ? cards : html`<p class="meta">Chưa có nhân sự.</p>`}
-      <p class="meta">Bảng chỉ dành cho nhân sự MagentX. Khách xem video qua link riêng mà team gửi.</p>`;
+      <div class="field"><span class="lab">Phòng Production</span>${list.length ? cards : html`<p class="meta">Chưa có nhân sự.</p>`}</div>
+      ${reqCards}
+      <div class="signup-cta"><div><b>Phòng ban khác, chưa có tài khoản?</b><span class="meta">Tạo tài khoản để gửi yêu cầu việc nội bộ cho phòng Production.</span></div><button type="button" class="btn" onClick=${() => go('signup', '')}><${Ic} n="plus" s=${16}/>Tạo tài khoản mới</button></div>
+      <p class="meta">Khách hàng xem video qua link riêng mà team gửi, không cần tài khoản.</p>`;
+  }
+  if(step === 'signup'){
+    title = 'Tạo tài khoản mới';
+    body = html`<form class="in-form" onSubmit=${e => { e.preventDefault(); signup(); }}>
+      <p class="meta">Tài khoản này dùng để gửi yêu cầu việc nội bộ cho phòng Production và theo dõi tình trạng yêu cầu của bạn.</p>
+      <div class="grid2 al-top">
+        <div class="field"><label class="lab" for="su-name">Họ tên</label><input id="su-name" class="inp" value=${nf.name} placeholder="VD: Nguyễn Minh Anh" autocomplete="name" onInput=${e => { setNf(Object.assign({}, nf, {name: e.target.value})); setErr(''); }}/></div>
+        <div class="field"><label class="lab" for="su-dept">Bộ phận</label><input id="su-dept" class="inp" value=${nf.dept} list="su-depts" placeholder="VD: Marketing" onInput=${e => { setNf(Object.assign({}, nf, {dept: e.target.value})); setErr(''); }}/><datalist id="su-depts">${Array.from(new Set(D.reqList.map(x => x.dept).filter(Boolean))).map(d => html`<option key=${d} value=${d}/>`)}</datalist></div>
+      </div>
+      ${D.cfg.inviteCode ? html`<div class="field"><label class="lab" for="su-code">Mã mời của công ty</label><input id="su-code" class="inp" value=${nf.code} autocomplete="off" placeholder="Hỏi Hào mã mời" onInput=${e => { setNf(Object.assign({}, nf, {code: e.target.value})); setErr(''); }}/></div>` : null}
+      <div class="grid2 al-top pin-pair">${pinBox('Mã PIN 4 số', pin, setPin, null, false)}${pinBox('Nhập lại', pin2, setPin2, null, false)}</div>${errLine}
+      <div class="form-foot">${back}<span class="sp"></span><button type="submit" class="btn primary" disabled=${busy || !nf.name.trim() || !nf.dept.trim() || pin.length !== 4 || pin2.length !== 4}><${Ic} n="check"/>${busy ? 'Đang tạo…' : 'Tạo tài khoản và vào'}</button></div>
+    </form>`;
   }
   return html`<${Modal} title=${title} onClose=${closeModal}>${body}<//>`;
 }
@@ -3136,6 +3204,7 @@ function SettingsView({D, me}){
       <p>${me ? html`Bạn đang đăng nhập là <b>${nameOf(D, me)}</b>.` : 'Bạn chưa đăng nhập, đang ở chế độ chỉ xem.'} Mỗi người có mã PIN 4 số riêng, máy đã đăng nhập được giữ trong 24 giờ. Hào có thể dùng mã PIN của mình để vào mọi tài khoản và đặt lại mã PIN cho người quên.</p>
       ${uids.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nhân sự</th><th>Tài khoản Claude đã chọn</th></tr></thead><tbody>${uids.map(u => html`<tr key=${u}><td>${nameOf(D, S.members[u].staff)}</td><td>${(profiles[u] && profiles[u].name) || (u === S.uid ? 'Bạn' : 'Một thành viên')}</td></tr>`)}</tbody></table></div>` : null}
     </section>
+    <${ReqUsersPanel} D=${D} me=${me}/>
     <${ClientsPanel} D=${D} me=${me}/>
     <section class="panel"><div class="panel-h"><h2>Thông số</h2>${!lead ? html`<span class="meta">Thông số credit chỉ leader sửa.</span>` : null}</div>
       <div class="grid3">
@@ -3154,6 +3223,38 @@ function SettingsView({D, me}){
     <${BackupPanel} D=${D}/>`;
 }
 
+function ReqUsersPanel({D, me}){
+  const lead = canW() && isLead(D, me);
+  const [nu, setNu] = useState({name: '', dept: ''});
+  const [ask, setAsk] = useState('');
+  const cnt = {}; intakeList(D).forEach(b => { cnt[b.by] = (cnt[b.by] || 0) + 1; });
+  const add = () => {
+    const nm = nu.name.trim().replace(/\s+/g, ' '), dp = nu.dept.trim();
+    if(nm.length < 2 || !dp){ toast('Cần họ tên và bộ phận.', 'warn'); return; }
+    if(Object.keys(S.staff).some(k => logFold(S.staff[k].name) === logFold(nm))){ toast('Đã có tài khoản tên '+nm+'.', 'warn'); return; }
+    W.staff('u'+Date.now().toString(36)+Math.random().toString(36).slice(2, 5), {name: nm, dept: dp, kind: 'req', role: dp, active: true, at: Date.now(), by: meId() || null});
+    setNu({name: '', dept: ''}); toast('Đã thêm '+nm+'. Lần đầu đăng nhập, họ tự tạo mã PIN.');
+  };
+  return html`<section class="panel flush" aria-label="Người dùng phòng ban khác">
+    <div class="panel-h"><div><h2>Người dùng phòng ban khác</h2><p class="meta">Chỉ vào được tab Booking nội bộ: gửi yêu cầu và xem tình trạng yêu cầu của mình. Không thấy lịch, dự án, credit.</p></div>${!lead ? html`<span class="meta">Chỉ leader sửa.</span>` : null}</div>
+    <div class="cl-links"><div class="field"><span class="lab">Mã mời khi tự tạo tài khoản</span><${InlineText} value=${D.cfg.inviteCode || ''} placeholder="Để trống: ai mở bảng cũng tạo được tài khoản" label="Mã mời tạo tài khoản" disabled=${!lead} onSave=${v => W.config({inviteCode: v.trim()})}/><span class="hint">Có mã mời thì người mới phải gõ đúng mã này ở màn hình Tạo tài khoản mới.</span></div></div>
+    ${D.reqList.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Bộ phận</th><th>Mã PIN</th><th class="num">Yêu cầu</th><th>Đang dùng</th><th></th></tr></thead><tbody>
+      ${D.reqList.map(u => html`<tr key=${u.id}>
+        <td style="min-width:150px"><${InlineText} value=${u.name} label=${'Tên '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {name: v})}/></td>
+        <td style="min-width:140px"><${InlineText} value=${u.dept || ''} label=${'Bộ phận của '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {dept: v, role: v})}/></td>
+        <td class="nw">${hasPin(u.id) ? html`<span>Đã tạo</span>${me === 'hao' && canW() ? (ask === 'pin'+u.id ? html` <button type="button" class="btn xs danger" onClick=${() => { setAsk(''); W.staff(u.id, {pin: null}); toast('Đã đặt lại mã PIN của '+u.name+'.'); }}>Bấm lần nữa để đặt lại</button>` : html` <button type="button" class="btn xs" onClick=${() => setAsk('pin'+u.id)}>Đặt lại</button>`) : null}` : html`<span class="meta">Chưa tạo</span>`}</td>
+        <td class="num">${cnt[u.id] || 0}</td>
+        <td><label class="check"><input type="checkbox" checked=${u.active !== false} disabled=${!lead} aria-label=${'Đang dùng: '+u.name} onChange=${e => W.staff(u.id, {active: e.target.checked})}/></label></td>
+        <td>${lead && !cnt[u.id] ? (ask === 'del'+u.id ? html`<button type="button" class="btn xs danger" onClick=${() => { setAsk(''); W.delStaff(u.id); }}>Bấm lần nữa để xóa</button>` : html`<button type="button" class="icon-btn sm bare" title="Xóa tài khoản" aria-label=${'Xóa tài khoản '+u.name} onClick=${() => setAsk('del'+u.id)}><${Ic} n="trash" s=${15}/></button>`) : null}</td>
+      </tr>`)}
+    </tbody></table></div>` : html`<div class="in-empty"><p class="meta">Chưa có ai. Thêm ở dưới, hoặc để họ tự bấm Tạo tài khoản mới ở màn hình đăng nhập.</p></div>`}
+    ${lead ? html`<div class="cl-add cl-last">
+      <input class="inp sm" value=${nu.name} placeholder="Họ tên" aria-label="Họ tên người dùng mới" onInput=${e => setNu(Object.assign({}, nu, {name: e.target.value}))}/>
+      <input class="inp sm" value=${nu.dept} placeholder="Bộ phận, VD Marketing" aria-label="Bộ phận người dùng mới" onInput=${e => setNu(Object.assign({}, nu, {dept: e.target.value}))} onKeyDown=${e => { if(e.key === 'Enter') add(); }}/>
+      <button type="button" class="btn sm" onClick=${add}><${Ic} n="plus" s=${16}/>Thêm người dùng</button>
+    </div>` : null}
+  </section>`;
+}
 function ClientsPanel({D, me}){
   const c = D.cfg, lead = canW() && isLead(D, me);
   const list = clientList(D), models = modelList(D), custom = c.models || {};
@@ -3689,7 +3790,7 @@ function ProjectForm({D, pid, pre}){
     const wantReg = !regMode && f.addReg && regOn && JOB_RE.test(code);
     W.newProject(id, doc).then(ok => {
       if(!ok) return;
-      if(f.intake) intakeSave(f.intake, {status: 'assigned', pid: id, aBy: meId() || null, aAt: Date.now()}, 'nhận booking nội bộ "'+doc.name+'" và lập dự án');
+      if(f.intake) intakeSave(f.intake, {status: 'assigned', pid: id, aBy: meId() || null, aAt: Date.now(), code: doc.code || '', team: members.map(w => nameOf(D, w)).join(', '), deadline: doc.deadline}, 'nhận booking nội bộ "'+doc.name+'" và lập dự án');
       if(wantReg) regAdd(id, doc).then(o => toast(o.ok ? 'Đã thêm '+code+' vào Job Register' : o.exists ? code+' đã có trong Job Register' : 'Chưa thêm được vào Job Register: '+(o.error || 'lỗi'), o.ok || o.exists ? '' : 'warn'));
     });
     closeModal(); S.focus = {pid: id, step: null}; location.hash = 'job-'+id;
@@ -3883,7 +3984,7 @@ function LogView({D, me}){
 
   const stat = {};
   all.forEach(x => { const k = x.by === 'client' ? 'client' : x.by; const r = stat[k] || (stat[k] = {n: 0, last: 0}); r.n++; if(x.at > r.last) r.last = x.at; });
-  const people = D.staffList.filter(s => s.active !== false || stat[s.id]).map(s => ({id: s.id, name: s.name}))
+  const people = D.staffList.filter(s => s.active !== false || stat[s.id]).concat(D.reqList.filter(s => stat[s.id])).map(s => ({id: s.id, name: s.name}))
     .concat(Object.keys(stat).filter(k => k !== 'client' && !D.staffMap[k]).map(k => ({id: k, name: nameOf(D, k)})))
     .concat(stat.client ? [{id: 'client', name: 'Khách'}] : []);
   const qq = logFold(q.trim());
@@ -3970,7 +4071,7 @@ function RegJobsPanel({D}){
 function intakeList(D){ return Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].name).map(k => Object.assign({id: k}, S.intake[k])); }
 function IntakeForm({D, id, me}){
   const b0 = id ? S.intake[id] : null;
-  const [f, setF] = useState(() => b0 ? Object.assign({kindOther: ''}, b0, {est: b0.est ? String(b0.est) : ''}) : {name: '', kind: 'Content ads', kindOther: '', type: 'Internal', req: me ? nameOf(D, me) : '', brief: '', deliv: '', due: addDays(D.t, 7), links: '', est: '', prio: 'normal'});
+  const [f, setF] = useState(() => b0 ? Object.assign({kindOther: ''}, b0, {est: b0.est ? String(b0.est) : ''}) : {name: '', kind: 'Content ads', kindOther: '', type: 'Internal', req: me ? nameOf(D, me)+(isReq(me) && S.staff[me].dept ? ', '+S.staff[me].dept : '') : '', brief: '', deliv: '', due: addDays(D.t, 7), links: '', est: '', prio: 'normal'});
   const set = (k, v) => setF(x => Object.assign({}, x, {[k]: v}));
   const ok = f.name.trim() && f.req.trim() && f.brief.trim() && f.due && (f.kind !== 'Khác' || f.kindOther.trim());
   const save = () => {
@@ -4015,7 +4116,7 @@ function IntakeCard({b, D, me}){
   const decide = st => { intakeSave(b.id, {status: st, dBy: me || null, dAt: Date.now(), reason: reason.trim()}, (st === 'hold' ? 'hoãn' : 'từ chối')+' booking nội bộ "'+b.name+'"'+(reason.trim() ? ': '+reason.trim() : '')); setAsk(''); setReason(''); };
   return html`<article class=${'in-card'+(b.prio === 'urgent' ? ' urgent' : '')}>
     <div class="in-h"><h3>${b.name}</h3>${b.prio === 'urgent' ? html`<span class="st sm fix">Gấp</span>` : null}<span class="sp"></span><span class=${'in-due'+(late ? ' bad-t' : '')}>Cần trước <b>${fD(b.due)}</b>${late ? ', đã quá hạn' : ''}</span></div>
-    <div class="in-tags"><span class="in-tag">${b.kind || 'Nội bộ'}</span>${b.type && b.type !== 'Internal' ? html`<span class="in-tag">${b.type}</span>` : null}<span class="meta">Yêu cầu: <b>${b.req}</b></span><span class="meta">${nameOf(D, b.by)} gửi ${rel(b.at)}</span></div>
+    <div class="in-tags"><span class="in-tag">${b.kind || 'Nội bộ'}</span>${b.type && b.type !== 'Internal' ? html`<span class="in-tag">${b.type}</span>` : null}<span class="meta">Yêu cầu: <b>${b.req}</b></span><span class="meta">${nameOf(D, b.by)}${isReq(b.by) && S.staff[b.by].dept ? ' ('+S.staff[b.by].dept+')' : ''} gửi ${rel(b.at)}</span></div>
     <p class="in-brief">${b.brief}</p>
     ${b.deliv || b.est || b.links ? html`<div class="in-extra">${b.deliv ? html`<span><span class="meta">Bản giao</span> ${b.deliv}</span>` : null}${b.est ? html`<span><span class="meta">Credit dự kiến</span> ${fN(b.est)}</span>` : null}${safeUrl(b.links) ? html`<a href=${b.links} target="_blank" rel="noopener"><${Ic} n="ext" s=${14}/>Link brief</a>` : null}</div>` : null}
     ${b.status !== 'new' && b.reason ? html`<p class="meta">${IN_STATUS[b.status]} bởi ${nameOf(D, b.dBy)}: ${b.reason}</p>` : null}
@@ -4029,36 +4130,36 @@ function IntakeCard({b, D, me}){
   </article>`;
 }
 function IntakeView({D, me}){
-  const lead = isLead(D, me);
-  const all = intakeList(D);
+  const lead = isLead(D, me), req = isReq(me);
+  const all = intakeList(D).filter(b => !req || b.by === me);
   const byDue = (a, b) => (b.prio === 'urgent') - (a.prio === 'urgent') || String(a.due).localeCompare(String(b.due));
   const fresh = all.filter(b => b.status === 'new').sort(byDue);
   const done = all.filter(b => b.status === 'assigned').sort((a, b) => (b.aAt || 0) - (a.aAt || 0));
   const parked = all.filter(b => b.status === 'hold' || b.status === 'declined').sort((a, b) => (b.dAt || 0) - (a.dAt || 0));
   const [showPark, setShowPark] = useState(false);
   return html`
-    <div class="ph"><div><h1>Booking nội bộ</h1><p>Nhận việc nội bộ, lập dự án và giao người làm. Mỗi yêu cầu được nhận thành một job <span class="code">YYMM_MX_…</span> trong Job Register.</p></div>
+    <div class="ph"><div><h1>Booking nội bộ</h1><p>${req ? 'Gửi yêu cầu việc cho phòng Production và theo dõi tình trạng. Hào hoặc Hiếu sẽ nhận, chọn người làm và hạn giao.' : html`Nhận việc nội bộ, lập dự án và giao người làm. Mỗi yêu cầu được nhận thành một job <span class="code">YYMM_MX_…</span> trong Job Register.`}</p></div>
       ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type: 'intake'})}><${Ic} n="plus" s=${18}/>Gửi yêu cầu</button>` : null}</div>
     <ol class="in-flow" aria-label="Các bước">
       <li><b>Gửi yêu cầu</b><span>Ai cũng gửi được: tên việc, người yêu cầu, brief, hạn xong, bản giao.</span></li>
       <li><b>Lead nhận và giao việc</b><span>${lead ? 'Bạn' : 'Hào hoặc Hiếu'} chọn quy trình, người làm, thời gian. Bảng tạo dự án và Job ID.</span></li>
-      <li><b>Vào Job Register</b><span>${S.reg.state === 'ok' ? 'Bảng tự thêm dòng job MX vào sheet.' : 'Copy ba khối ô vào sheet, rồi bấm Đã nhập xong.'} Tạo folder bằng menu MagentX.</span></li>
+      ${req ? html`<li><b>Theo dõi</b><span>Yêu cầu chuyển sang Đã giao kèm người làm, hạn giao và tiến độ. Bị hoãn hay từ chối thì có lý do.</span></li>` : html`<li><b>Vào Job Register</b><span>${S.reg.state === 'ok' ? 'Bảng tự thêm dòng job MX vào sheet.' : 'Copy ba khối ô vào sheet, rồi bấm Đã nhập xong.'} Tạo folder bằng menu MagentX.</span></li>`}
     </ol>
     <section class="panel flush" aria-label="Chờ nhận">
-      <div class="panel-h"><h2>Chờ nhận <span class=${'badge-n'+(fresh.length ? ' wait' : '')}>${fresh.length}</span></h2></div>
-      ${fresh.length ? html`<div class="in-list">${fresh.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : html`<div class="in-empty"><p class="empty">Không có yêu cầu nào đang chờ.${canW() ? ' Bấm Gửi yêu cầu khi có việc nội bộ mới.' : ''}</p></div>`}
+      <div class="panel-h"><h2>${req ? 'Đang chờ nhận' : 'Chờ nhận'} <span class=${'badge-n'+(fresh.length ? ' wait' : '')}>${fresh.length}</span></h2></div>
+      ${fresh.length ? html`<div class="in-list">${fresh.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : html`<div class="in-empty"><p class="empty">${req ? 'Bạn chưa có yêu cầu nào đang chờ.' : 'Không có yêu cầu nào đang chờ.'}${canW() ? ' Bấm Gửi yêu cầu khi có việc nội bộ mới.' : ''}</p></div>`}
     </section>
     <section class="panel flush" aria-label="Đã giao">
       <div class="panel-h"><h2>Đã giao <span class="badge-n">${done.length}</span></h2></div>
       ${done.length ? html`<ul class="in-done">${done.slice(0, 30).map(b => { const p = D.pmap[b.pid]; return html`<li key=${b.id}>
-          <div class="in-done-h"><b>${p ? html`<a href=${'#job-'+p.id}>${p.name}</a>` : b.name}</b>${p && p.code ? html`<span class="code meta">${p.code}</span>` : null}</div>
-          <div class="in-tags"><span class="meta">Yêu cầu: ${b.req}</span>${p ? html`<span class="meta">${teamText(D, p)}</span><span class="meta">${p.steps.length ? 'Xong '+p.doneN+'/'+p.total+' bước' : P_STATUS[p.status]}, deadline ${fD(p.deadline)}</span>` : html`<span class="meta">Dự án đã bị xóa</span>`}<span class="meta">${nameOf(D, b.aBy)} giao ${rel(b.aAt)}</span></div>
-          ${p ? html`<${RegBox} p=${p} D=${D}/>` : null}
+          <div class="in-done-h"><b>${p && !req ? html`<a href=${'#job-'+p.id}>${p.name}</a>` : p ? p.name : b.name}</b>${(p && p.code) || b.code ? html`<span class="code meta">${(p && p.code) || b.code}</span>` : null}${p && p.closed ? html`<span class="st sm done">${P_STATUS[p.status]}</span>` : null}</div>
+          <div class="in-tags"><span class="meta">Yêu cầu: ${b.req}</span>${p ? html`<span class="meta">Người làm: ${req ? p.steps.length ? Array.from(new Set([].concat.apply([], p.steps.map(x => x.who)))).map(w => nameOf(D, w)).join(', ') || b.team : (b.team || nameOf(D, p.pic)) : teamText(D, p)}</span><span class="meta">${p.steps.length ? 'Xong '+p.doneN+'/'+p.total+' bước'+(p.cur ? ', đang ở bước '+p.cur.def.no+' '+p.cur.def.name : '') : P_STATUS[p.status]}, hạn giao ${fD(p.deadline)}</span>` : b.team ? html`<span class="meta">Người làm: ${b.team}</span><span class="meta">Hạn giao ${fD(b.deadline)}</span>` : html`<span class="meta">Dự án đã bị xóa</span>`}<span class="meta">${nameOf(D, b.aBy)} giao ${rel(b.aAt)}</span></div>
+          ${p && !req ? html`<${RegBox} p=${p} D=${D}/>` : null}
         </li>`; })}</ul>` : html`<div class="in-empty"><p class="empty">Chưa giao yêu cầu nào.</p></div>`}
     </section>
     ${parked.length ? html`<section class="panel flush" aria-label="Tạm hoãn, từ chối">
-      <div class="panel-h"><h2>Tạm hoãn, từ chối <span class="badge-n">${parked.length}</span></h2><button type="button" class="btn xs" aria-expanded=${showPark} onClick=${() => setShowPark(!showPark)}>${showPark ? 'Thu gọn' : 'Xem'}</button></div>
-      ${showPark ? html`<div class="in-list">${parked.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : null}
+      <div class="panel-h"><h2>Tạm hoãn, từ chối <span class="badge-n">${parked.length}</span></h2>${req ? null : html`<button type="button" class="btn xs" aria-expanded=${showPark} onClick=${() => setShowPark(!showPark)}>${showPark ? 'Thu gọn' : 'Xem'}</button>`}</div>
+      ${showPark || req ? html`<div class="in-list">${parked.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : null}
     </section>` : null}`;
 }
 
@@ -4084,17 +4185,20 @@ function App(){
     if(S.localMe){
       const ss = sessGet();
       if(!ss || ss.staff !== S.localMe) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.');
-      else if(S.got.staff){ const st = S.staff[S.localMe]; if(!st || !hasPin(S.localMe) || (st.pin.at || 0) !== ss.pv) logout('Mã PIN của tài khoản này vừa được đổi hoặc đặt lại. Đăng nhập lại.'); }
+      else if(S.got.staff){ const st = S.staff[S.localMe]; if(st && st.active === false && st.kind === 'req') logout('Tài khoản này đang bị khóa. Hỏi Hào để mở lại.'); else if(!st || !hasPin(S.localMe) || (st.pin.at || 0) !== ss.pv) logout('Mã PIN của tài khoản này vừa được đổi hoặc đặt lại. Đăng nhập lại.'); }
     }
     if(S.phase === 'ready' && S.got.staff && !meId() && !S.idAsked && D.staffList.length && !S.modal){ S.idAsked = true; openModal({type: 'identity'}); }
   });
   useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
-  useEffect(() => { if(me && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
+  const req = isReq(me);
+  useEffect(() => { if(me && !req && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
+  useEffect(() => { if(req && route.view !== 'noi-bo') location.hash = 'noi-bo'; }, [req, route.view]);
   const free = route.view === 'dat-ten';
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;
-  else if(!free && S.phase === 'ready' && !me) view = html`<div class="boot"><div class="boot-card"><b>Đăng nhập để xem bảng</b><span>Chọn tên của bạn và nhập mã PIN 4 số.</span><button type="button" class="btn primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div></div>`;
+  else if(!free && S.phase === 'ready' && !me) view = html`<div class="boot"><div class="boot-card"><b>Đăng nhập để xem bảng</b><span>Chọn tên của bạn và nhập mã PIN 4 số. Phòng ban khác cần đặt việc nội bộ thì tạo tài khoản mới.</span><button type="button" class="btn primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div></div>`;
+  else if(req) view = html`<${IntakeView} D=${D} me=${me}/>`;
   else if(!free && (S.phase === 'boot' || !S.firstData)) view = html`<div class="boot"><div class="boot-card"><b>Đang tải dữ liệu phòng…</b><span>Lịch, dự án và credit Higgsfield.</span></div></div>`;
   else if(route.view === 'du-an') view = html`<${ProjectsView} D=${D}/>`;
   else if(route.view === 'qc') view = html`<${QCView} D=${D} me=${me}/>`;
