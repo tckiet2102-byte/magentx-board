@@ -72,6 +72,13 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Player (cả nội bộ và khách) vừa phát trực tiếp vừa tải sẵn cả file về máy theo khúc 8 MB, 3 khúc song song, mỗi khúc tự thử lại khi rớt mạng. Tải xong thì tua tức thì (khoảng 0,1 giây), không phụ thuộc mạng. File lớn hơn 900 MB (260 MB trên điện thoại) chỉ phát trực tiếp.
 - Mỗi lần Google Drive trả dữ liệu mất khoảng 1,5–2 giây, nên nộp bản xem nhẹ: MP4 H.264, 1080p khoảng 8–15 Mbps, bật **Fast Start / Web optimized** khi xuất để video bắt đầu phát nhanh hơn.
 
+## Nhật ký thao tác
+- Đăng nhập là Hào sẽ thấy thêm tab **Nhật ký**. Trang này ghi lại ai làm gì, lúc nào: nộp bản, sửa link, duyệt, yêu cầu sửa, góp ý, ghi chú video, lịch và giao việc, gate, booking và log credit, số credit còn, link gửi khách, nhân sự, cài đặt, đăng nhập, đăng xuất, nhập sai và đổi mã PIN.
+- Khi Hào dùng mã PIN của mình để vào tài khoản người khác, các thao tác trong phiên đó có thêm dòng **Hào đăng nhập hộ**.
+- Chọn **Hôm nay**, **7 ngày** hoặc **30 ngày**. Bấm thẻ tên một người để xem riêng người đó; lọc theo loại thao tác, tìm theo dự án hay nội dung; **Tải CSV** để mở bằng Excel.
+- Nhật ký bắt đầu ghi từ ngày 13/11/2026. Trước đó trang lấy lại các lần nộp bản, duyệt, góp ý và gate từ dữ liệu dự án. Phản hồi của khách qua link duyệt luôn lấy từ dữ liệu dự án.
+- Dữ liệu lưu ở Firestore, mỗi ngày một doc `config/log-YYYY-MM-DD` (dùng collection `config` có sẵn nên không phải sửa Firestore Rules).
+
 ## Lưu ý
 - Mã PIN chặn việc chọn nhầm hoặc giả tên người khác trên giao diện. Database vẫn mở cho ai có link (xem `firestore.rules`), nên vẫn chỉ gửi link trong nội bộ.
 - Nút **Điều chỉnh số dư**, **Sửa account** và **Thêm account** ở trang Credit chỉ hiện khi đang đăng nhập là Hào.

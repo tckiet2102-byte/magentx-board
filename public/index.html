@@ -728,6 +728,51 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .toast.bad{background:var(--bad);color:var(--surface)}
 @media (max-width:640px){:root{--namew:150px;--dayw:32px}h1{font-size:25px}.mnav h1{min-width:0}.uform{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.uform .btn{grid-column:1 / -1}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+/* nhật ký thao tác */
+.lg-people{display:flex;flex-wrap:wrap;gap:8px}
+.lg-p{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:128px;padding:10px 14px 11px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.lg-p:hover{border-color:var(--field-hover)}
+.lg-p[aria-pressed="true"]{border-color:var(--action);background:var(--action-soft)}
+.lg-p b{font-size:14.5px;font-weight:700}
+.lg-n{font-size:24px;font-weight:800;line-height:1.2;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.lg-p .meta{font-size:12.5px}
+.lg-p.zero .lg-n{color:var(--ink-3)}
+.panel-h.lg-bar{justify-content:flex-start;gap:10px}
+.lg-q{width:min(320px,100%)}
+.lg-g + .lg-g{border-top:1px solid var(--rule)}
+.lg-day{display:flex;align-items:center;gap:10px;padding:14px 22px 6px}
+.lg-day h3{font-size:15px;font-weight:700}
+.lg-tag{font-size:12.5px;font-weight:700;color:var(--action)}
+.lg-list{list-style:none;margin:0;padding:0 0 8px}
+.lg-row{display:grid;grid-template-columns:48px minmax(120px,170px) minmax(0,1fr) auto;gap:2px 16px;align-items:baseline;padding:8px 22px;font-size:14.5px}
+.lg-row:hover{background:var(--subtle)}
+.lg-t{font-size:13.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.lg-who{display:flex;flex-direction:column;min-width:0}
+.lg-who b{font-weight:700;overflow-wrap:anywhere}
+.lg-via{font-size:12.5px;font-weight:600;color:var(--wait)}
+.lg-x{display:flex;flex-direction:column;gap:1px;min-width:0;overflow-wrap:anywhere}
+.lg-pn{font-size:13.5px;color:var(--ink-2)}
+a.lg-pn:hover{color:var(--action)}
+.lg-src{font-size:12.5px;color:var(--ink-3)}
+.lg-row.old > .lg-x > span:first-child{color:var(--ink-2)}
+.lg-cat{justify-self:end;padding:1px 9px;border-radius:999px;background:var(--tint);color:var(--ink-2);font-size:12.5px;font-weight:600;white-space:nowrap}
+.lg-cat.client{background:var(--action-soft);color:var(--action)}
+.lg-cat.login{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--rule)}
+.lg-empty{padding:4px 22px 22px}
+.lg-more{display:flex;align-items:center;gap:12px;padding:6px 22px 18px}
+.lg-note{max-width:80ch}
+@media (max-width:720px){
+  .lg-people{flex-wrap:nowrap;overflow-x:auto;margin-inline:-20px;padding:2px 20px 4px;scrollbar-width:none}
+  .lg-people::-webkit-scrollbar{display:none}
+  .lg-p{flex:none;min-width:112px;padding:8px 12px 9px}
+  .lg-n{font-size:20px}
+  .lg-row{grid-template-columns:auto minmax(0,1fr) auto;padding:10px 16px}
+  .lg-who{flex-direction:row;flex-wrap:wrap;gap:0 8px}
+  .lg-cat{grid-row:1;grid-column:3}
+  .lg-x{grid-row:2;grid-column:1 / -1}
+  .lg-day{padding:14px 16px 4px}.lg-empty{padding:4px 16px 18px}.lg-more{padding:6px 16px 16px}
+  .lg-q{width:100%}
+}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -771,6 +816,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
       get: () => wrap(r.get()),
       set: d => wrap(r.set(clean(d))),
       update: d => { const args = flat(d || {}, [], []); return args.length ? wrap(r.update(...args)) : Promise.resolve(); },
+      merge: d => wrap(r.set(clean(d), { merge: true })),
       delete: () => wrap(r.delete()),
       onSnapshot: (n, err) => r.onSnapshot(META, n, e => err && err(mapErr(e))) };
   };
@@ -918,7 +964,7 @@ function uniqSteps(list){ const seen = {}; return list.filter(q => { const k = q
 /* ---------- login session (24 giờ trên máy này) ---------- */
 const SESS_MS = 24 * 3600 * 1000;
 function sessGet(){ try { const x = JSON.parse(lsGet('mx.sess') || 'null'); return x && x.staff && x.exp > Date.now() ? x : null; } catch(e){ return null; } }
-function sessSet(staff, pv){ lsSet('mx.sess', staff ? JSON.stringify({staff, pv: pv || 0, exp: Date.now() + SESS_MS}) : null); }
+function sessSet(staff, pv, via){ lsSet('mx.sess', staff ? JSON.stringify(Object.assign({staff, pv: pv || 0, exp: Date.now() + SESS_MS}, via ? {via} : {})) : null); }
 function skipActive(){ return (+lsGet('mx.viewonly') || 0) > Date.now(); }
 
 /* ---------- store ---------- */
@@ -995,13 +1041,14 @@ function writeErr(e){
   else toast('Không lưu được ('+(c||'lỗi')+').', 'bad');
   emit();
 }
+/* Mọi lần ghi đi qua W; mô tả thao tác lấy trước khi ghi (so với dữ liệu cũ), ghi xong mới vào nhật ký. */
 const W = {
-  project: (pid, patch) => wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))),
-  newProject: (pid, doc) => wdoc('projects/'+pid, r => r.set(doc)),
-  delProject: pid => wdoc('projects/'+pid, r => r.delete()),
-  staff: (sid, patch) => wdoc('staff/'+sid, r => S.staff[sid] ? r.update(patch) : r.set(patch)),
-  account: (aid, patch) => wdoc('accounts/'+aid, r => S.accounts[aid] ? r.update(patch) : r.set(patch)),
-  config: patch => wdoc('config/main', r => S.configExists ? r.update(patch) : r.set(Object.assign({}, DEF_CFG, patch))),
+  project: (pid, patch) => { const lg = logDescProject(pid, patch); return logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); },
+  newProject: (pid, doc) => logAfter(wdoc('projects/'+pid, r => r.set(doc)), [{t: 'project', text: 'tạo dự án', pid, pn: doc.name}]),
+  delProject: pid => { const pr = S.projects[pid]; const lg = [{t: 'project', text: 'xóa dự án '+((pr && (pr.name || pr.code)) || pid)}]; return logAfter(wdoc('projects/'+pid, r => r.delete()), lg); },
+  staff: (sid, patch) => { const lg = logDescStaff(sid, patch); return logAfter(wdoc('staff/'+sid, r => S.staff[sid] ? r.update(patch) : r.set(patch)), lg); },
+  account: (aid, patch) => { const lg = logDescAccount(aid, patch); return logAfter(wdoc('accounts/'+aid, r => S.accounts[aid] ? r.update(patch) : r.set(patch)), lg); },
+  config: patch => { const lg = logDescConfig(patch); return logAfter(wdoc('config/main', r => S.configExists ? r.update(patch) : r.set(Object.assign({}, DEF_CFG, patch))), lg); },
   member: (uid, staffId) => wdoc('members/'+uid, r => r.set({staff: staffId, at: Date.now()})),
 };
 /* Mã PIN 4 số: lưu dạng băm SHA-256 kèm salt trong staff/{id}.pin = {h, s, at}. */
@@ -1014,13 +1061,15 @@ async function pinOk(sid, pin){ if(!hasPin(sid)) return false; const p = S.staff
 async function setPinFor(sid, pin){
   const salt = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
   const np = {h: await pinHash(sid, salt, pin), s: salt, at: Date.now()};
+  const had = hasPin(sid), by = meId() || sid, nm = (S.staff[sid] && S.staff[sid].name) || sid;
   const ok = await wdoc('staff/'+sid, r => r.update({pin: np}), true);
-  if(ok){ S.staff[sid] = Object.assign({}, S.staff[sid], {pin: np}); emit(); }
+  if(ok){ S.staff[sid] = Object.assign({}, S.staff[sid], {pin: np}); emit(); logPut([{t: 'login', text: by !== sid ? (had ? 'đổi mã PIN của ' : 'tạo mã PIN cho ')+nm : had ? 'đổi mã PIN' : 'tạo mã PIN lần đầu'}], by); }
   return ok ? np : null;
 }
 function login(sid, viaHao){
   const p = S.staff[sid] && S.staff[sid].pin;
-  S.localMe = sid; sessSet(sid, p ? p.at : 0); lsSet('mx.viewonly', null); S.idAsked = true;
+  S.localMe = sid; sessSet(sid, p ? p.at : 0, viaHao ? 'hao' : null); lsSet('mx.viewonly', null); S.idAsked = true;
+  logPut([{t: 'login', text: 'đăng nhập'+(logIsPhone() ? ' trên điện thoại' : ' trên máy tính')}], sid);
   if(S.startPrivate) S.startPrivate();
   closeModal();
   const nm = (S.staff[sid] && S.staff[sid].name) || sid;
@@ -1028,11 +1077,156 @@ function login(sid, viaHao){
 }
 function logout(msg){
   if(!S.localMe) return;
+  if(!msg) logPut([{t: 'login', text: 'đăng xuất'}]);
   S.localMe = null; sessSet(null); S.idAsked = false;
   if(msg) toast(msg, 'warn');
   emit();
 }
 function viewOnly(){ lsSet('mx.viewonly', String(Date.now() + SESS_MS)); closeModal(); }
+
+/* ---------- nhật ký thao tác (trang #nhat-ky, chỉ Hào xem) ----------
+   Mỗi ngày một doc config/log-YYYY-MM-DD = {day, e: {<id>: {at, by, via?, t, x, pid?, pn?, sid?}}}.
+   Ghi sau mỗi lần lưu thành công qua W, khi đăng nhập, đăng xuất, nhập sai hay đổi mã PIN.
+   Ghi nhật ký lỗi thì bỏ qua, không làm phiền người đang thao tác. */
+const LOG_SINCE = Date.parse('2026-11-13T12:04:00+07:00');
+const LOG_CAT = {submit:'Nộp bản', qc:'Duyệt QC', cm:'Góp ý, ghi chú', step:'Lịch, giao việc', project:'Dự án', credit:'Credit', share:'Link khách', client:'Khách', admin:'Nhân sự, cài đặt', login:'Đăng nhập, mã PIN'};
+const logQ = s => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s ? '“'+(s.length > 90 ? s.slice(0, 88)+'…' : s)+'”' : ''; };
+const logStep = sid => STEP[sid] ? STEP[sid].no+' '+STEP[sid].name : (sid || '');
+const logMs = t => { t = Math.max(0, +t || 0); return pad(Math.floor(t / 60))+':'+pad(Math.floor(t % 60)); };
+/* so sánh giá trị cũ và mới, coi '', null, undefined và key rỗng là như nhau */
+const logNorm = v => {
+  if(v === undefined || v === null || v === '') return null;
+  if(Array.isArray(v)) return v.map(logNorm);
+  if(typeof v === 'object'){ const o = {}; Object.keys(v).sort().forEach(k => { const x = logNorm(v[k]); if(x !== null) o[k] = x; }); return Object.keys(o).length ? o : null; }
+  return v;
+};
+const logSame = (a, b) => JSON.stringify(logNorm(a)) === JSON.stringify(logNorm(b));
+const logIsPhone = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+function logPut(list, by){
+  try {
+    if(!list || !list.length || !S.db || S.phase !== 'ready') return;
+    const who = by || meId(); if(!who) return;
+    const ss = sessGet(), via = ss && ss.staff === who && ss.via && ss.via !== who ? ss.via : null;
+    const at = Date.now(), day = ymd(new Date(at)), e = {};
+    list.forEach((x, i) => {
+      const o = {at: at + i, by: who, t: x.t, x: String(x.text || '').slice(0, 300)};
+      if(via) o.via = via;
+      if(x.pid){ o.pid = x.pid; const pr = S.projects[x.pid]; o.pn = x.pn || (pr && pr.name) || ''; }
+      if(x.sid) o.sid = x.sid;
+      e[rid('l')] = o;
+    });
+    const r = S.db.doc('config/log-'+day), d = {day, e};
+    (r.merge ? r.merge(d) : r.update(d)).catch(() => {});
+  } catch(err){}
+}
+const logAfter = (pr, list, by) => { if(list && list.length) pr.then(ok => { if(ok) logPut(list, by); }); return pr; };
+
+const LOG_PF = {name:'tên', client:'khách hàng', kind:'loại nội bộ', clientCode:'mã khách', code:'mã job', useCase:'nội bộ hay khách ngoài', workflow:'workflow', duration:'thời lượng', value:'giá trị HĐ', pic:'PIC', team:'team', start:'ngày bắt đầu', folder:'link folder', revAllowed:'số vòng sửa', tier:'tier'};
+function logDescStep(sid, o, old, add, bk){
+  const nm = logStep(sid);
+  if(o === null){ add('step', 'xóa dữ liệu bước '+nm, sid); return; }
+  if(!o || typeof o !== 'object') return;
+  const fixBy = o.fix && o.fix.by;
+  if(o.link && 'ver' in o) add('submit', 'nộp '+nm+' '+vTag(o.ver)+(o.lname ? ': '+o.lname : ''), sid);
+  else if('link' in o && !logSame(o.link, old.link)) add('submit', o.link ? 'sửa link '+nm+' '+vTag(old.ver) : 'xóa link '+nm, sid);
+  if(o.qc) Object.keys(o.qc).forEach(r => { const q = o.qc[r]; if(!q) return; if(q.ok) add('qc', 'duyệt '+nm+' '+vTag(q.ver), sid); else if(!fixBy) add('qc', 'bỏ duyệt '+nm+' '+vTag(q.ver), sid); });
+  if(fixBy){ const fc = Object.keys(o.cm || {}).map(k => o.cm[k]).filter(c => c && c.kind === 'fix')[0]; add('qc', 'yêu cầu sửa '+nm+' '+vTag(o.fix.ver)+(fc ? ': '+logQ(fc.text) : ''), sid); }
+  if(o.cm) Object.keys(o.cm).forEach(k => {
+    const c = o.cm[k], was = (old.cm || {})[k];
+    if(c === null){ if(was) add('cm', 'xóa góp ý ở '+nm+': '+logQ(was.text), sid); }
+    else if(c && c.text && !was){ if(!(fixBy && c.kind === 'fix')) add('cm', 'góp ý '+nm+(c.ver ? ' '+vTag(c.ver) : '')+': '+logQ(c.text), sid); }
+    else if(c && was && 'text' in c && !logSame(c.text, was.text)) add('cm', 'sửa góp ý ở '+nm+': '+logQ(c.text), sid);
+  });
+  if(o.vn) Object.keys(o.vn).forEach(k => {
+    const n = o.vn[k], was = (old.vn || {})[k];
+    if(n === null){ if(was) add('cm', 'xóa ghi chú video '+nm+' tại '+logMs(was.t)+(was.src === 'client' ? ' (của khách '+(was.cn || '')+')' : ''), sid); return; }
+    if(!n) return;
+    if(!was){ if(typeof n.t === 'number') add('cm', 'ghi chú video '+nm+' tại '+logMs(n.t)+(n.text ? ': '+logQ(n.text) : '')+(n.d && n.d.length ? ' (có vẽ)' : ''), sid); return; }
+    if('ok' in n && !logSame(!!n.ok, !!was.ok)) add('cm', (n.ok ? 'đánh dấu đã sửa' : 'bỏ đánh dấu đã sửa')+' ghi chú '+logMs(was.t)+' ở '+nm, sid);
+    else if(('text' in n || 'd' in n || 't' in n) && !logSame(Object.assign({}, was, n), was)) add('cm', 'sửa ghi chú video '+nm+' tại '+logMs(was.t), sid);
+  });
+  if(o.rv && o.rv.url) add('submit', 'gắn link video cho player ở '+nm, sid);
+  if(o.chk) add('step', 'cập nhật checklist tự kiểm ở '+nm, sid);
+  if('on' in o && !logSame(!!o.on, !!old.on)) (o.on ? bk.on : bk.off).push(sid);
+  if(['who', 'start', 'end', 'qcBy'].some(k => k in o && !logSame(o[k], old[k]))) bk.sched.push(sid);
+}
+function logDescBooking(o, old, add){
+  const acc = id => (id && S.accounts[id] && S.accounts[id].code) || 'chưa chọn account';
+  if(o === null){ if(old) add('credit', 'xóa booking '+fN(old.est)+' credit ở '+acc(old.acc)); return; }
+  if(!o || typeof o !== 'object') return;
+  if(!old){ if('est' in o) add('credit', 'book '+fN(o.est)+' credit ở '+acc(o.acc)); return; }
+  if('approved' in o && !logSame(!!o.approved, !!old.approved)) add('credit', (o.approved ? 'duyệt booking ' : 'bỏ duyệt booking ')+fN(old.est)+' credit ở '+acc(o.acc || old.acc));
+  if(o.usage) Object.keys(o.usage).forEach(u => { const x = o.usage[u], was = (old.usage || {})[u]; if(x === null){ if(was) add('credit', 'xóa dòng log '+fN(was.n)+' credit ở '+acc(old.acc)); } else if(x && !was) add('credit', 'log dùng '+fN(x.n)+' credit ở '+acc(old.acc)+(x.note ? ': '+logQ(x.note) : '')); else if(x) add('credit', 'sửa log credit ở '+acc(old.acc)); });
+  if('status' in o && !logSame(o.status, old.status)) add('credit', (o.status === 'open' ? 'mở lại booking ở ' : 'đóng booking ở ')+acc(old.acc));
+  if('acc' in o && !logSame(o.acc, old.acc)) add('credit', 'chuyển booking từ '+acc(old.acc)+' sang '+acc(o.acc));
+  if('est' in o && !logSame(o.est, old.est)) add('credit', 'sửa credit dự kiến từ '+fN(old.est)+' thành '+fN(o.est));
+  if('date' in o && !logSame(o.date, old.date)) add('credit', 'đổi ngày booking sang '+fD(o.date));
+}
+function logDescShare(o, old, add){
+  if(o === null){ if(old) add('share', 'xóa link gửi khách '+logStep(old.sid), old.sid); return; }
+  if(!o || typeof o !== 'object') return;
+  if(!old){ add('share', 'tạo link gửi khách '+logStep(o.sid)+' '+vTag(o.ver), o.sid); return; }
+  const nm = logStep(old.sid);
+  if('ver' in o && !logSame(o.ver, old.ver)) add('share', 'đưa '+vTag(o.ver)+' lên link gửi khách '+nm, old.sid);
+  else if('exp' in o && !logSame(o.exp, old.exp)) add('share', 'gia hạn link gửi khách '+nm+' đến '+fD(ymd(new Date(o.exp))), old.sid);
+  else if('on' in o && !logSame(!!o.on, !!old.on)) add('share', (o.on ? 'mở lại' : 'tắt')+' link gửi khách '+nm+' '+vTag(old.ver), old.sid);
+}
+function logDescProject(pid, patch){
+  const raw = S.projects[pid] || {}, out = [], fields = [], bk = {on: [], off: [], sched: []};
+  const add = (t, text, sid) => out.push({t, text, pid, sid});
+  Object.keys(patch || {}).forEach(k => {
+    const v = patch[k];
+    if(k === 'updatedAt' || k === 'updatedBy' || k === 'c') return;
+    if(k === 'steps'){ Object.keys(v || {}).forEach(sid => logDescStep(sid, v[sid], (raw.steps || {})[sid] || {}, add, bk)); return; }
+    if(k === 'gates'){ Object.keys(v || {}).forEach(g => { const o = v[g], lb = GATES[g] ? GATES[g].label : g, was = (raw.gates || {})[g] || {}; if(!o) return; if('ok' in o && !logSame(!!o.ok, !!was.ok)) add('project', (o.ok ? 'xác nhận ' : 'bỏ xác nhận ')+lb); if('paid' in o && !logSame(!!o.paid, !!was.paid)) add('project', (o.paid ? 'đánh dấu đã thu tiền ' : 'bỏ đánh dấu thu tiền ')+lb); }); return; }
+    if(k === 'bookings'){ Object.keys(v || {}).forEach(b => logDescBooking(v[b], (raw.bookings || {})[b], add)); return; }
+    if(k === 'revs'){ Object.keys(v || {}).forEach(r => { const o = v[r], was = (raw.revs || {})[r]; if(o === null){ if(was) add('project', 'xóa một vòng sửa'); } else if(o && !was) add('project', 'ghi vòng sửa'+(o.to && STEP[o.to] ? ', quay về bước '+STEP[o.to].no : '')+(o.note ? ': '+logQ(o.note) : '')); }); return; }
+    if(k === 'shares'){ Object.keys(v || {}).forEach(tok => logDescShare(v[tok], (raw.shares || {})[tok], add)); return; }
+    if(logSame(v, raw[k])) return;
+    if(k === 'status') add('project', 'đổi trạng thái thành '+(P_STATUS[v] || v));
+    else if(k === 'deadline') add('project', 'đổi deadline từ '+fD(raw.deadline)+' sang '+fD(v));
+    else if(k === 'note') add('project', 'sửa ghi chú dự án');
+    else fields.push(LOG_PF[k] || k);
+  });
+  if(fields.length) out.unshift({t: 'project', text: 'sửa thông tin dự án: '+fields.join(', '), pid});
+  const many = (a, one, n) => a.length === 1 ? one+' '+logStep(a[0]) : n.replace('#', a.length);
+  if(bk.on.length) add('step', many(bk.on, 'bật bước', 'bật # bước'));
+  if(bk.off.length) add('step', many(bk.off, 'tắt bước', 'tắt # bước'));
+  if(bk.sched.length) add('step', many(bk.sched, 'sửa lịch hoặc người làm bước', 'sửa lịch, người làm của # bước'), bk.sched.length === 1 ? bk.sched[0] : undefined);
+  return out;
+}
+function logDescStaff(sid, patch){
+  const old = S.staff[sid], nm = (old && old.name) || patch.name || sid, out = [], add = (t, text) => out.push({t, text});
+  if(!old){ add('admin', 'thêm nhân sự '+nm); return out; }
+  Object.keys(patch || {}).forEach(k => {
+    const v = patch[k];
+    if(k === 'off'){ Object.keys(v || {}).forEach(d => { if(!logSame(!!v[d], !!(old.off || {})[d])) add('step', v[d] ? 'đánh dấu '+nm+' nghỉ ngày '+fD(d) : 'bỏ ngày nghỉ '+fD(d)+' của '+nm); }); return; }
+    if(k === 'pin'){ if(v === null && old.pin) add('login', 'đặt lại mã PIN của '+nm); return; }
+    if(k === 'qcOpt' || k === 'order' || k === 'c' || logSame(v, old[k])) return;
+    if(k === 'name') add('admin', 'đổi tên '+old.name+' thành '+v);
+    else if(k === 'role') add('admin', 'sửa vai trò của '+nm+(v ? ': '+v : ''));
+    else if(k === 'qc') add('admin', v ? 'cho '+nm+' duyệt QC' : 'bỏ quyền duyệt QC của '+nm);
+    else if(k === 'lead') add('admin', v ? 'đặt '+nm+' làm Lead' : 'bỏ Lead của '+nm);
+    else if(k === 'active') add('admin', v ? 'đánh dấu '+nm+' đang làm' : 'đánh dấu '+nm+' không còn làm');
+    else add('admin', 'sửa thông tin nhân sự '+nm);
+  });
+  return out;
+}
+const LOG_AF = {code:'mã', email:'email', resetDay:'ngày reset', perPeriod:'credit mỗi kỳ', topup:'top-up', scope:'phạm vi dùng', note:'ghi chú', active:'đang dùng'};
+function logDescAccount(aid, patch){
+  const old = S.accounts[aid], code = (old && old.code) || patch.code || aid, out = [];
+  if(!old) return [{t: 'credit', text: 'thêm account '+code}];
+  if('balance' in patch && !logSame(patch.balance, old.balance)) out.push({t: 'credit', text: patch.balance === null ? 'xóa số credit còn của '+code : 'cập nhật credit còn của '+code+': '+fN(patch.balance)+(old.balance !== null && old.balance !== undefined ? ' (trước đó '+fN(old.balance)+')' : '')});
+  const f = Object.keys(patch).filter(k => LOG_AF[k] && !logSame(patch[k], old[k])).map(k => LOG_AF[k]);
+  if(f.length) out.push({t: 'credit', text: 'sửa account '+code+': '+f.join(', ')});
+  return out;
+}
+const LOG_CF = {prefix:'tiền tố mã job', revDefault:'vòng sửa mặc định', payMin:'ngưỡng thu 50/30/20', buffer:'buffer mỗi account', nearFull:'ngưỡng sắp đầy', unloggedWarn:'cảnh báo dùng chưa log'};
+function logDescConfig(patch){
+  const old = S.config || {};
+  const f = Object.keys(patch || {}).filter(k => !logSame(patch[k], old[k])).map(k => (LOG_CF[k] || k)+' = '+patch[k]);
+  return f.length ? [{t: 'admin', text: 'sửa thông số: '+f.join(', ')}] : [];
+}
 
 /* ---------- derived data ---------- */
 function reservedOf(b){ return b.status === 'open' ? Math.max(b.est, b.used) : b.used; }
@@ -1449,7 +1643,7 @@ function teamText(D, p){
 function parseHash(){
   const hsh = (location.hash || '').replace(/^#/, '');
   if(hsh.indexOf('job-') === 0) return {view:'job', id: hsh.slice(4)};
-  if(['du-an','qc','credit','dat-ten','cai-dat','lich'].indexOf(hsh) >= 0) return {view: hsh};
+  if(['du-an','qc','credit','dat-ten','cai-dat','lich','nhat-ky'].indexOf(hsh) >= 0) return {view: hsh};
   return {view:'lich'};
 }
 function useRoute(){
@@ -1625,7 +1819,7 @@ function DateRange({start, end, onChange, labels}){
 
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
-  const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['qc','Duyệt QC'],['credit','Credit Higgsfield'],['dat-ten','Đặt tên file']];
+  const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['qc','Duyệt QC'],['credit','Credit Higgsfield'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
   const s = me && D.staffMap[me];
@@ -1664,6 +1858,7 @@ function IdentityModal({D, me}){
     setBusy(false);
     if(own || viaHao){ fails.current = 0; login(sel, viaHao); return; }
     fails.current++; setPin('');
+    logPut([{t: 'login', text: 'nhập sai mã PIN'+(fails.current >= 5 ? ' 5 lần, bị khóa 30 giây' : '')}], sel);
     if(fails.current >= 5){ fails.current = 0; lock.current = Date.now() + 30000; setErr('Sai quá 5 lần. Đợi 30 giây rồi thử lại.'); }
     else setErr('Mã PIN chưa đúng, thử lại.');
   };
@@ -2521,6 +2716,7 @@ function downloadBackup(){
   const blob = new Blob([JSON.stringify({app: 'magentx-board', version: 1, at: new Date().toISOString(), docs: backupDocs()})], {type: 'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'MagentX_backup_'+today()+'.json';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  logPut([{t: 'admin', text: 'tải bản backup dữ liệu'}]);
 }
 function parseBackup(text){
   const j = JSON.parse(text);
@@ -2545,6 +2741,7 @@ function BackupPanel({D}){
     if(!pending || busy) return; setBusy(true);
     Promise.all(pending.docs.map(d => wdoc(d[0], r => r.set(d[1])))).then(res => {
       const ok = res.filter(Boolean).length; setBusy(false); setPending(null);
+      if(ok) logPut([{t: 'admin', text: 'nhập dữ liệu từ file '+pending.name+' ('+ok+' mục)'}]);
       toast(ok === res.length ? 'Đã nhập '+ok+' mục dữ liệu.' : 'Đã nhập '+ok+'/'+res.length+' mục, một số mục bị lỗi.', ok === res.length ? '' : 'warn');
     });
   };
@@ -3130,6 +3327,119 @@ function ProjectForm({D, pid}){
   <//>`;
 }
 
+/* ---------- nhật ký thao tác (chỉ Hào) ---------- */
+/* Trước LOG_SINCE chưa có nhật ký: lấy lại nộp bản, duyệt, góp ý, gate từ dữ liệu dự án.
+   Thao tác của khách (qua link duyệt) luôn lấy từ dữ liệu dự án. */
+function logDerived(D, from){
+  const ev = [], inR = t => !!t && t >= from, pre = t => inR(t) && t < LOG_SINCE;
+  const push = (o, p, sid) => ev.push(Object.assign({id: 'd'+ev.length, pid: p.id, pn: p.name, sid, src: o.by === 'client' ? 'client' : 'data'}, o));
+  D.projects.forEach(p => {
+    if(!p.source && pre(p.createdAt)) push({at: p.createdAt, by: p.createdBy, t: 'project', x: 'tạo dự án'}, p);
+    p.steps.forEach(st => {
+      const nm = st.def.no+' '+st.def.name;
+      Object.keys(st.hist || {}).forEach(k => { const h = st.hist[k]; if(h && pre(h.at)) push({at: h.at, by: h.by, t: 'submit', x: 'nộp '+nm+' '+k.toUpperCase()}, p, st.id); });
+      if(st.subAt && pre(st.subAt) && !(st.hist || {})['v'+st.ver]) push({at: st.subAt, by: st.subBy, t: 'submit', x: 'nộp '+nm+' '+vTag(st.ver)}, p, st.id);
+      Object.keys(st.qc || {}).forEach(r => { const q = st.qc[r]; if(q && q.ok && pre(q.at)) push({at: q.at, by: r, t: 'qc', x: 'duyệt '+nm+' '+vTag(q.ver)}, p, st.id); });
+      st.comments.forEach(c => { if(pre(c.at)) push({at: c.at, by: c.by, t: c.kind === 'fix' ? 'qc' : 'cm', x: (c.kind === 'fix' ? 'yêu cầu sửa ' : 'góp ý ')+nm+(c.ver ? ' '+vTag(c.ver) : '')+': '+logQ(c.text)}, p, st.id); });
+      st.vnotes.forEach(n => {
+        const x = 'ghi chú video '+nm+' tại '+logMs(n.t)+(n.text ? ': '+logQ(n.text) : '')+(n.d && n.d.length ? ' (có vẽ)' : '');
+        if(n.src === 'client'){ if(inR(n.at)) push({at: n.at, by: 'client', cn: n.cn || '', t: 'client', x}, p, st.id); }
+        else if(pre(n.at)) push({at: n.at, by: n.by, t: 'cm', x}, p, st.id);
+      });
+    });
+    p.gates.forEach(g => { if(g.ok && pre(g.at)) push({at: g.at, by: g.by, t: 'project', x: 'xác nhận '+g.label}, p); });
+    (p.shareList || []).forEach(s => { const d = s.dec; if(d && inR(d.at)) push({at: d.at, by: 'client', cn: d.name || '', t: 'client', x: (d.ok ? 'đồng ý ' : 'yêu cầu sửa ')+logStep(s.sid)+' '+vTag(d.ver)+(d.text ? ': '+logQ(d.text) : '')}, p, s.sid); });
+  });
+  return ev.filter(e => e.by);
+}
+const LOG_RANGES = [['1', 'Hôm nay'], ['7', '7 ngày'], ['30', '30 ngày']];
+const logFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+const logHm = ms => { const d = new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+function LogView({D, me}){
+  const ok = me === 'hao';
+  const [range, setRange] = useState('7');
+  const [who, setWho] = useState('');
+  const [cat, setCat] = useState('');
+  const [q, setQ] = useState('');
+  const [lim, setLim] = useState(200);
+  const [docs, setDocs] = useState({});
+  const dayIds = useMemo(() => { const t = today(), a = []; for(let i = 0; i < +range; i++) a.push(addDays(t, -i)); return a; }, [range, D.t]);
+  useEffect(() => {
+    if(!ok || !S.db) return;
+    const offs = dayIds.map(d => { try {
+      return S.db.doc('config/log-'+d).onSnapshot(sn => {
+        const data = sn.exists ? (sn.data() || {}) : {}, e = data.e || {};
+        setDocs(o => Object.assign({}, o, {[d]: Object.keys(e).map(k => Object.assign({id: k}, e[k]))}));
+      }, () => setDocs(o => Object.assign({}, o, {[d]: o[d] || []})));
+    } catch(err){ return null; } });
+    return () => offs.forEach(f => { if(typeof f === 'function') f(); });
+  }, [ok, dayIds.join()]);
+  useEffect(() => { setLim(200); }, [range, who, cat, q]);
+  if(!ok) return html`<div class="ph"><div><h1>Nhật ký thao tác</h1><p>Chỉ tài khoản Hào xem được trang này.</p></div></div>`;
+
+  const from = parse(dayIds[dayIds.length - 1]).getTime();
+  const all = [];
+  dayIds.forEach(d => (docs[d] || []).forEach(x => { if(x && x.at && x.by && x.at >= from) all.push(x); }));
+  logDerived(D, from).forEach(x => all.push(x));
+  all.sort((a, b) => b.at - a.at);
+  const loading = dayIds.some(d => !docs[d]);
+  const whoName = x => x.by === 'client' ? 'Khách'+(x.cn ? ' '+x.cn : '') : nameOf(D, x.by);
+  const pname = x => (x.pid && D.pmap[x.pid] && D.pmap[x.pid].name) || x.pn || '';
+
+  const stat = {};
+  all.forEach(x => { const k = x.by === 'client' ? 'client' : x.by; const r = stat[k] || (stat[k] = {n: 0, last: 0}); r.n++; if(x.at > r.last) r.last = x.at; });
+  const people = D.staffList.filter(s => s.active !== false || stat[s.id]).map(s => ({id: s.id, name: s.name}))
+    .concat(Object.keys(stat).filter(k => k !== 'client' && !D.staffMap[k]).map(k => ({id: k, name: nameOf(D, k)})))
+    .concat(stat.client ? [{id: 'client', name: 'Khách'}] : []);
+  const qq = logFold(q.trim());
+  const list = all.filter(x => (!who || (who === 'client' ? x.by === 'client' : x.by === who)) && (!cat || x.t === cat)
+    && (!qq || logFold(x.x+' '+pname(x)+' '+whoName(x)).indexOf(qq) >= 0));
+  const perDay = {}; list.forEach(x => { const d = ymd(new Date(x.at)); perDay[d] = (perDay[d] || 0) + 1; });
+  const groups = [];
+  list.slice(0, lim).forEach(x => { const d = ymd(new Date(x.at)), g = groups[groups.length - 1]; if(g && g.d === d) g.items.push(x); else groups.push({d, items: [x]}); });
+  const t = today();
+
+  const csv = () => {
+    const rows = [['Thời gian', 'Người', 'Đăng nhập hộ', 'Loại', 'Thao tác', 'Dự án', 'Nguồn']].concat(list.map(x => {
+      const d = new Date(x.at);
+      return [ymd(d)+' '+logHm(x.at)+':'+pad(d.getSeconds()), whoName(x), x.via && x.via !== x.by ? nameOf(D, x.via) : '', LOG_CAT[x.t] || '', x.x, pname(x), x.src === 'client' ? 'Link khách' : x.src === 'data' ? 'Dữ liệu dự án' : 'Nhật ký'];
+    }));
+    const s = '﻿'+rows.map(r => r.map(c => '"'+String(c === null || c === undefined ? '' : c).replace(/"/g, '""')+'"').join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([s], {type: 'text/csv;charset=utf-8'})); a.download = 'MagentX_nhat-ky_'+t+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  const pick = id => setWho(who === id ? '' : id);
+
+  return html`
+    <div class="ph"><div><h1>Nhật ký thao tác</h1><p>Ai làm gì trên bảng, theo thời gian: nộp bản, duyệt, góp ý, credit, link khách, cài đặt và đăng nhập. Chỉ tài khoản Hào thấy trang này.</p></div>
+      <div class="seg" role="group" aria-label="Khoảng thời gian">${LOG_RANGES.map(r => html`<button key=${r[0]} type="button" class=${range === r[0] ? 'on' : ''} aria-pressed=${range === r[0]} onClick=${() => setRange(r[0])}>${r[1]}</button>`)}</div></div>
+    <div class="lg-people" role="group" aria-label="Lọc theo người">
+      <button type="button" class="lg-p" aria-pressed=${!who} onClick=${() => setWho('')}><b>Cả phòng</b><span class="lg-n">${all.length}</span><span class="meta">thao tác</span></button>
+      ${people.map(pp => { const st = stat[pp.id]; return html`<button key=${pp.id} type="button" class=${'lg-p'+(st ? '' : ' zero')} aria-pressed=${who === pp.id} onClick=${() => pick(pp.id)}><b>${pp.name}</b><span class="lg-n">${st ? st.n : 0}</span><span class="meta">${st ? 'lần cuối '+(ymd(new Date(st.last)) === t ? logHm(st.last) : fT(st.last)) : 'chưa có thao tác'}</span></button>`; })}
+    </div>
+    <section class="panel flush lg-panel" aria-label="Danh sách thao tác">
+      <div class="panel-h lg-bar">
+        <select class="sel sm auto" value=${cat} aria-label="Loại thao tác" onChange=${e => setCat(e.target.value)}><option value="">Mọi loại thao tác</option>${Object.keys(LOG_CAT).map(k => html`<option key=${k} value=${k}>${LOG_CAT[k]}</option>`)}</select>
+        <input class="inp sm lg-q" type="search" placeholder="Tìm theo dự án, bước, nội dung" aria-label="Tìm trong nhật ký" value=${q} onInput=${e => setQ(e.target.value)}/>
+        <span class="sp"></span>
+        <span class="meta">${list.length} thao tác${loading ? ', đang tải…' : ''}</span>
+        <button type="button" class="btn sm" disabled=${!list.length} onClick=${csv}><${Ic} n="download" s=${16}/>Tải CSV</button>
+      </div>
+      ${groups.length ? groups.map(g => html`<div key=${g.d} class="lg-g">
+          <div class="lg-day"><h3>${WD_LONG[parse(g.d).getDay()]}, ${fD(g.d)}</h3>${g.d === t ? html`<span class="lg-tag">Hôm nay</span>` : g.d === addDays(t, -1) ? html`<span class="lg-tag">Hôm qua</span>` : null}<span class="badge-n">${perDay[g.d]}</span></div>
+          <ol class="lg-list">${g.items.map(x => { const pn = pname(x); return html`<li key=${x.id} class=${'lg-row'+(x.src === 'data' ? ' old' : '')}>
+            <time class="lg-t" datetime=${new Date(x.at).toISOString()} title=${fT(x.at)}>${logHm(x.at)}</time>
+            <span class="lg-who"><b>${whoName(x)}</b>${x.via && x.via !== x.by ? html`<span class="lg-via" title=${'Đăng nhập bằng mã PIN của '+nameOf(D, x.via)}>${nameOf(D, x.via)} đăng nhập hộ</span>` : null}</span>
+            <span class="lg-x"><span>${x.x}</span>${pn ? (D.pmap[x.pid] ? html`<a class="lg-pn" href=${'#job-'+x.pid} onClick=${e => { e.preventDefault(); openJob(x.pid, x.sid || null); }}>${pn}</a>` : html`<span class="lg-pn">${pn} (đã xóa)</span>`) : null}${x.src === 'data' ? html`<span class="lg-src">Lấy lại từ dữ liệu dự án</span>` : null}</span>
+            <span class=${'lg-cat '+x.t}>${LOG_CAT[x.t] || 'Khác'}</span>
+          </li>`; })}</ol>
+        </div>`)
+        : html`<div class="lg-empty"><p class="empty">${loading ? 'Đang tải nhật ký…' : all.length ? 'Không có thao tác nào khớp bộ lọc.' : 'Chưa có thao tác nào trong khoảng này.'}</p></div>`}
+      ${list.length > lim ? html`<div class="lg-more"><button type="button" class="btn sm" onClick=${() => setLim(lim + 200)}>Xem thêm ${Math.min(200, list.length - lim)} thao tác</button><span class="meta">Đang hiện ${lim}/${list.length}</span></div>` : null}
+    </section>
+    ${from < LOG_SINCE ? html`<p class="meta lg-note">Nhật ký bắt đầu ghi từ ${fT(LOG_SINCE)}. Trước đó chỉ có nộp bản, duyệt, góp ý và gate, lấy lại từ dữ liệu dự án. Thao tác của khách qua link duyệt luôn lấy từ dữ liệu dự án.</p>` : null}`;
+}
+
 /* ---------- app ---------- */
 function NoDb(){
   return html`<div class="empty"><b>Chưa kết nối được database.</b><span>${window.__mxDbError === 'config' ? 'Chưa dán cấu hình Firebase (FIREBASE_CONFIG) vào file index.html.' : 'Kiểm tra kết nối mạng rồi tải lại trang. Nếu vẫn lỗi, báo người quản lý bảng.'}</span><a class="btn" href="#dat-ten">Mở trang Đặt tên file</a></div>`;
@@ -3167,6 +3477,7 @@ function App(){
   else if(route.view === 'credit') view = html`<${CreditView} D=${D} me=${me}/>`;
   else if(route.view === 'dat-ten') view = html`<${NamingView} D=${D}/>`;
   else if(route.view === 'cai-dat') view = html`<${SettingsView} D=${D} me=${me}/>`;
+  else if(route.view === 'nhat-ky') view = html`<${LogView} D=${D} me=${me}/>`;
   else if(route.view === 'job') view = html`<${ProjectDetail} key=${route.id} D=${D} id=${route.id} me=${me}/>`;
   else view = html`<${CalendarView} D=${D} me=${me}/>`;
   return html`
