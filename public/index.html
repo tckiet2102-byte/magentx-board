@@ -824,6 +824,50 @@ a.lg-pn:hover{color:var(--action)}
 .nm-rules ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:90ch}
 .sb-folder{display:block;margin-top:4px}
 @media (max-width:900px){.nm-grid2,.nm-job-pick{grid-template-columns:minmax(0,1fr)}.nm-job-info{padding-top:0}}
+/* Job ID từ Job Register trong form, khối Job Register */
+.jid-src .seg{align-self:flex-start;margin-bottom:6px}
+.jid-src > .sel, .jid-src > .inp{margin-top:6px}
+.jid-sum{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;padding:9px 12px;border-radius:10px;background:var(--ok-soft);font-size:14px}
+.reg-box{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:9px 12px;border-radius:10px;font-size:14px;background:var(--tint)}
+.reg-box.ok{background:var(--ok-soft)}
+.reg-box.ok svg{color:var(--ok)}
+.reg-box.warn{background:var(--wait-soft)}
+.reg-box.col{flex-direction:column;align-items:stretch}
+.reg-blocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.reg-blocks li{display:flex;flex-direction:column;gap:4px}
+.reg-blocks code{font-size:13px}
+.reg-conn{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 22px 16px;padding:10px 14px;border-radius:10px;background:var(--tint);font-size:14px}
+.reg-conn.ok{background:var(--ok-soft)}
+.reg-conn.bad{background:var(--bad-soft)}
+.rj-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rj-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
+.rj-list li > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rj-list .code{overflow-wrap:anywhere}
+/* booking nội bộ */
+.in-flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;counter-reset:f}
+.in-flow li{counter-increment:f;display:flex;flex-direction:column;gap:3px;padding:12px 14px 13px 46px;position:relative;border-radius:12px;background:var(--surface);border:1px solid var(--rule);font-size:13.5px;color:var(--ink-2)}
+.in-flow li::before{content:counter(f);position:absolute;left:14px;top:12px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--action-soft);color:var(--action);font-weight:800;font-size:13px}
+.in-flow b{font-size:14.5px;color:var(--ink)}
+.in-list{display:flex;flex-direction:column}
+.in-card{display:flex;flex-direction:column;gap:8px;padding:16px 22px;border-top:1px solid var(--rule)}
+.in-card.urgent{box-shadow:inset 4px 0 0 var(--d-fix)}
+.in-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px}
+.in-h h3{font-size:16.5px;font-weight:700}
+.in-due{font-size:14px;color:var(--ink-2)}
+.in-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+.in-tag{padding:1px 9px;border-radius:999px;background:var(--tint);font-size:13px;font-weight:600;color:var(--ink-2)}
+.in-brief{white-space:pre-wrap;max-width:90ch;font-size:14.5px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.in-extra{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px}
+.in-ask{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.in-ask .inp{flex:1 1 240px;width:auto}
+.in-empty{padding:0 22px 20px}
+.in-done{list-style:none;margin:0;padding:0}
+.in-done li{display:flex;flex-direction:column;gap:6px;padding:14px 22px;border-top:1px solid var(--rule)}
+.in-done-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.in-done .reg-box{align-self:flex-start}
+.in-form{display:flex;flex-direction:column;gap:16px}
+.in-form textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
+@media (max-width:760px){.in-flow{grid-template-columns:minmax(0,1fr)}.in-card,.in-done li{padding:14px 16px}.reg-conn{margin:0 16px 14px}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -985,11 +1029,13 @@ function parseJob(code){ const m = /^(\d{4})_([A-Z0-9]{2,5})_([A-Za-z0-9-]+)$/.e
 /* danh sách khách: config.clients (Cài đặt, đồng bộ với tab Clients của Job Register) cộng mã đã dùng trong dự án */
 function clientList(D){
   const c = (D.cfg && D.cfg.clients) || {}, out = {};
-  Object.keys(c).forEach(k => { if(c[k] && k !== INT_CODE) out[k] = {code: k, name: c[k].name || k, note: c[k].note || '', saved: true}; });
+  (S.reg.clients || []).forEach(k => { if(k.code && k.code !== INT_CODE) out[k.code] = {code: k.code, name: k.name || k.code, note: k.note || '', saved: false, reg: true}; });
+  Object.keys(c).forEach(k => { if(c[k] && k !== INT_CODE && !out[k]) out[k] = {code: k, name: c[k].name || k, note: c[k].note || '', saved: true}; });
   D.projects.forEach(p => { const j = parseJob(p.code); if(j && j.cc !== INT_CODE && !out[j.cc]) out[j.cc] = {code: j.cc, name: p.client || j.cc, note: '', saved: false}; });
   return Object.keys(out).sort().map(k => out[k]);
 }
-function clientFolder(D, cc, fallback){ const c = (D.cfg.clients || {})[cc]; return (c && c.name) || fallback || cc; }
+function clientFolder(D, cc, fallback){ const r = (S.reg.clients || []).find(k => k.code === cc), c = (D.cfg.clients || {})[cc]; return (r && r.name) || (c && c.name) || fallback || cc; }
+function clientKnown(D, cc){ return !!cc && ((S.reg.clients || []).some(k => k.code === cc) || !!(D.cfg.clients || {})[cc] || D.projects.some(p => (parseJob(p.code) || {}).cc === cc)); }
 function drivePath(D, p){
   const j = parseJob(p.code); if(!j) return '';
   return 'MAGENTX_PRODUCTION/'+(j.cc === INT_CODE ? '02_INTERNAL' : '01_CLIENTS/'+clientFolder(D, j.cc, p.client))+'/'+p.code+'/';
@@ -1049,6 +1095,7 @@ const S = {
   v:0, phase:'boot', db:null, user:null, uid:null, isOwner:false, canWrite:null, readOnly:false,
   staff:{}, members:{}, accounts:{}, config:null, configExists:false, projects:{},
   got:{}, firstData:false, stale:false, toasts:[], modal:null, focus:null, created:null,
+  reg:{state:'idle', jobs:[], clients:[]}, intake:{}, intakeExists:false,
   localMe: (sessGet() || {}).staff || null,
 };
 const subs = new Set();
@@ -1094,6 +1141,8 @@ async function boot(){
     if(S.privOn) return; S.privOn = true;
     timer = setTimeout(() => { if(!S.got.projects || !S.got.staff){ S.stale = true; emit(); } }, 10000);
     ['accounts','projects'].forEach(sub);
+    db.doc('config/intake').onSnapshot(d => { S.intake = (d.exists && (d.data() || {}).b) || {}; S.intakeExists = !!d.exists; emit(); }, () => {});
+    regLoad();
   };
   if(meId()) S.startPrivate();
 }
@@ -1198,7 +1247,7 @@ function logPut(list, by){
 }
 const logAfter = (pr, list, by) => { if(list && list.length) pr.then(ok => { if(ok) logPut(list, by); }); return pr; };
 
-const LOG_PF = {parent:'job gốc', name:'tên', client:'khách hàng', kind:'loại nội bộ', clientCode:'mã khách', code:'mã job', useCase:'nội bộ hay khách ngoài', workflow:'workflow', duration:'thời lượng', value:'giá trị HĐ', pic:'PIC', team:'team', start:'ngày bắt đầu', folder:'link folder', revAllowed:'số vòng sửa', tier:'tier'};
+const LOG_PF = {type:'type', intake:'booking nội bộ', parent:'job gốc', name:'tên', client:'khách hàng', kind:'loại nội bộ', clientCode:'mã khách', code:'mã job', useCase:'nội bộ hay khách ngoài', workflow:'workflow', duration:'thời lượng', value:'giá trị HĐ', pic:'PIC', team:'team', start:'ngày bắt đầu', folder:'link folder', revAllowed:'số vòng sửa', tier:'tier'};
 function logDescStep(sid, o, old, add, bk){
   const nm = logStep(sid);
   if(o === null){ add('step', 'xóa dữ liệu bước '+nm, sid); return; }
@@ -1259,6 +1308,7 @@ function logDescProject(pid, patch){
     if(k === 'bookings'){ Object.keys(v || {}).forEach(b => logDescBooking(v[b], (raw.bookings || {})[b], add)); return; }
     if(k === 'revs'){ Object.keys(v || {}).forEach(r => { const o = v[r], was = (raw.revs || {})[r]; if(o === null){ if(was) add('project', 'xóa một vòng sửa'); } else if(o && !was) add('project', 'ghi vòng sửa'+(o.to && STEP[o.to] ? ', quay về bước '+STEP[o.to].no : '')+(o.note ? ': '+logQ(o.note) : '')); }); return; }
     if(k === 'shares'){ Object.keys(v || {}).forEach(tok => logDescShare(v[tok], (raw.shares || {})[tok], add)); return; }
+    if(k === 'reg'){ if(v) add('project', v.how === 'auto' ? 'thêm job vào Job Register' : v.how === 'had' ? 'xác nhận job đã có trong Job Register' : 'đánh dấu đã nhập Job Register'); return; }
     if(logSame(v, raw[k])) return;
     if(k === 'status') add('project', 'đổi trạng thái thành '+(P_STATUS[v] || v));
     else if(k === 'deadline') add('project', 'đổi deadline từ '+fD(raw.deadline)+' sang '+fD(v));
@@ -1316,6 +1366,60 @@ function logDescConfig(patch){
   });
   if(f.length) out.unshift({t: 'admin', text: 'sửa thông số: '+f.join(', ')});
   return out;
+}
+
+/* ---------- Job Register (qua /api/register, xem docs/register-sync.md) ----------
+   Có kết nối: đọc danh sách job và khách trong sheet, thêm dòng mới cho job tạo từ bảng.
+   Chưa kết nối (state 'off'): bảng chạy chế độ nhập tay, đưa sẵn các ô để copy vào sheet. */
+const REG_TYPES = ['TVC', 'Social', 'MV', 'Show intro', 'Brand film', 'Pitch', 'Internal'];
+const REG_LIVE = ['Quoting', 'Confirmed', 'Pre-pro', 'Production', 'Review'];
+function regLoad(force){
+  if(!meId() || S.reg.state === 'loading') return;
+  if(!force && S.reg.at && Date.now() - S.reg.at < 60000) return;
+  S.reg = Object.assign({}, S.reg, {state: 'loading'}); emit();
+  const done = o => { S.reg = Object.assign({jobs: [], clients: []}, o, {at: Date.now()}); emit(); };
+  fetch('/api/register', {cache: 'no-store'}).then(r => r.json()).then(o => {
+    if(!o || o.configured === false) done({state: 'off'});
+    else if(!o.ok) done({state: 'error', error: o.error || 'Không đọc được Job Register.', jobs: S.reg.jobs, clients: S.reg.clients});
+    else done({state: 'ok', jobs: o.jobs || [], clients: o.clients || []});
+  }).catch(() => done({state: 'off'}));
+}
+function regJob(code){ return S.reg.state === 'ok' && code ? S.reg.jobs.find(j => j.id === code) || null : null; }
+/* Register status sang trạng thái dự án trên bảng */
+function regBoardStatus(st){ return ['Delivered', 'Invoiced', 'Paid'].indexOf(st) >= 0 ? 'done' : st === 'Cancelled' ? 'cancelled' : ['Lead', 'Quoting'].indexOf(st) >= 0 ? 'planned' : 'active'; }
+function regPicId(name){ const n = logFold(String(name || '').split(',')[0].trim()); if(!n) return ''; const s = Object.keys(S.staff).find(id => logFold(S.staff[id].name) === n); return s || ''; }
+const dmy = s => s ? s.slice(8, 10)+'/'+s.slice(5, 7)+'/'+s.slice(0, 4) : '';
+/* Giá trị cho các cột nhập tay của tab Jobs. A, D, N là công thức nên tách làm ba khối dán. */
+function regFields(p){
+  const j = parseJob(p.code); if(!j) return null;
+  const st = S.staff[p.pic], intake = p.intake && S.intake[p.intake];
+  const notes = intake ? [intake.req ? 'Yêu cầu: '+intake.req : '', intake.deliv || ''].filter(Boolean).join('. ') : '';
+  return {kickoff: j.yymm, cc: j.cc, project: j.pn, type: p.type || (j.cc === INT_CODE ? 'Internal' : ''), parent: p.parent || '',
+    status: p.useCase === 'INT' || j.cc === INT_CODE ? 'Confirmed' : 'Quoting', pic: st ? st.name : '', deadline: p.deadline || '', notes};
+}
+function regBlocks(p){
+  const f = regFields(p); if(!f) return [];
+  const b = [{cell: 'B', lab: 'Kick-off, Client code', vals: [f.kickoff, f.cc]}, {cell: 'E', lab: 'Project, Type, Parent job, Status, PIC, Deadline', vals: [f.project, f.type, f.parent, f.status, f.pic, dmy(f.deadline)]}];
+  if(f.notes) b.push({cell: 'P', lab: 'Notes', vals: [f.notes]});
+  return b;
+}
+function regAdd(pid, doc){
+  const p = doc || S.projects[pid]; if(!p) return Promise.resolve({ok: false, error: 'Không tìm thấy dự án.'});
+  const job = regFields(Object.assign({id: pid}, p)); if(!job) return Promise.resolve({ok: false, error: 'Dự án chưa có Job ID đúng dạng.'});
+  return fetch('/api/register', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({op: 'add', job})})
+    .then(r => r.json()).catch(() => ({ok: false, error: 'Không kết nối được Job Register.'}))
+    .then(o => {
+      if(o && (o.ok || o.exists)){ W.project(pid, {reg: {how: o.ok ? 'auto' : 'had', at: Date.now(), by: meId() || null, row: o.row || null}}); S.reg.at = 0; regLoad(true); }
+      return o || {ok: false};
+    });
+}
+
+/* ---------- booking nội bộ: config/intake = {b: {<id>: {…}}} ---------- */
+const IN_KINDS = ['Content ads', 'TVC khóa học', 'Showcase', 'Pitch', 'Khác'];
+const IN_STATUS = {new: 'Chờ nhận', assigned: 'Đã giao', hold: 'Tạm hoãn', declined: 'Từ chối'};
+function intakeSave(id, obj, text){
+  const lg = text ? [{t: 'step', text}] : [];
+  return logAfter(wdoc('config/intake', r => S.intakeExists ? r.update({b: {[id]: obj}}) : (r.merge ? r.merge({b: {[id]: obj}}) : r.set({b: {[id]: obj}}))), lg);
 }
 
 /* ---------- derived data ---------- */
@@ -1728,7 +1832,7 @@ function teamText(D, p){
 function parseHash(){
   const hsh = (location.hash || '').replace(/^#/, '');
   if(hsh.indexOf('job-') === 0) return {view:'job', id: hsh.slice(4)};
-  if(['du-an','qc','credit','dat-ten','cai-dat','lich','nhat-ky'].indexOf(hsh) >= 0) return {view: hsh};
+  if(['du-an','qc','credit','dat-ten','cai-dat','lich','nhat-ky','noi-bo'].indexOf(hsh) >= 0) return {view: hsh};
   return {view:'lich'};
 }
 function useRoute(){
@@ -1904,13 +2008,14 @@ function DateRange({start, end, onChange, labels}){
 
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
-  const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['qc','Duyệt QC'],['credit','Credit Higgsfield'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
+  const tabs = [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
+  const inNew = me && isLead(D, me) ? Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].status === 'new').length : 0;
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
   const s = me && D.staffMap[me];
   return html`<header class="top"><div class="top-in">
     <a class="brand" href="#lich">${Clapper()}<span>MagentX <span class="sub">Production</span></span></a>
-    <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}</a>`)}</nav>
+    <nav class="nav" aria-label="Các trang">${tabs.map(t => html`<a key=${t[0]} href=${'#'+t[0]} class=${act === t[0] ? 'on' : ''} aria-current=${act === t[0] ? 'page' : null}>${t[1]}${t[0] === 'qc' && mine ? html`<span class="cnt" title="Chờ bạn duyệt">${mine}</span>` : null}${t[0] === 'noi-bo' && inNew ? html`<span class="cnt" title="Yêu cầu nội bộ chờ nhận">${inNew}</span>` : null}</a>`)}</nav>
     <div class="top-r">
       <a class=${'icon-btn bare'+(act === 'cai-dat' ? ' on' : '')} href="#cai-dat" title="Cài đặt" aria-label="Cài đặt"><${Ic} n="gear" s=${20}/></a>
       ${S.phase === 'ready' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'identity'})} title=${s ? 'Tài khoản, đổi người dùng' : 'Đăng nhập'} aria-label=${s ? 'Tài khoản: '+s.name : 'Đăng nhập'}><${Ic} n="user" s=${16}/><span class="who-name">${s ? s.name : 'Đăng nhập'}</span></button>` : null}
@@ -2193,6 +2298,7 @@ function ProjectsView({D}){
   });
   return html`
     <div class="ph"><div><h1>Dự án</h1><p>Bấm vào một dự án để nộp link, duyệt QC và ghi credit.</p></div><button type="button" class="btn" onClick=${() => copyText(projectsTSV(D))}><${Ic} n="copy" s=${17}/>Copy bảng sang Google Sheets</button><${XlsxBtn} D=${D}/></div>
+    <${RegJobsPanel} D=${D}/>
     <div class="toolbar">
       <div class="search"><${Ic} n="search" s=${18}/><input class="inp" type="search" placeholder="Tìm theo tên, mã job, khách hàng" value=${q} onInput=${e => setQ(e.target.value)} aria-label="Tìm dự án"/></div>
       <div class="seg" role="group" aria-label="Lọc trạng thái">${[['open','Đang chạy'],['done','Đã xong'],['all','Tất cả']].map(o => html`<button key=${o[0]} type="button" class=${fs === o[0] ? 'on' : ''} aria-pressed=${fs === o[0]} onClick=${() => setFs(o[0])}>${o[1]}</button>`)}</div>
@@ -2551,6 +2657,7 @@ function NamingCard({p, D}){
     ${canW() ? html`<div><button type="button" class="btn sm" onClick=${() => openModal({type:'project', pid: p.id})}><${Ic} n="edit" s=${16}/>${p.code ? 'Sửa Job ID' : 'Đặt Job ID'}</button></div>` : null}</section>`;
   return html`<section class="panel" aria-label="Folder và tên file">
     <h3>Folder và tên file</h3>
+    <${RegBox} p=${p} D=${D}/>
     <div class="nm-path"><span class="meta">Folder trên Drive</span><span class="code">${path}</span></div>
     <div class="acts">
       ${safeUrl(p.folder) ? html`<a class="btn xs" href=${p.folder} target="_blank" rel="noopener"><${Ic} n="folder" s=${14}/>Mở folder</a>` : html`<span class="meta">Chưa có link folder. Tạo bằng menu MagentX trong Job Register rồi dán link vào thông tin dự án.</span>`}
@@ -3066,6 +3173,13 @@ function ClientsPanel({D, me}){
   const addModel = () => { const k = nm.code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if(k.length < 2 || !nm.name.trim()){ toast('Cần code 2–6 ký tự và tên model.', 'warn'); return; } if(MODELS[k]){ toast('Code '+k+' đã có.', 'warn'); return; } W.config({models: {[k]: nm.name.trim()}}); setNm({code: '', name: ''}); };
   return html`<section class="panel flush" aria-label="Khách hàng và Job Register">
     <div class="panel-h"><div><h2>Khách hàng và Job Register</h2><p class="meta">Client code dùng trong Job ID. Giữ giống tab Clients của Job Register.</p></div>${!lead ? html`<span class="meta">Chỉ leader sửa.</span>` : null}</div>
+    <div class=${'reg-conn '+(S.reg.state === 'ok' ? 'ok' : S.reg.state === 'error' ? 'bad' : '')}>
+      ${S.reg.state === 'ok' ? html`<span><b>Đã kết nối Job Register.</b> ${S.reg.jobs.length} job, ${S.reg.clients.length} khách, cập nhật ${rel(S.reg.at)}. Danh sách khách dưới đây lấy từ tab Clients.</span>`
+        : S.reg.state === 'error' ? html`<span><b>Không đọc được Job Register:</b> ${S.reg.error}</span>`
+        : S.reg.state === 'loading' ? html`<span>Đang kiểm tra kết nối Job Register…</span>`
+        : html`<span><b>Chưa kết nối Job Register.</b> Bảng đang ở chế độ nhập tay. Kết nối theo <span class="code">docs/register-sync.md</span> để bảng đọc job, khách và tự thêm dòng job mới.</span>`}
+      <button type="button" class="btn xs" onClick=${() => regLoad(true)}>Kiểm tra lại</button>
+    </div>
     <div class="cl-links">
       <div class="field"><span class="lab">Link Job Register</span><${InlineText} value=${c.registerUrl || ''} placeholder="https://docs.google.com/spreadsheets/…" label="Link Job Register" disabled=${!lead} onSave=${v => W.config({registerUrl: safeUrl(v) ? v.trim() : ''})}/></div>
       <div class="field"><span class="lab">Link folder MAGENTX_PRODUCTION</span><${InlineText} value=${c.driveUrl || ''} placeholder="https://drive.google.com/drive/folders/…" label="Link folder MAGENTX_PRODUCTION" disabled=${!lead} onSave=${v => W.config({driveUrl: safeUrl(v) ? v.trim() : ''})}/></div>
@@ -3074,10 +3188,10 @@ function ClientsPanel({D, me}){
       <tr><td><b class="code">${INT_CODE}</b></td><td>MagentX, lưu trong <span class="code">02_INTERNAL</span></td><td class="meta">Job nội bộ, cố định</td><td class="num">${used[INT_CODE] || 0}</td><td></td></tr>
       ${list.map(k => html`<tr key=${k.code}>
         <td><b class="code">${k.code}</b></td>
-        <td>${k.saved ? html`<${InlineText} value=${k.name} label=${'Tên folder của '+k.code} disabled=${!lead} onSave=${v => v.trim() && W.config({clients: {[k.code]: {name: v.trim()}}})}/>` : html`<span>${k.name}</span> <span class="meta">(chỉ có trong dự án)</span>`}</td>
-        <td>${k.saved ? html`<${InlineText} value=${k.note} placeholder="—" label=${'Ghi chú '+k.code} disabled=${!lead} onSave=${v => W.config({clients: {[k.code]: {note: v.trim()}}})}/>` : null}</td>
+        <td>${k.saved ? html`<${InlineText} value=${k.name} label=${'Tên folder của '+k.code} disabled=${!lead} onSave=${v => v.trim() && W.config({clients: {[k.code]: {name: v.trim()}}})}/>` : html`<span>${k.name}</span> <span class="meta">${k.reg ? '(từ Job Register)' : '(chỉ có trong dự án)'}</span>`}</td>
+        <td>${k.saved ? html`<${InlineText} value=${k.note} placeholder="—" label=${'Ghi chú '+k.code} disabled=${!lead} onSave=${v => W.config({clients: {[k.code]: {note: v.trim()}}})}/>` : k.reg ? html`<span class="meta">${k.note}</span>` : null}</td>
         <td class="num">${used[k.code] || 0}</td>
-        <td>${!lead ? null : k.saved ? html`<button type="button" class="icon-btn sm bare" disabled=${!!used[k.code]} title=${used[k.code] ? 'Đang có job dùng mã này' : 'Xóa khỏi danh sách'} aria-label=${'Xóa khách '+k.code} onClick=${() => W.config({clients: {[k.code]: null}})}><${Ic} n="trash" s=${15}/></button>` : html`<button type="button" class="btn xs" onClick=${() => W.config({clients: {[k.code]: {name: k.name, note: ''}}})}>Lưu vào danh sách</button>`}</td>
+        <td>${!lead || k.reg ? null : k.saved ? html`<button type="button" class="icon-btn sm bare" disabled=${!!used[k.code]} title=${used[k.code] ? 'Đang có job dùng mã này' : 'Xóa khỏi danh sách'} aria-label=${'Xóa khách '+k.code} onClick=${() => W.config({clients: {[k.code]: null}})}><${Ic} n="trash" s=${15}/></button>` : html`<button type="button" class="btn xs" onClick=${() => W.config({clients: {[k.code]: {name: k.name, note: ''}}})}>Lưu vào danh sách</button>`}</td>
       </tr>`)}
     </tbody></table></div>
     ${lead ? html`<div class="cl-add">
@@ -3442,24 +3556,30 @@ function FormSec({n, title, desc, done, optional, open, onToggle, children}){
     ${shut ? null : html`<div class="fs-b">${children}</div>`}
   </section>`;
 }
-function ProjectForm({D, pid}){
+function ProjectForm({D, pid, pre}){
+  const pr = pre || {}, rj0 = pr.regJob || null;
   const p0 = pid ? D.pmap[pid] : null; const editing = !!p0;
   const [f, setF] = useState(() => {
     if(p0){
       const pj = parseJob(p0.code), known = clientList(D).some(c => c.code === (pj ? pj.cc : cleanCC(p0.clientCode)));
       return {name: p0.name || '', client: p0.client || '', clientCode: pj ? pj.cc : (p0.useCase === 'INT' ? '' : cleanCC(p0.clientCode || codeify(p0.client || ''))), newClient: p0.useCase !== 'INT' && !known,
         yymm: pj ? pj.yymm : ymOf(D.t), pn: pj ? pj.pn : pnameOf(p0.name), pnTouched: !!pj, jidMode: p0.code && !pj ? 'manual' : 'auto', jidText: p0.code || '', parent: p0.parent || '',
-        useCase: p0.useCase || 'EXT', tier: p0.tier || '', workflow: p0.workflow || 'Full AI', duration: p0.duration || '', value: p0.value ? String(p0.value) : '', pic: p0.pic || '', start: p0.start || D.t, deadline: p0.deadline || addDays(D.t, 14), folder: p0.folder || '', revAllowed: p0.revAllowed === null ? '' : String(p0.revAllowed), note: p0.note || '', status: p0.status, kindSel: kindSelOf(p0.kind), kindOther: kindSelOf(p0.kind) === 'other' ? (p0.kind || '') : ''};
+        useCase: p0.useCase || 'EXT', tier: p0.tier || '', workflow: p0.workflow || 'Full AI', duration: p0.duration || '', value: p0.value ? String(p0.value) : '', pic: p0.pic || '', start: p0.start || D.t, deadline: p0.deadline || addDays(D.t, 14), folder: p0.folder || '', revAllowed: p0.revAllowed === null ? '' : String(p0.revAllowed), note: p0.note || '', status: p0.status, type: p0.type || '', src: 'edit', jobIn: '', kindSel: kindSelOf(p0.kind), kindOther: kindSelOf(p0.kind) === 'other' ? (p0.kind || '') : ''};
     }
-    return {name: '', client: '', clientCode: '', newClient: false, yymm: ymOf(D.t), pn: '', pnTouched: false, jidMode: 'auto', jidText: '', parent: '', useCase: 'EXT', tier: 'B', workflow: 'Full AI', duration: '', value: '', pic: meId() || '', start: D.t, deadline: addDays(D.t, 14), folder: '', revAllowed: String(D.cfg.revDefault), note: '', est: '', acc: '', kindSel: 'ads', kindOther: ''};
+    const pj0 = parseJob(rj0 ? rj0.id : pr.jobId), int0 = pr.useCase === 'INT' || (pj0 && pj0.cc === INT_CODE);
+    const name0 = pr.name || (pj0 ? (int0 ? '' : clientFolder(D, pj0.cc).replace(/_/g, ' ')+' ')+pj0.pn.replace(/-/g, ' ') : '');
+    return {name: name0, client: '', clientCode: '', newClient: false, yymm: ymOf(D.t), pn: pr.pn || '', pnTouched: !!pr.pn, jidMode: 'auto', jidText: '', parent: pr.parent || (rj0 && rj0.parent) || '',
+      src: pr.src || (pr.useCase === 'INT' ? 'new' : 'reg'), jobIn: pj0 ? (rj0 ? rj0.id : pr.jobId) : '', regPick: !!rj0, addReg: true, intake: pr.intake || '', type: pr.type || (rj0 && rj0.type) || (int0 ? 'Internal' : ''),
+      useCase: int0 ? 'INT' : 'EXT', tier: pr.tier !== undefined ? pr.tier : 'B', workflow: 'Full AI', duration: pr.duration || '', value: '', pic: meId() || '', start: pr.start || D.t, deadline: pr.deadline || (rj0 && rj0.deadline) || addDays(D.t, 14), folder: (rj0 && safeUrl(rj0.folder) ? rj0.folder : '') || pr.folder || '', revAllowed: String(D.cfg.revDefault), note: pr.note || '', est: pr.est ? String(pr.est) : '', acc: '', kindSel: pr.kindSel || 'ads', kindOther: pr.kindOther || ''};
   });
   const [more, setMore] = useState(editing);
   const [accEdit, setAccEdit] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [tm, setTm] = useState(() => {
     const me = meId();
-    const team = p0 ? teamFromProject(p0) : (me ? {[me]: ALL_ROLES.slice()} : {});
-    const pic = p0 ? (p0.pic && team[p0.pic] ? p0.pic : (Object.keys(team)[0] || '')) : (me || '');
+    const rp = !p0 && rj0 ? regPicId(rj0.pic) : '';
+    const team = p0 ? teamFromProject(p0) : rp ? {[rp]: ALL_ROLES.slice()} : (me ? {[me]: ALL_ROLES.slice()} : {});
+    const pic = p0 ? (p0.pic && team[p0.pic] ? p0.pic : (Object.keys(team)[0] || '')) : (rp || me || '');
     return {team, pic, team0: JSON.stringify(normTeam(team)), pic0: pic, reassign: true};
   });
   const members = D.staffList.map(x => x.id).filter(id => tm.team[id]);
@@ -3492,12 +3612,31 @@ function ProjectForm({D, pid}){
   /* Job ID = YYMM_CLIENTCODE_Project-Name, phải khớp cột A của Job Register */
   const clients = clientList(D);
   const isExt = f.useCase === 'EXT';
-  const cc = isExt ? cleanCC(f.clientCode) : INT_CODE;
+  /* Tạo mới: "reg" = job đã có trong Job Register (dán hoặc chọn Job ID); "new" = bảng ghép Job ID rồi thêm vào Register */
+  const regMode = !editing && f.src === 'reg';
+  const pjIn = regMode ? parseJob(f.jobIn.trim()) : null;
+  const regOn = S.reg.state === 'ok';
+  const rjIn = pjIn ? regJob(f.jobIn.trim()) : null;
+  const regCli = pjIn && isExt ? (clientKnown(D, pjIn.cc) ? clientFolder(D, pjIn.cc) : '') : '';
+  const regAvail = regOn ? S.reg.jobs.filter(j => JOB_RE.test(j.id) && ['Cancelled', 'Paid', 'Invoiced', 'Delivered'].indexOf(j.status) < 0 && !D.projects.some(x => x.code === j.id)).sort((a, b) => b.id.localeCompare(a.id)) : [];
+  const useJob = j => {
+    const q = parseJob(j && j.id); if(!q) return;
+    const int = q.cc === INT_CODE, rp = regPicId(j.pic);
+    setF(x => Object.assign({}, x, {jobIn: j.id, regPick: true, useCase: int ? 'INT' : 'EXT', type: j.type || x.type, parent: j.parent || x.parent, deadline: j.deadline && j.deadline >= x.start ? j.deadline : x.deadline, folder: safeUrl(j.folder) ? j.folder : x.folder,
+      name: x.name.trim() ? x.name : (int ? '' : clientFolder(D, q.cc, j.client).replace(/_/g, ' ')+' ')+q.pn.replace(/-/g, ' ')}));
+    if(rp) setTm(t => Object.assign({}, t, {team: {[rp]: ALL_ROLES.slice()}, pic: rp}));
+  };
+  const pasteJob = v => {
+    const q = parseJob(v.trim());
+    setF(x => Object.assign({}, x, {jobIn: v, regPick: false}, q ? {useCase: q.cc === INT_CODE ? 'INT' : 'EXT', type: x.type || (q.cc === INT_CODE ? 'Internal' : ''), name: x.name.trim() ? x.name : (q.cc === INT_CODE ? '' : clientFolder(D, q.cc, '').replace(/_/g, ' ')+' ')+q.pn.replace(/-/g, ' ')} : {}));
+    const j = q && regJob(v.trim()); if(j) useJob(j);
+  };
+  const cc = regMode ? (pjIn ? pjIn.cc : '') : isExt ? cleanCC(f.clientCode) : INT_CODE;
   const pnEff = f.pnTouched ? cleanPname(f.pn) : pnameOf(f.name);
   const autoCode = /^\d{4}$/.test(f.yymm) && cc.length >= 2 && pnEff ? f.yymm+'_'+cc+'_'+pnEff : '';
-  const code = f.jidMode === 'manual' ? f.jidText.trim() : autoCode;
+  const code = regMode ? (pjIn ? f.jobIn.trim() : '') : f.jidMode === 'manual' ? f.jidText.trim() : autoCode;
   const legacy = editing && f.jidMode === 'manual' && !!code && code === (p0.code || '');
-  const codeOk = !!code && (JOB_RE.test(code) || legacy);
+  const codeOk = !!code && (JOB_RE.test(code) || legacy) && (!regMode || !!pjIn);
   const codeCc = (parseJob(code) || {}).cc;
   const dup = !!code && D.projects.some(p => p.code === code && p.id !== pid);
   const parents = D.projects.filter(p => p.id !== pid && p.jobOk && parseJob(p.code).cc === cc && p.code !== code);
@@ -3514,8 +3653,9 @@ function ProjectForm({D, pid}){
     if(f.folder.trim() && !/^https?:\/\//i.test(f.folder.trim())){ toast('Link folder cần bắt đầu bằng http:// hoặc https://', 'warn'); return; }
     if(code && !codeOk){ toast('Job ID cần dạng YYMM_CLIENTCODE_Project-Name, VD 2611_ACME_Demo-TVC.', 'warn'); return; }
     if(dup){ toast('Job ID trùng với dự án khác.', 'warn'); return; }
-    if(isExt && f.newClient && f.addClient && cc.length >= 2 && f.client.trim() && !(D.cfg.clients || {})[cc]) W.config({clients: {[cc]: {name: f.client.trim(), note: ''}}});
-    const base = {name: f.name.trim(), client: f.useCase === 'INT' ? '' : f.client.trim(), kind: f.useCase === 'INT' ? kindName : '', clientCode: cc, code: code || '', parent: f.parent || null, useCase: f.useCase, workflow: f.workflow, duration: f.duration.trim(), value: f.useCase === 'EXT' && f.value ? +f.value : null, pic: tm.pic || members[0] || null, team: tm.team, start: f.start, deadline: f.deadline, folder: f.folder.trim(), revAllowed: f.revAllowed === '' ? null : +f.revAllowed, note: f.note.trim()};
+    if(regMode && isExt && !regCli && f.client.trim() && !regOn) W.config({clients: {[cc]: {name: f.client.trim(), note: ''}}});
+    if(!regMode && isExt && f.newClient && f.addClient && cc.length >= 2 && f.client.trim() && !(D.cfg.clients || {})[cc]) W.config({clients: {[cc]: {name: f.client.trim(), note: ''}}});
+    const base = {name: f.name.trim(), client: f.useCase === 'INT' ? '' : (regMode ? (regCli || f.client.trim()) : f.client.trim()), type: f.type || (cc === INT_CODE ? 'Internal' : ''), kind: f.useCase === 'INT' ? kindName : '', clientCode: cc, code: code || '', parent: f.parent || null, useCase: f.useCase, workflow: f.workflow, duration: f.duration.trim(), value: f.useCase === 'EXT' && f.value ? +f.value : null, pic: tm.pic || members[0] || null, team: tm.team, start: f.start, deadline: f.deadline, folder: f.folder.trim(), revAllowed: f.revAllowed === '' ? null : +f.revAllowed, note: f.note.trim()};
     if(editing){
       const patch = Object.assign({}, base);
       const team = Object.assign({}, tm.team); Object.keys(p0.team || {}).forEach(k => { if(!tm.team[k]) team[k] = null; }); patch.team = team;
@@ -3544,19 +3684,28 @@ function ProjectForm({D, pid}){
     let col = 1; for(let i = 2; i <= 7; i++){ if((used[i] || 0) < (used[col] || 0)) col = i; }
     const doc = Object.assign(base, {tier: TIERS[f.tier] ? f.tier : '', status: f.start > D.t ? 'planned' : 'active', c: col, steps, gates: {}, revs: {}, bookings, createdAt: Date.now(), createdBy: meId(), updatedAt: Date.now()});
     S.created = id;
-    W.newProject(id, doc);
+    if(regMode) doc.reg = {how: f.regPick ? 'pick' : 'paste', at: Date.now(), by: meId() || null};
+    if(f.intake) doc.intake = f.intake;
+    const wantReg = !regMode && f.addReg && regOn && JOB_RE.test(code);
+    W.newProject(id, doc).then(ok => {
+      if(!ok) return;
+      if(f.intake) intakeSave(f.intake, {status: 'assigned', pid: id, aBy: meId() || null, aAt: Date.now()}, 'nhận booking nội bộ "'+doc.name+'" và lập dự án');
+      if(wantReg) regAdd(id, doc).then(o => toast(o.ok ? 'Đã thêm '+code+' vào Job Register' : o.exists ? code+' đã có trong Job Register' : 'Chưa thêm được vào Job Register: '+(o.error || 'lỗi'), o.ok || o.exists ? '' : 'warn'));
+    });
     closeModal(); S.focus = {pid: id, step: null}; location.hash = 'job-'+id;
     toast('Đã tạo dự án '+(code || doc.name));
   };
   const del = () => { W.delProject(pid); closeModal(); location.hash = 'du-an'; toast('Đã xóa dự án'); };
   const ext = f.useCase === 'EXT';
-  const okInfo = !!f.name.trim() && (ext ? (!!f.client.trim() && cc.length >= 2) : (f.kindSel !== 'other' || !!(f.kindOther || '').trim()));
+  const okInfo = !!f.name.trim() && (regMode && !pjIn ? false : true) && (ext ? (regMode ? !!(regCli || f.client.trim()) : (!!f.client.trim() && cc.length >= 2)) : (f.kindSel !== 'other' || !!(f.kindOther || '').trim()));
   const okTime = !!(f.start && f.deadline && !badDates);
   const okTeam = members.length > 0;
   const missing = [];
   if(!f.name.trim()) missing.push('tên dự án');
-  if(ext && (!f.client.trim() || cc.length < 2)) missing.push('khách hàng');
-  if(!editing && !(codeOk && !dup)) missing.push('Job ID');
+  if(regMode && !pjIn) missing.push('Job ID');
+  else if(ext && (regMode ? !(regCli || f.client.trim()) : (!f.client.trim() || cc.length < 2))) missing.push('khách hàng');
+  if(!editing && !regMode && !(codeOk && !dup)) missing.push('Job ID');
+  if(regMode && pjIn && dup) missing.push('Job ID khác (đã có dự án dùng mã này)');
   if(!ext && f.kindSel === 'other' && !(f.kindOther || '').trim()) missing.push('loại dự án');
   if(!okTime) missing.push('thời gian');
   if(!okTeam) missing.push('người làm');
@@ -3580,10 +3729,24 @@ function ProjectForm({D, pid}){
     <form class="pform" onSubmit=${e => { e.preventDefault(); if(canSave) save(); }}>
       <div class="modal-b">
       <${FormSec} n="1" title="Thông tin dự án" desc=${ext ? 'Tên, loại job và khách hàng.' : 'Tên, loại job và loại dự án.'} done=${okInfo}>
-        <div class="field"><label class="lab" for="pf-name">Tên dự án</label><input id="pf-name" class="inp" value=${f.name} placeholder="VD: MoMo - Quỹ - VDO2 (couple sống thử)" onInput=${e => set('name', e.target.value)}/></div>
+        ${!editing ? html`<div class="field jid-src"><span class="lab">Job ID</span>
+          <div class="seg" role="group" aria-label="Job ID"><button type="button" class=${regMode ? 'on' : ''} aria-pressed=${regMode} onClick=${() => set('src', 'reg')}>Đã có trong Job Register</button><button type="button" class=${!regMode ? 'on' : ''} aria-pressed=${!regMode} onClick=${() => set('src', 'new')}>Chưa có, tạo mới</button></div>
+          ${regMode ? html`
+            ${regOn && regAvail.length ? html`<select class="sel" value=${f.regPick ? f.jobIn : ''} aria-label="Chọn job trong Job Register" onChange=${e => { const j = regAvail.find(x => x.id === e.target.value); if(j) useJob(j); }}><option value="">Chọn job trong Job Register (${regAvail.length} job chưa có trên bảng)…</option>${regAvail.map(j => html`<option key=${j.id} value=${j.id}>${j.id}, ${j.status}${j.pic ? ', '+j.pic : ''}</option>`)}</select>` : null}
+            <input class="inp code" value=${f.jobIn} placeholder=${regOn && regAvail.length ? 'Hoặc dán Job ID ở cột A, VD 2611_ACME_Demo-TVC' : 'Dán Job ID ở cột A của Job Register, VD 2611_ACME_Demo-TVC'} aria-label="Job ID trong Job Register" onInput=${e => pasteJob(e.target.value)}/>
+            ${pjIn ? html`<div class="jid-sum"><span>Kick-off <b class="code">${pjIn.yymm}</b></span><span>Client <b class="code">${pjIn.cc}</b>${pjIn.cc === INT_CODE ? ' (nội bộ)' : regCli ? ' ('+regCli+')' : ''}</span><span>Project <b class="code">${pjIn.pn}</b></span>${rjIn ? html`<span>Register: <b>${rjIn.status}</b>${rjIn.pic ? ', '+rjIn.pic : ''}</span>` : null}</div>
+                ${dup ? html`<span class="hint bad-t">Đã có dự án trên bảng dùng Job ID này.</span>` : regOn && !rjIn ? html`<span class="hint warn-t">Chưa thấy Job ID này trong Job Register. Kiểm tra lại, hoặc chọn "Chưa có, tạo mới".</span>` : null}`
+              : f.jobIn.trim() ? html`<span class="hint bad-t">Job ID cần dạng YYMM_CLIENTCODE_Project-Name, VD 2611_ACME_Demo-TVC.</span>`
+              : html`<span class="hint">Thêm dòng trong Job Register trước, rồi ${regOn ? 'chọn job ở trên hoặc dán' : 'copy'} Job ID ở cột A vào đây. Bảng tự điền khách, loại job${regOn ? ', PIC, deadline, folder, job gốc' : ''}.${D.cfg.registerUrl ? html` <a href=${D.cfg.registerUrl} target="_blank" rel="noopener">Mở Job Register</a>` : null}</span>`}`
+            : html`<span class="hint">Bảng ghép Job ID theo tên dự án ở mục 4. ${regOn ? 'Khi tạo dự án, bảng thêm dòng này vào Job Register.' : 'Sau khi tạo, copy các ô vào Job Register (thẻ Folder và tên file trong trang dự án).'}</span>`}
+        </div>` : null}
+        <div class="field"><label class="lab" for="pf-name">Tên dự án</label><input id="pf-name" class="inp" value=${f.name} placeholder="VD: MoMo - Quỹ - VDO2 (couple sống thử)" onInput=${e => { const v = e.target.value; if(!editing && JOB_RE.test(v.trim()) && !pjIn){ setF(x => Object.assign({}, x, {src: 'reg', name: ''})); pasteJob(v.trim()); toast('Đã chuyển Job ID sang ô Job ID. Đặt tên dễ đọc cho dự án.'); } else set('name', v); }}/></div>
         <div class="grid2 al-top">
-          <div class="field"><span class="lab">Loại job</span><div class="opts c2">${[['EXT','Job khách','Job làm cho khách (EXT)'],['INT','Nội bộ','Dự án nội bộ MagentX (INT)']].map(o => html`<label key=${o[0]} class=${'opt'+(f.useCase === o[0] ? ' on' : '')} title=${o[2]}><input type="radio" name="pf-use" checked=${f.useCase === o[0]} onChange=${() => set('useCase', o[0])}/><span><b>${o[1]}</b></span></label>`)}</div></div>
-          ${ext
+          ${regMode ? html`<div class="field"><span class="lab">Loại job</span><span class="jid-fixed">${isExt ? 'Job khách' : 'Nội bộ (MX)'}</span></div>` : html`<div class="field"><span class="lab">Loại job</span><div class="opts c2">${[['EXT','Job khách','Job làm cho khách (EXT)'],['INT','Nội bộ','Dự án nội bộ MagentX (INT)']].map(o => html`<label key=${o[0]} class=${'opt'+(f.useCase === o[0] ? ' on' : '')} title=${o[2]}><input type="radio" name="pf-use" checked=${f.useCase === o[0]} onChange=${() => set('useCase', o[0])}/><span><b>${o[1]}</b></span></label>`)}</div></div>`}
+          ${ext && regMode
+            ? html`<div class="field"><label class="lab" for="pf-cname">Khách hàng</label>${!pjIn ? html`<span class="jid-fixed meta">Theo Job ID</span>` : regCli ? html`<span class="jid-fixed">${regCli} <span class="code meta">(${pjIn.cc})</span></span>`
+                : html`<input id="pf-cname" class="inp" value=${f.client} placeholder="Tên folder khách, viết đầy đủ" onInput=${e => set('client', e.target.value)}/><span class="hint">${regOn ? 'Client code '+pjIn.cc+' chưa có trong tab Clients của Job Register.' : 'Client code '+pjIn.cc+' chưa có trong danh sách khách của bảng. Ghi tên folder khách để thêm.'}</span>`}</div>`
+            : ext
             ? html`<div class="field"><label class="lab" for="pf-client">Khách hàng</label>
                 <select id="pf-client" class="sel" value=${f.newClient ? '__new' : f.clientCode} onChange=${e => { const v = e.target.value; if(v === '__new') setF(x => Object.assign({}, x, {newClient: true, addClient: true, clientCode: '', client: ''})); else { const c = clients.find(k => k.code === v); setF(x => Object.assign({}, x, {newClient: false, clientCode: v, client: c ? c.name : ''})); } }}>
                   <option value="">Chọn khách…</option>${clients.map(c => html`<option key=${c.code} value=${c.code}>${c.name} (${c.code})</option>`)}<option value="__new">Khách mới…</option></select>
@@ -3591,6 +3754,7 @@ function ProjectForm({D, pid}){
               </div>`
             : html`<div class="field"><label class="lab" for="pf-kindsel">Loại dự án</label><select id="pf-kindsel" class="sel" value=${f.kindSel} onChange=${e => set('kindSel', e.target.value)}>${KINDS.map(k => html`<option key=${k.id} value=${k.id}>${k.id === 'other' ? 'Khác (tự ghi)' : k.name}</option>`)}</select>${f.kindSel === 'other' ? html`<input id="pf-kind" class="inp" value=${f.kindOther} placeholder="Ghi loại dự án, VD: Showcase, R&D" aria-label="Loại dự án khác" onInput=${e => set('kindOther', e.target.value)}/>` : null}</div>`}
         </div>
+        <div class="field"><label class="lab" for="pf-type">Type trong Job Register${optTag}</label><select id="pf-type" class="sel" value=${f.type} onChange=${e => set('type', e.target.value)}><option value="">Chưa chọn</option>${REG_TYPES.map(t => html`<option key=${t} value=${t}>${t}</option>`)}</select></div>
         ${editing ? html`<div class="field"><label class="lab" for="pf-status">Trạng thái</label><select id="pf-status" class="sel" value=${f.status} onChange=${e => set('status', e.target.value)}>${Object.keys(P_STATUS).map(k => html`<option key=${k} value=${k}>${P_STATUS[k]}</option>`)}</select></div>` : null}
         <div class="field"><label class="lab" for="pf-folder">Link folder dự án (Google Drive)${optTag}</label><input id="pf-folder" class="inp" type="url" value=${f.folder} placeholder="https://drive.google.com/drive/folders/…" onInput=${e => set('folder', e.target.value)}/></div>
       <//>
@@ -3605,7 +3769,8 @@ function ProjectForm({D, pid}){
         ${reassignBox}
       <//>
       <${FormSec} n="4" title=${editing ? 'Job ID' : 'Job ID và credit'} desc=${html`Theo Job Register: <span class="nw code">YYMM_CLIENTCODE_Project-Name</span>.`} done=${codeOk && !dup}>
-        ${f.jidMode === 'auto' ? html`<div class="field"><span class="lab">Job ID</span>
+        ${regMode ? html`<div class="field"><span class="lab">Job ID</span><div class="out"><code>${code || 'Dán hoặc chọn Job ID ở mục 1'}</code>${code ? html`<${CopyBtn} text=${code} label="Copy Job ID"/>` : null}</div></div>`
+          : f.jidMode === 'auto' ? html`<div class="field"><span class="lab">Job ID</span>
             <div class="jid-parts">
               <label><span class="hint">Kick-off YYMM</span><input class="inp code" value=${f.yymm} maxlength="4" inputmode="numeric" aria-label="Kick-off YYMM" onInput=${e => set('yymm', e.target.value.replace(/\D/g, '').slice(0, 4))}/></label>
               <label><span class="hint">Client code</span><span class="jid-fixed code">${cc || '—'}</span></label>
@@ -3613,7 +3778,8 @@ function ProjectForm({D, pid}){
             </div>
             <div class="out"><code class=${dup ? 'bad-t' : ''}>${code || (ext ? 'Chọn khách hàng và nhập tên dự án' : 'Nhập tên dự án')}</code>${code ? html`<${CopyBtn} text=${code} label="Copy Job ID"/>` : null}</div>
             <span class="hint">Kick-off là tháng ký quote hoặc confirm job, không lấy tháng giao. Thêm dòng Job Register với đúng ba giá trị này để cột A ra cùng Job ID.${editing && p0.code && p0.code !== code ? html` <span class="warn-t">Folder đã tạo theo Job ID cũ thì chạy Đồng bộ trong Job Register.</span>` : null}</span>
-            <div><button type="button" class="btn xs" onClick=${() => setF(x => Object.assign({}, x, {jidMode: 'manual', jidText: code || x.jidText}))}><${Ic} n="edit" s=${14}/>Dán Job ID có sẵn</button></div>
+            ${!editing ? (regOn ? html`<label class="check"><input type="checkbox" checked=${f.addReg} onChange=${e => set('addReg', e.target.checked)}/>Thêm dòng này vào Job Register khi tạo dự án</label>` : html`<span class="hint">Job Register chưa kết nối: sau khi tạo, copy các ô ở thẻ "Folder và tên file" trong trang dự án.</span>`) : null}
+            <div><button type="button" class="btn xs" onClick=${() => editing ? setF(x => Object.assign({}, x, {jidMode: 'manual', jidText: code || x.jidText})) : setF(x => Object.assign({}, x, {src: 'reg'}))}><${Ic} n="edit" s=${14}/>${editing ? 'Dán Job ID có sẵn' : 'Đã có Job ID trong Register'}</button></div>
           </div>`
           : html`<div class="field"><label class="lab" for="pf-jid">Job ID</label>
             <input id="pf-jid" class="inp code" value=${f.jidText} placeholder="VD 2611_ACME_Demo-TVC" onInput=${e => set('jidText', e.target.value.trim())}/>
@@ -3769,13 +3935,141 @@ function LogView({D, me}){
     ${from < LOG_SINCE ? html`<p class="meta lg-note">Nhật ký bắt đầu ghi từ ${fT(LOG_SINCE)}. Trước đó chỉ có nộp bản, duyệt, góp ý và gate, lấy lại từ dữ liệu dự án. Thao tác của khách qua link duyệt luôn lấy từ dữ liệu dự án.</p>` : null}`;
 }
 
+/* ---------- Job Register trong trang dự án ---------- */
+function RegBox({p, D}){
+  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false);
+  if(!p.jobOk) return null;
+  const on = S.reg.state === 'ok', rj = regJob(p.code), w = canW();
+  if(rj) return html`<div class="reg-box ok"><${Ic} n="check" s=${16}/><span>Có trong Job Register: <b>${rj.status}</b>${rj.pic ? ', PIC '+rj.pic : ''}.</span></div>`;
+  const add = () => { setBusy(true); regAdd(p.id).then(o => { setBusy(false); toast(o.ok ? 'Đã thêm '+p.code+' vào Job Register' : o.exists ? p.code+' đã có trong Job Register' : 'Chưa thêm được: '+(o.error || 'lỗi'), o.ok || o.exists ? '' : 'warn'); }); };
+  if(on) return html`<div class="reg-box warn"><span>${p.reg ? 'Không thấy Job ID này trong Job Register.' : 'Chưa có trong Job Register.'}</span>${w ? html`<button type="button" class="btn xs" disabled=${busy} onClick=${add}>${busy ? 'Đang thêm…' : 'Thêm vào Job Register'}</button>` : null}</div>`;
+  if(p.reg) return html`<div class="reg-box ok"><${Ic} n="check" s=${16}/><span>${p.reg.how === 'manual' ? 'Đã nhập vào Job Register' : p.reg.how === 'auto' ? 'Đã thêm vào Job Register' : 'Tạo từ Job ID trong Job Register'}${p.reg.at ? ', '+fT(p.reg.at) : ''}.</span></div>`;
+  const bl = regBlocks(p);
+  return html`<div class="reg-box warn col">
+    <div class="acts"><span>Chưa đánh dấu đã nhập Job Register.</span>${w ? html`<button type="button" class="btn xs" aria-expanded=${open} onClick=${() => setOpen(!open)}>${open ? 'Thu gọn' : 'Copy ô cho Job Register'}</button>` : null}</div>
+    ${open ? html`<p class="meta">Thêm một dòng trống ở tab Jobs. Cột A, D, N là công thức nên dán ba lần:</p>
+      <ul class="reg-blocks">${bl.map(b => html`<li key=${b.cell}><span class="meta">Dán vào ô <b class="code">${b.cell}</b> (${b.lab})</span><div class="out"><code>${b.vals.join('  |  ')}</code><${CopyBtn} text=${b.vals.join('\t')} label=${'Copy khối '+b.cell}/></div></li>`)}</ul>
+      <div class="acts"><button type="button" class="btn sm primary" onClick=${() => { W.project(p.id, {reg: {how: 'manual', at: Date.now(), by: meId() || null}}); setOpen(false); }}><${Ic} n="check" s=${16}/>Đã nhập xong</button>${D.cfg.registerUrl ? html`<a class="btn sm" href=${D.cfg.registerUrl} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở Job Register</a>` : null}</div>` : null}
+  </div>`;
+}
+/* Trang Dự án: job trong Register đang chạy mà bảng chưa có */
+function RegJobsPanel({D}){
+  const [all, setAll] = useState(false);
+  if(S.reg.state !== 'ok') return null;
+  const list = S.reg.jobs.filter(j => REG_LIVE.indexOf(j.status) >= 0 && JOB_RE.test(j.id) && !D.projects.some(p => p.code === j.id)).sort((a, b) => b.id.localeCompare(a.id));
+  if(!list.length) return null;
+  const shown = all ? list : list.slice(0, 4);
+  return html`<section class="panel reg-jobs" aria-label="Job trong Job Register chưa có trên bảng">
+    <div class="panel-h"><div><h2>Job Register có ${list.length} job chưa lên bảng</h2><p class="meta">Job từ Quoting tới Review. Bấm Tạo dự án để lập pipeline và giao người làm; khách, PIC, deadline, folder lấy sẵn từ sheet.</p></div></div>
+    <ul class="rj-list">${shown.map(j => html`<li key=${j.id}><div><b class="code">${j.id}</b><span class="meta">${[j.client, j.type, j.status, j.pic, j.deadline ? 'deadline '+fD(j.deadline) : ''].filter(Boolean).join(', ')}</span></div>${canW() ? html`<button type="button" class="btn sm" onClick=${() => openModal({type: 'project', pre: {regJob: j, src: 'reg'}})}><${Ic} n="plus" s=${16}/>Tạo dự án</button>` : null}</li>`)}</ul>
+    ${list.length > 4 ? html`<div><button type="button" class="btn xs" onClick=${() => setAll(!all)}>${all ? 'Thu gọn' : 'Xem cả '+list.length+' job'}</button></div>` : null}
+  </section>`;
+}
+
+/* ---------- booking nội bộ ---------- */
+function intakeList(D){ return Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].name).map(k => Object.assign({id: k}, S.intake[k])); }
+function IntakeForm({D, id, me}){
+  const b0 = id ? S.intake[id] : null;
+  const [f, setF] = useState(() => b0 ? Object.assign({kindOther: ''}, b0, {est: b0.est ? String(b0.est) : ''}) : {name: '', kind: 'Content ads', kindOther: '', type: 'Internal', req: me ? nameOf(D, me) : '', brief: '', deliv: '', due: addDays(D.t, 7), links: '', est: '', prio: 'normal'});
+  const set = (k, v) => setF(x => Object.assign({}, x, {[k]: v}));
+  const ok = f.name.trim() && f.req.trim() && f.brief.trim() && f.due && (f.kind !== 'Khác' || f.kindOther.trim());
+  const save = () => {
+    if(!ok) return;
+    if(f.links.trim() && !safeUrl(f.links.trim())){ toast('Link cần bắt đầu bằng http:// hoặc https://', 'warn'); return; }
+    const o = {name: f.name.trim(), kind: f.kind === 'Khác' ? f.kindOther.trim() : f.kind, type: f.type, req: f.req.trim(), brief: f.brief.trim(), deliv: f.deliv.trim(), due: f.due, links: f.links.trim(), est: toInt(f.est) || 0, prio: f.prio};
+    if(b0) intakeSave(id, o, 'sửa booking nội bộ "'+o.name+'"');
+    else intakeSave(rid('in'), Object.assign(o, {status: 'new', by: me || null, at: Date.now()}), 'gửi booking nội bộ "'+o.name+'"');
+    closeModal(); toast(b0 ? 'Đã lưu yêu cầu' : 'Đã gửi yêu cầu, chờ lead nhận');
+  };
+  const kinds = IN_KINDS.indexOf(f.kind) >= 0 ? f.kind : 'Khác';
+  return html`<${Modal} title=${b0 ? 'Sửa yêu cầu nội bộ' : 'Gửi yêu cầu nội bộ'} onClose=${closeModal}>
+    <form class="in-form" onSubmit=${e => { e.preventDefault(); save(); }}>
+      <div class="field"><label class="lab" for="in-name">Tên việc</label><input id="in-name" class="inp" value=${f.name} placeholder="VD: Video showcase AI tháng 12" onInput=${e => set('name', e.target.value)}/></div>
+      <div class="grid2 al-top">
+        <div class="field"><label class="lab" for="in-kind">Loại việc</label><select id="in-kind" class="sel" value=${kinds} onChange=${e => set('kind', e.target.value)}>${IN_KINDS.map(k => html`<option key=${k} value=${k}>${k}</option>`)}</select>${kinds === 'Khác' ? html`<input class="inp" value=${f.kind === 'Khác' ? f.kindOther : (IN_KINDS.indexOf(f.kind) < 0 ? f.kind : f.kindOther)} placeholder="Ghi loại việc" aria-label="Loại việc khác" onInput=${e => setF(x => Object.assign({}, x, {kind: 'Khác', kindOther: e.target.value}))}/>` : null}</div>
+        <div class="field"><label class="lab" for="in-type">Type trong Job Register</label><select id="in-type" class="sel" value=${f.type} onChange=${e => set('type', e.target.value)}>${REG_TYPES.map(t => html`<option key=${t} value=${t}>${t}</option>`)}</select></div>
+      </div>
+      <div class="grid2 al-top">
+        <div class="field"><label class="lab" for="in-req">Người hoặc bộ phận yêu cầu</label><input id="in-req" class="inp" value=${f.req} placeholder="VD: Marketing, anh Minh" onInput=${e => set('req', e.target.value)}/></div>
+        <div class="field"><label class="lab" for="in-due">Cần xong trước</label><input id="in-due" class="inp" type="date" value=${f.due} onInput=${e => set('due', e.target.value)}/></div>
+      </div>
+      <div class="field"><label class="lab" for="in-brief">Mô tả, brief</label><textarea id="in-brief" class="inp" rows="4" value=${f.brief} placeholder="Mục tiêu, nội dung chính, đối tượng xem, yêu cầu đặc biệt" onInput=${e => set('brief', e.target.value)}></textarea></div>
+      <div class="grid2 al-top">
+        <div class="field"><label class="lab" for="in-deliv">Bản giao<em class="opt-tag">không bắt buộc</em></label><input id="in-deliv" class="inp" value=${f.deliv} placeholder="VD: 3 video 30s, 9:16, có phụ đề" onInput=${e => set('deliv', e.target.value)}/></div>
+        <div class="field"><label class="lab" for="in-est">Credit Higgsfield dự kiến<em class="opt-tag">không bắt buộc</em></label><input id="in-est" class="inp" inputmode="numeric" value=${f.est} placeholder="Tổng cho cả việc" onInput=${e => set('est', e.target.value.replace(/\D/g, ''))}/></div>
+      </div>
+      <div class="field"><label class="lab" for="in-links">Link brief, tham khảo<em class="opt-tag">không bắt buộc</em></label><input id="in-links" class="inp" type="url" value=${f.links} placeholder="https://…" onInput=${e => set('links', e.target.value)}/></div>
+      <div class="field"><span class="lab">Mức ưu tiên</span><div class="seg" role="group" aria-label="Mức ưu tiên">${[['normal', 'Bình thường'], ['urgent', 'Gấp']].map(o => html`<button key=${o[0]} type="button" class=${f.prio === o[0] ? 'on' : ''} aria-pressed=${f.prio === o[0]} onClick=${() => set('prio', o[0])}>${o[1]}</button>`)}</div></div>
+      <div class="form-foot"><span class=${ok ? 'good-t' : 'warn-t'}>${ok ? 'Đủ thông tin' : 'Cần tên việc, người yêu cầu, brief và hạn xong'}</span><span class="sp"></span><button type="button" class="btn" onClick=${closeModal}>Hủy</button><button type="submit" class="btn primary" disabled=${!ok}><${Ic} n="check"/>${b0 ? 'Lưu' : 'Gửi yêu cầu'}</button></div>
+    </form>
+  <//>`;
+}
+function IntakeCard({b, D, me}){
+  const lead = canW() && isLead(D, me), mine = canW() && b.by === me;
+  const [ask, setAsk] = useState(''), [reason, setReason] = useState('');
+  const late = b.due && b.due < D.t;
+  const take = () => openModal({type: 'project', pre: {useCase: 'INT', src: 'new', intake: b.id, name: b.name, type: b.type || 'Internal', pn: pnameOf(b.name),
+    kindSel: b.kind === 'Content ads' ? 'ads' : b.kind === 'TVC khóa học' ? 'course' : 'other', kindOther: ['Content ads', 'TVC khóa học'].indexOf(b.kind) < 0 ? b.kind : '',
+    start: D.t, deadline: b.due && b.due >= D.t ? b.due : addDays(D.t, 7), est: b.est || '', tier: 'C', duration: b.deliv || '',
+    note: ['Yêu cầu: '+b.req, b.brief, b.deliv ? 'Bản giao: '+b.deliv : '', b.links || ''].filter(Boolean).join('\n')}});
+  const decide = st => { intakeSave(b.id, {status: st, dBy: me || null, dAt: Date.now(), reason: reason.trim()}, (st === 'hold' ? 'hoãn' : 'từ chối')+' booking nội bộ "'+b.name+'"'+(reason.trim() ? ': '+reason.trim() : '')); setAsk(''); setReason(''); };
+  return html`<article class=${'in-card'+(b.prio === 'urgent' ? ' urgent' : '')}>
+    <div class="in-h"><h3>${b.name}</h3>${b.prio === 'urgent' ? html`<span class="st sm fix">Gấp</span>` : null}<span class="sp"></span><span class=${'in-due'+(late ? ' bad-t' : '')}>Cần trước <b>${fD(b.due)}</b>${late ? ', đã quá hạn' : ''}</span></div>
+    <div class="in-tags"><span class="in-tag">${b.kind || 'Nội bộ'}</span>${b.type && b.type !== 'Internal' ? html`<span class="in-tag">${b.type}</span>` : null}<span class="meta">Yêu cầu: <b>${b.req}</b></span><span class="meta">${nameOf(D, b.by)} gửi ${rel(b.at)}</span></div>
+    <p class="in-brief">${b.brief}</p>
+    ${b.deliv || b.est || b.links ? html`<div class="in-extra">${b.deliv ? html`<span><span class="meta">Bản giao</span> ${b.deliv}</span>` : null}${b.est ? html`<span><span class="meta">Credit dự kiến</span> ${fN(b.est)}</span>` : null}${safeUrl(b.links) ? html`<a href=${b.links} target="_blank" rel="noopener"><${Ic} n="ext" s=${14}/>Link brief</a>` : null}</div>` : null}
+    ${b.status !== 'new' && b.reason ? html`<p class="meta">${IN_STATUS[b.status]} bởi ${nameOf(D, b.dBy)}: ${b.reason}</p>` : null}
+    ${ask ? html`<div class="in-ask"><input class="inp sm" value=${reason} placeholder=${ask === 'hold' ? 'Lý do hoãn, VD chờ brief đầy đủ' : 'Lý do từ chối'} aria-label="Lý do" onInput=${e => setReason(e.target.value)}/><button type="button" class=${'btn sm'+(ask === 'declined' ? ' danger' : '')} onClick=${() => decide(ask)}>${ask === 'hold' ? 'Hoãn' : 'Từ chối'}</button><button type="button" class="btn sm" onClick=${() => setAsk('')}>Thôi</button></div>`
+      : html`<div class="acts">
+        ${lead && b.status !== 'assigned' ? html`<button type="button" class="btn sm primary" onClick=${take}><${Ic} n="check" s=${16}/>Nhận và giao việc</button>` : null}
+        ${lead && b.status === 'new' ? html`<button type="button" class="btn sm" onClick=${() => setAsk('hold')}>Hoãn</button><button type="button" class="btn sm" onClick=${() => setAsk('declined')}>Từ chối</button>` : null}
+        ${(mine || lead) && b.status === 'new' ? html`<button type="button" class="btn sm" onClick=${() => openModal({type: 'intake', id: b.id})}><${Ic} n="edit" s=${16}/>Sửa</button>` : null}
+        ${lead && b.status !== 'new' && b.status !== 'assigned' ? html`<button type="button" class="btn sm" onClick=${() => intakeSave(b.id, {status: 'new', reason: ''}, 'mở lại booking nội bộ "'+b.name+'"')}>Mở lại</button>` : null}
+      </div>`}
+  </article>`;
+}
+function IntakeView({D, me}){
+  const lead = isLead(D, me);
+  const all = intakeList(D);
+  const byDue = (a, b) => (b.prio === 'urgent') - (a.prio === 'urgent') || String(a.due).localeCompare(String(b.due));
+  const fresh = all.filter(b => b.status === 'new').sort(byDue);
+  const done = all.filter(b => b.status === 'assigned').sort((a, b) => (b.aAt || 0) - (a.aAt || 0));
+  const parked = all.filter(b => b.status === 'hold' || b.status === 'declined').sort((a, b) => (b.dAt || 0) - (a.dAt || 0));
+  const [showPark, setShowPark] = useState(false);
+  return html`
+    <div class="ph"><div><h1>Booking nội bộ</h1><p>Nhận việc nội bộ, lập dự án và giao người làm. Mỗi yêu cầu được nhận thành một job <span class="code">YYMM_MX_…</span> trong Job Register.</p></div>
+      ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type: 'intake'})}><${Ic} n="plus" s=${18}/>Gửi yêu cầu</button>` : null}</div>
+    <ol class="in-flow" aria-label="Các bước">
+      <li><b>Gửi yêu cầu</b><span>Ai cũng gửi được: tên việc, người yêu cầu, brief, hạn xong, bản giao.</span></li>
+      <li><b>Lead nhận và giao việc</b><span>${lead ? 'Bạn' : 'Hào hoặc Hiếu'} chọn quy trình, người làm, thời gian. Bảng tạo dự án và Job ID.</span></li>
+      <li><b>Vào Job Register</b><span>${S.reg.state === 'ok' ? 'Bảng tự thêm dòng job MX vào sheet.' : 'Copy ba khối ô vào sheet, rồi bấm Đã nhập xong.'} Tạo folder bằng menu MagentX.</span></li>
+    </ol>
+    <section class="panel flush" aria-label="Chờ nhận">
+      <div class="panel-h"><h2>Chờ nhận <span class=${'badge-n'+(fresh.length ? ' wait' : '')}>${fresh.length}</span></h2></div>
+      ${fresh.length ? html`<div class="in-list">${fresh.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : html`<div class="in-empty"><p class="empty">Không có yêu cầu nào đang chờ.${canW() ? ' Bấm Gửi yêu cầu khi có việc nội bộ mới.' : ''}</p></div>`}
+    </section>
+    <section class="panel flush" aria-label="Đã giao">
+      <div class="panel-h"><h2>Đã giao <span class="badge-n">${done.length}</span></h2></div>
+      ${done.length ? html`<ul class="in-done">${done.slice(0, 30).map(b => { const p = D.pmap[b.pid]; return html`<li key=${b.id}>
+          <div class="in-done-h"><b>${p ? html`<a href=${'#job-'+p.id}>${p.name}</a>` : b.name}</b>${p && p.code ? html`<span class="code meta">${p.code}</span>` : null}</div>
+          <div class="in-tags"><span class="meta">Yêu cầu: ${b.req}</span>${p ? html`<span class="meta">${teamText(D, p)}</span><span class="meta">${p.steps.length ? 'Xong '+p.doneN+'/'+p.total+' bước' : P_STATUS[p.status]}, deadline ${fD(p.deadline)}</span>` : html`<span class="meta">Dự án đã bị xóa</span>`}<span class="meta">${nameOf(D, b.aBy)} giao ${rel(b.aAt)}</span></div>
+          ${p ? html`<${RegBox} p=${p} D=${D}/>` : null}
+        </li>`; })}</ul>` : html`<div class="in-empty"><p class="empty">Chưa giao yêu cầu nào.</p></div>`}
+    </section>
+    ${parked.length ? html`<section class="panel flush" aria-label="Tạm hoãn, từ chối">
+      <div class="panel-h"><h2>Tạm hoãn, từ chối <span class="badge-n">${parked.length}</span></h2><button type="button" class="btn xs" aria-expanded=${showPark} onClick=${() => setShowPark(!showPark)}>${showPark ? 'Thu gọn' : 'Xem'}</button></div>
+      ${showPark ? html`<div class="in-list">${parked.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : null}
+    </section>` : null}`;
+}
+
 /* ---------- app ---------- */
 function NoDb(){
   return html`<div class="empty"><b>Chưa kết nối được database.</b><span>${window.__mxDbError === 'config' ? 'Chưa dán cấu hình Firebase (FIREBASE_CONFIG) vào file index.html.' : 'Kiểm tra kết nối mạng rồi tải lại trang. Nếu vẫn lỗi, báo người quản lý bảng.'}</span><a class="btn" href="#dat-ten">Mở trang Đặt tên file</a></div>`;
 }
 function ModalHost({D, me}){
   const m = S.modal; if(!m) return null;
-  if(m.type === 'project') return html`<${ProjectForm} key=${m.pid || 'new'} D=${D} pid=${m.pid}/>`;
+  if(m.type === 'project') return html`<${ProjectForm} key=${m.pid || 'new'} D=${D} pid=${m.pid} pre=${m.pre}/>`;
+  if(m.type === 'intake') return html`<${IntakeForm} key=${m.id || 'new'} D=${D} id=${m.id} me=${me}/>`;
   if(m.type === 'identity') return html`<${IdentityModal} D=${D} me=${me}/>`;
   if(m.type === 'account') return html`<${AccountForm} key=${m.aid || 'new'} D=${D} aid=${m.aid}/>`;
   if(m.type === 'review') return html`<${ReviewPlayer} key=${m.pid+'/'+m.sid} D=${D} pid=${m.pid} sid=${m.sid} me=${me}/>`;
@@ -3796,6 +4090,7 @@ function App(){
   });
   useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
+  useEffect(() => { if(me && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
   const free = route.view === 'dat-ten';
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;
@@ -3807,6 +4102,7 @@ function App(){
   else if(route.view === 'dat-ten') view = html`<${NamingView} D=${D}/>`;
   else if(route.view === 'cai-dat') view = html`<${SettingsView} D=${D} me=${me}/>`;
   else if(route.view === 'nhat-ky') view = html`<${LogView} D=${D} me=${me}/>`;
+  else if(route.view === 'noi-bo') view = html`<${IntakeView} D=${D} me=${me}/>`;
   else if(route.view === 'job') view = html`<${ProjectDetail} key=${route.id} D=${D} id=${route.id} me=${me}/>`;
   else view = html`<${CalendarView} D=${D} me=${me}/>`;
   return html`

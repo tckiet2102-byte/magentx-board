@@ -72,9 +72,14 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Player (cả nội bộ và khách) vừa phát trực tiếp vừa tải sẵn cả file về máy theo khúc 8 MB, 3 khúc song song, mỗi khúc tự thử lại khi rớt mạng. Tải xong thì tua tức thì (khoảng 0,1 giây), không phụ thuộc mạng. File lớn hơn 900 MB (260 MB trên điện thoại) chỉ phát trực tiếp.
 - Mỗi lần Google Drive trả dữ liệu mất khoảng 1,5–2 giây, nên nộp bản xem nhẹ: MP4 H.264, 1080p khoảng 8–15 Mbps, bật **Fast Start / Web optimized** khi xuất để video bắt đầu phát nhanh hơn.
 
+## Quy trình tạo job
+- **Job khách:** thêm dòng trong Job Register trước, lấy Job ID ở cột A. Trên bảng bấm **Tạo dự án**, để mặc định "Đã có trong Job Register", dán Job ID (hoặc chọn trong danh sách khi đã nối sheet); bảng tự tách kick-off, client code, project và điền khách. Dán Job ID nhầm vào ô Tên dự án thì bảng tự chuyển sang ô Job ID. Job chưa có trong Register thì chọn "Chưa có, tạo mới": bảng ghép Job ID và thêm dòng vào sheet (hoặc đưa ba khối ô để copy).
+- **Job nội bộ:** tab **Booking nội bộ**. Ai cũng gửi yêu cầu được (tên việc, loại, người yêu cầu, brief, hạn xong, bản giao, credit dự kiến, mức gấp). Hào hoặc Hiếu bấm **Nhận và giao việc**: form dự án mở sẵn thông tin, chọn quy trình, người làm, thời gian; bảng tạo job `YYMM_MX_…`, đánh dấu yêu cầu đã giao và đưa vào Job Register. Có thể hoãn hoặc từ chối kèm lý do.
+- **Nối với Job Register:** làm một lần theo [`docs/register-sync.md`](docs/register-sync.md) (Apps Script trong sheet + hai biến môi trường trên Vercel). Khi đã nối: trang Dự án liệt kê job đang chạy trong Register mà bảng chưa có, form tạo dự án có danh sách chọn, danh sách khách lấy từ tab Clients, và thẻ "Folder và tên file" cho biết job đã có trong Register chưa. Chưa nối: thẻ đó có nút copy ba khối ô (B, E, P) để dán vào sheet, vì cột A, D, N là công thức.
+
 ## Job ID, folder và tên file
 - Quy tắc nằm ở [`docs/naming-convention.md`](docs/naming-convention.md) (bản rút gọn; bản đầy đủ có danh sách khách và Drive ID nằm trong Drive của phòng).
-- **Job ID** dạng `YYMM_CLIENTCODE_Project-Name`, ví dụ `2611_ACME_Demo-TVC`. Form tạo dự án ghép sẵn từ tháng kick-off, client code của khách và tên dự án (bỏ dấu, nối bằng gạch ngang); thêm dòng Job Register với đúng ba giá trị đó. Job nội bộ dùng `MX`. Có PO hoặc báo giá mới thì tạo job mới và chọn **Job gốc**.
+- **Job ID** dạng `YYMM_CLIENTCODE_Project-Name`, ví dụ `2611_ACME_Demo-TVC`, lấy từ cột A của Job Register. Job nội bộ dùng `MX`. Có PO hoặc báo giá mới thì tạo job mới và chọn **Job gốc**.
 - Dự án cũ giữ mã cũ (dạng `MX-2611-…`); sửa thông tin dự án để dán Job ID từ Job Register khi cần.
 - **Cài đặt › Khách hàng và Job Register**: danh sách client code (giữ giống tab Clients, có nút dán cả bảng), link Job Register, link folder MAGENTX_PRODUCTION, model code cho tên file 05_Gen. Chỉ leader sửa.
 - Pipeline theo thứ tự folder: 07 Edit → **08 QC** (gửi khách R1, R2…) → **09 Finish** → 10 Giao. Dự án lập lịch theo thứ tự cũ có nút **Đổi lịch hai bước** trong trang dự án.
