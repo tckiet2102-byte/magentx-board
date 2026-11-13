@@ -1441,12 +1441,20 @@ const IN_KINDS = ['Content ads', 'TVC khóa học', 'Showcase', 'Pitch', 'Khác'
 /* Project của job từ booking: Loại-Người, VD ContentAds-Kiet; Job ID tự thêm -01, -02… trong tháng */
 const IN_KIND_CODE = {'Content ads': 'ContentAds', 'TVC khóa học': 'TVCKhoaHoc', 'Showcase': 'Showcase', 'Pitch': 'Pitch'};
 function intakePname(b){
-  const k = IN_KIND_CODE[b.kind] || pnameOf(b.kind || '') || 'NoiBo';
-  /* người yêu cầu: tên gọi (từ cuối của họ tên), bỏ "anh", "chị"… nếu ghi tay */
-  const raw = b.by && isReq(b.by) && S.staff[b.by] ? S.staff[b.by].name : String(b.req || '').split(',').pop();
-  const ws = unaccent(raw).trim().split(/\s+/).filter(w => w && !/^(anh|chi|em|ban|co|chu|a|c|mr|ms|mrs)$/i.test(w));
-  const acc = ws.length ? ws[ws.length - 1] : '';
-  const who = pnameOf(acc || '').replace(/-/g, '');
+  const kn = IN_KIND_CODE[b.kind] ? b.kind : (b.kind || '');
+  const k = IN_KIND_CODE[kn] || pnameOf(kn) || 'NoiBo';
+  /* phần riêng lấy từ tên việc sau khi bỏ chữ của loại việc: "Content ads Trâm" thành ContentAds-Tram */
+  const kw = unaccent(kn).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  /* bỏ chữ của loại việc và các chữ đệm; so sánh nguyên dấu để "ảnh", "bản", "cơ" không bị coi là "anh", "bạn", "cô" */
+  const FILL = ['cho', 'của', 'the', 'of', 'for', 'video', 'vdo', 'clip', 'job', 'làm', 'anh', 'chị', 'em', 'bạn', 'cô', 'chú', 'mr', 'ms', 'mrs'];
+  const rest = String(b.name || '').normalize('NFC').split(/[\s,.;:()/|+&-]+/).filter(w => { const lw = w.toLowerCase(), x = unaccent(lw).replace(/[^a-z0-9]/g, ''); return x && kw.indexOf(x) < 0 && FILL.indexOf(lw) < 0; });
+  let who = pnameOf(rest.join(' ')).replace(/-/g, '');
+  if(!who){
+    /* tên việc chỉ có loại việc: dùng tên gọi của người yêu cầu, bỏ "anh", "chị"… */
+    const raw = b.by && isReq(b.by) && S.staff[b.by] ? S.staff[b.by].name : String(b.req || '').split(',').pop();
+    const ws = unaccent(raw).trim().split(/\s+/).filter(w => w && !/^(anh|chi|em|ban|co|chu|a|c|mr|ms|mrs)$/i.test(w));
+    who = pnameOf(ws.length ? ws[ws.length - 1] : '').replace(/-/g, '');
+  }
   return cleanPname(k+(who ? '-'+who : '')).slice(0, 40);
 }
 const IN_STATUS = {new: 'Chờ nhận', assigned: 'Đã giao', hold: 'Tạm hoãn', declined: 'Từ chối'};
@@ -4109,7 +4117,7 @@ function IntakeForm({D, id, me}){
   const kinds = IN_KINDS.indexOf(f.kind) >= 0 ? f.kind : 'Khác';
   return html`<${Modal} title=${b0 ? 'Sửa yêu cầu nội bộ' : 'Gửi yêu cầu nội bộ'} onClose=${closeModal}>
     <form class="in-form" onSubmit=${e => { e.preventDefault(); save(); }}>
-      <div class="field"><label class="lab" for="in-name">Tên việc</label><input id="in-name" class="inp" value=${f.name} placeholder="VD: Video showcase AI tháng 12" onInput=${e => set('name', e.target.value)}/></div>
+      <div class="field"><label class="lab" for="in-name">Tên việc</label><input id="in-name" class="inp" value=${f.name} placeholder="VD: Content ads Trâm, Showcase AI tháng 12" onInput=${e => set('name', e.target.value)}/>${f.name.trim() ? html`<span class="hint">Job ID dự kiến: <span class="code">${ymOf(D.t)}_MX_${intakePname({name: f.name, kind: f.kind === 'Khác' ? f.kindOther : f.kind, by: b0 ? b0.by : me, req: f.req})}-NN</span></span>` : html`<span class="hint">Ghi loại việc và cho ai, VD "Content ads Trâm": Job ID sẽ là ${ymOf(D.t)}_MX_ContentAds-Tram-01.</span>`}</div>
       <div class="grid2 al-top">
         <div class="field"><label class="lab" for="in-kind">Loại việc</label><select id="in-kind" class="sel" value=${kinds} onChange=${e => set('kind', e.target.value)}>${IN_KINDS.map(k => html`<option key=${k} value=${k}>${k}</option>`)}</select>${kinds === 'Khác' ? html`<input class="inp" value=${f.kind === 'Khác' ? f.kindOther : (IN_KINDS.indexOf(f.kind) < 0 ? f.kind : f.kindOther)} placeholder="Ghi loại việc" aria-label="Loại việc khác" onInput=${e => setF(x => Object.assign({}, x, {kind: 'Khác', kindOther: e.target.value}))}/>` : null}</div>
         <div class="field"><label class="lab" for="in-type">Type trong Job Register</label><select id="in-type" class="sel" value=${f.type} onChange=${e => set('type', e.target.value)}>${REG_TYPES.map(t => html`<option key=${t} value=${t}>${t}</option>`)}</select></div>
