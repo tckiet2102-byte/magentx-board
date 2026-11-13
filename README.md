@@ -53,6 +53,9 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Người ngoài phòng Production (Marketing, Sale, Học viện…) đăng nhập để **gửi yêu cầu việc nội bộ** và theo dõi tình trạng. Họ chỉ thấy tab **Booking nội bộ** với yêu cầu của chính mình: chờ nhận, đã giao (người làm, hạn giao, tiến độ từng bước), tạm hoãn hay từ chối kèm lý do. Họ không thấy lịch, dự án, credit, cài đặt, và không có trong lịch hay danh sách giao việc.
 - **Tự tạo tài khoản:** ở màn hình đăng nhập bấm **Tạo tài khoản mới**, nhập họ tên, bộ phận, mã PIN 4 số (hai lần). Nếu Hào đặt **mã mời** ở Cài đặt thì phải gõ đúng mã đó.
 - **Hào hoặc Hiếu tạo hộ:** Cài đặt › **Người dùng phòng ban khác** › nhập họ tên và bộ phận. Lần đầu đăng nhập họ tự tạo mã PIN. Ở đây cũng sửa tên, bộ phận, khóa tài khoản (bỏ tick Đang dùng), xóa tài khoản chưa gửi yêu cầu nào, và Hào đặt lại mã PIN.
+- **Quyền** (Cài đặt › Người dùng phòng ban khác, cột Quyền):
+  - **Đặt booking** (mặc định): chỉ tab Booking nội bộ, thấy yêu cầu của mình.
+  - **Xem lịch, dự án** (VD admin operation): thêm tab Lịch tháng và Dự án, mở được trang từng dự án và thấy mọi booking nội bộ để nắm tình hình, nhưng không sửa, nộp, duyệt hay giao việc; vẫn gửi yêu cầu được. Không thấy Duyệt QC, Credit, Đặt tên file, Cài đặt, Nhật ký.
 - Tên tài khoản không được trùng. Mã PIN của Hào vẫn vào được mọi tài khoản.
 
 ## Duyệt

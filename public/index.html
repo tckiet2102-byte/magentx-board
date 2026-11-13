@@ -1124,9 +1124,15 @@ function useStore(){ const [, force] = useState(0); useEffect(() => { const f = 
 function toast(msg, tone){ const id = rid('t'); S.toasts = S.toasts.concat([{id, msg, tone}]); emit(); setTimeout(() => { S.toasts = S.toasts.filter(t => t.id !== id); emit(); }, 3600); }
 function openModal(m){ S.modal = m; emit(); }
 function closeModal(){ S.modal = null; emit(); }
-function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId(); }
+/* Người dùng phòng ban khác chỉ được ghi booking nội bộ; mọi thao tác khác trên bảng cần canW() */
+function canW(){ return S.phase === 'ready' && !S.readOnly && !!meId() && !isReq(meId()); }
+function canBook(){ return S.phase === 'ready' && !S.readOnly && !!meId(); }
 /* Người dùng phòng ban khác (staff.kind 'req'): chỉ vào tab Booking nội bộ, không thuộc team Production */
 function isReq(id){ const st = id && S.staff[id]; return !!(st && st.kind === 'req'); }
+/* access 'view' (VD admin operation): xem lịch, dự án và mọi booking nội bộ, không sửa; còn lại chỉ đặt booking */
+function isViewer(id){ const st = id && S.staff[id]; return !!(st && st.kind === 'req' && st.access === 'view'); }
+function bookOnly(id){ return isReq(id) && !isViewer(id); }
+const VIEWER_ROUTES = ['lich', 'du-an', 'job', 'noi-bo'];
 /* credit balances and account settings: only Hào */
 function canApproveBooking(){ return canW() && meId() === 'hao'; }
 function canCredit(){ return canW() && !!S.isOwner && meId() === 'hao'; }
@@ -1160,7 +1166,7 @@ async function boot(){
   /* người đặt booking chỉ theo dõi dự án lập từ yêu cầu của mình, không tải cả bảng */
   const pw = {};
   const watchMine = () => {
-    const me = meId(); if(!me || !isReq(me) || S.privOn) return;
+    const me = meId(); if(!me || !bookOnly(me) || S.privOn) return;
     Object.keys(S.intake || {}).forEach(k => { const b = S.intake[k]; if(b && b.by === me && b.pid && !pw[b.pid]) pw[b.pid] = db.doc('projects/'+b.pid).onSnapshot(d => { if(S.privOn) return; const o = Object.assign({}, S.projects); if(d.exists) o[b.pid] = d.data(); else delete o[b.pid]; S.projects = o; emit(); }, () => {}); });
   };
   const startIntake = () => { if(S.intakeOn) return; S.intakeOn = true; db.doc('config/intake').onSnapshot(d => { S.intake = (d.exists && (d.data() || {}).b) || {}; S.intakeExists = !!d.exists; watchMine(); emit(); }, () => {}); };
@@ -1168,7 +1174,7 @@ async function boot(){
   db.doc('config/main').onSnapshot(d => { S.config = d.exists ? d.data() : null; S.configExists = !!d.exists; if(!d.metadata.fromCache) S.got.config = true; emit(); }, onErr('config'));
   S.startPrivate = () => {
     startIntake();
-    if(isReq(meId())){ watchMine(); return; }
+    if(bookOnly(meId())){ watchMine(); return; }
     if(S.privOn) return; S.privOn = true;
     timer = setTimeout(() => { if(!S.got.projects || !S.got.staff){ S.stale = true; emit(); } }, 10000);
     ['accounts','projects'].forEach(sub);
@@ -1398,6 +1404,7 @@ function logDescStaff(sid, patch){
     else if(k === 'lead') add('admin', v ? 'đặt '+nm+' làm Lead' : 'bỏ Lead của '+nm);
     else if(k === 'active') add('admin', old.kind === 'req' ? (v ? 'mở khóa tài khoản '+nm : 'khóa tài khoản '+nm) : v ? 'đánh dấu '+nm+' đang làm' : 'đánh dấu '+nm+' không còn làm');
     else if(k === 'dept') add('admin', 'đổi bộ phận của '+nm+' thành '+v);
+    else if(k === 'access') add('admin', v === 'view' ? 'cho '+nm+' xem lịch và dự án' : 'đổi '+nm+' về quyền chỉ đặt booking');
     else add('admin', 'sửa thông tin nhân sự '+nm);
   });
   return out;
@@ -1501,7 +1508,8 @@ function intakePname(b){
 const IN_STATUS = {new: 'Chờ nhận', assigned: 'Đã giao', hold: 'Tạm hoãn', declined: 'Từ chối'};
 function intakeSave(id, obj, text){
   const lg = text ? [{t: 'step', text}] : [];
-  return logAfter(wdoc('config/intake', r => S.intakeExists ? r.update({b: {[id]: obj}}) : (r.merge ? r.merge({b: {[id]: obj}}) : r.set({b: {[id]: obj}}))), lg);
+  if(!canBook()){ toast('Đăng nhập để gửi yêu cầu.', 'warn'); return Promise.resolve(false); }
+  return logAfter(wdoc('config/intake', r => S.intakeExists ? r.update({b: {[id]: obj}}) : (r.merge ? r.merge({b: {[id]: obj}}) : r.set({b: {[id]: obj}})), true), lg);
 }
 
 /* ---------- derived data ---------- */
@@ -2095,7 +2103,7 @@ function DateRange({start, end, onChange, labels}){
 /* ---------- top bar & identity ---------- */
 function TopBar({D, route, me}){
   const req = isReq(me);
-  const tabs = req ? [['noi-bo','Booking nội bộ']] : [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
+  const tabs = req ? (isViewer(me) ? [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ']] : [['noi-bo','Booking nội bộ']]) : [['lich','Lịch tháng'],['du-an','Dự án'],['noi-bo','Booking nội bộ'],['qc','Duyệt QC'],['credit','Credit'],['dat-ten','Đặt tên file']].concat(me === 'hao' ? [['nhat-ky','Nhật ký']] : []);
   const inNew = me && isLead(D, me) ? Object.keys(S.intake || {}).filter(k => S.intake[k] && S.intake[k].status === 'new').length : 0;
   const mine = me ? uniqSteps(D.qcPending.filter(q => q.reviewer === me)).length : 0;
   const act = route.view === 'job' ? 'du-an' : route.view;
@@ -2175,7 +2183,7 @@ function IdentityModal({D, me}){
   const reqShown = reqs.filter(s => !fq || logFold(s.name+' '+(s.dept || '')).indexOf(fq) >= 0);
   const reqCards = reqs.length ? html`<div class="field"><span class="lab">Phòng ban khác</span>
     ${reqs.length > 6 ? html`<input class="inp sm" type="search" value=${qr} placeholder="Tìm tên hoặc bộ phận" aria-label="Tìm người dùng" onInput=${e => setQr(e.target.value)}/>` : null}
-    <div class="who-list">${reqShown.slice(0, 40).map(s => html`<button key=${s.id} type="button" class=${'who-row'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><b>${s.name}</b><span class="meta">${s.dept || 'Phòng ban khác'}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</span></button>`)}${!reqShown.length ? html`<p class="meta">Không thấy tên khớp.</p>` : null}</div></div>` : null;
+    <div class="who-list">${reqShown.slice(0, 40).map(s => html`<button key=${s.id} type="button" class=${'who-row'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><b>${s.name}</b><span class="meta">${s.dept || 'Phòng ban khác'}${s.access === 'view' ? ', xem lịch và dự án' : ''}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</span></button>`)}${!reqShown.length ? html`<p class="meta">Không thấy tên khớp.</p>` : null}</div></div>` : null;
   const cards = html`<div class="opts who-grid">${list.map(s => html`<button key=${s.id} type="button" class=${'opt who'+(s.id === me ? ' on' : '')} onClick=${() => choose(s.id)}><span><b>${s.name}</b><small>${s.role || 'Nhân sự'}${hasPin(s.id) ? '' : ', chưa tạo mã PIN'}</small></span></button>`)}</div>`;
   const pinBox = (lab, v, set, done, af) => html`<div class="field"><span class="lab">${lab}</span><${PinInput} value=${v} onChange=${x => { set(x); setErr(''); }} onDone=${done} label=${lab} autoFocus=${af}/></div>`;
   const back = html`<button type="button" class="btn" onClick=${() => go(me ? 'home' : 'pick', '')}><${Ic} n="left" s=${16}/>Quay lại</button>`;
@@ -3292,23 +3300,24 @@ function SettingsView({D, me}){
 
 function ReqUsersPanel({D, me}){
   const lead = canW() && isLead(D, me);
-  const [nu, setNu] = useState({name: '', dept: ''});
+  const [nu, setNu] = useState({name: '', dept: '', access: ''});
   const [ask, setAsk] = useState('');
   const cnt = {}; intakeList(D).forEach(b => { cnt[b.by] = (cnt[b.by] || 0) + 1; });
   const add = () => {
     const nm = nu.name.trim().replace(/\s+/g, ' '), dp = nu.dept.trim();
     if(nm.length < 2 || !dp){ toast('Cần họ tên và bộ phận.', 'warn'); return; }
     if(Object.keys(S.staff).some(k => logFold(S.staff[k].name) === logFold(nm))){ toast('Đã có tài khoản tên '+nm+'.', 'warn'); return; }
-    W.staff('u'+Date.now().toString(36)+Math.random().toString(36).slice(2, 5), {name: nm, dept: dp, kind: 'req', role: dp, active: true, at: Date.now(), by: meId() || null});
-    setNu({name: '', dept: ''}); toast('Đã thêm '+nm+'. Lần đầu đăng nhập, họ tự tạo mã PIN.');
+    W.staff('u'+Date.now().toString(36)+Math.random().toString(36).slice(2, 5), Object.assign({name: nm, dept: dp, kind: 'req', role: dp, active: true, at: Date.now(), by: meId() || null}, nu.access ? {access: nu.access} : {}));
+    setNu({name: '', dept: '', access: ''}); toast('Đã thêm '+nm+'. Lần đầu đăng nhập, họ tự tạo mã PIN.');
   };
   return html`<section class="panel flush" aria-label="Người dùng phòng ban khác">
-    <div class="panel-h"><div><h2>Người dùng phòng ban khác</h2><p class="meta">Chỉ vào được tab Booking nội bộ: gửi yêu cầu và xem tình trạng yêu cầu của mình. Không thấy lịch, dự án, credit.</p></div>${!lead ? html`<span class="meta">Chỉ leader sửa.</span>` : null}</div>
+    <div class="panel-h"><div><h2>Người dùng phòng ban khác</h2><p class="meta">Quyền "Đặt booking": chỉ tab Booking nội bộ, gửi yêu cầu và xem yêu cầu của mình. Quyền "Xem lịch, dự án" (VD admin operation): xem thêm Lịch tháng, Dự án và mọi booking, không sửa được gì ngoài gửi yêu cầu. Không ai trong nhóm này thấy credit, cài đặt hay nhật ký.</p></div>${!lead ? html`<span class="meta">Chỉ leader sửa.</span>` : null}</div>
     <div class="cl-links"><div class="field"><span class="lab">Mã mời khi tự tạo tài khoản</span><${InlineText} value=${D.cfg.inviteCode || ''} placeholder="Để trống: ai mở bảng cũng tạo được tài khoản" label="Mã mời tạo tài khoản" disabled=${!lead} onSave=${v => W.config({inviteCode: v.trim()})}/><span class="hint">Có mã mời thì người mới phải gõ đúng mã này ở màn hình Tạo tài khoản mới.</span></div></div>
-    ${D.reqList.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Bộ phận</th><th>Mã PIN</th><th class="num">Yêu cầu</th><th>Đang dùng</th><th></th></tr></thead><tbody>
+    ${D.reqList.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tên</th><th>Bộ phận</th><th>Quyền</th><th>Mã PIN</th><th class="num">Yêu cầu</th><th>Đang dùng</th><th></th></tr></thead><tbody>
       ${D.reqList.map(u => html`<tr key=${u.id}>
         <td style="min-width:150px"><${InlineText} value=${u.name} label=${'Tên '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {name: v})}/></td>
         <td style="min-width:140px"><${InlineText} value=${u.dept || ''} label=${'Bộ phận của '+u.name} disabled=${!lead} onSave=${v => v && W.staff(u.id, {dept: v, role: v})}/></td>
+        <td><select class="sel sm auto" value=${u.access === 'view' ? 'view' : ''} disabled=${!lead} aria-label=${'Quyền của '+u.name} onChange=${e => W.staff(u.id, {access: e.target.value || null})}><option value="">Đặt booking</option><option value="view">Xem lịch, dự án</option></select></td>
         <td class="nw">${hasPin(u.id) ? html`<span>Đã tạo</span>${me === 'hao' && canW() ? (ask === 'pin'+u.id ? html` <button type="button" class="btn xs danger" onClick=${() => { setAsk(''); W.staff(u.id, {pin: null}); toast('Đã đặt lại mã PIN của '+u.name+'.'); }}>Bấm lần nữa để đặt lại</button>` : html` <button type="button" class="btn xs" onClick=${() => setAsk('pin'+u.id)}>Đặt lại</button>`) : null}` : html`<span class="meta">Chưa tạo</span>`}</td>
         <td class="num">${cnt[u.id] || 0}</td>
         <td><label class="check"><input type="checkbox" checked=${u.active !== false} disabled=${!lead} aria-label=${'Đang dùng: '+u.name} onChange=${e => W.staff(u.id, {active: e.target.checked})}/></label></td>
@@ -3318,6 +3327,7 @@ function ReqUsersPanel({D, me}){
     ${lead ? html`<div class="cl-add cl-last">
       <input class="inp sm" value=${nu.name} placeholder="Họ tên" aria-label="Họ tên người dùng mới" onInput=${e => setNu(Object.assign({}, nu, {name: e.target.value}))}/>
       <input class="inp sm" value=${nu.dept} placeholder="Bộ phận, VD Marketing" aria-label="Bộ phận người dùng mới" onInput=${e => setNu(Object.assign({}, nu, {dept: e.target.value}))} onKeyDown=${e => { if(e.key === 'Enter') add(); }}/>
+      <select class="sel sm auto" value=${nu.access} aria-label="Quyền người dùng mới" onChange=${e => setNu(Object.assign({}, nu, {access: e.target.value}))}><option value="">Đặt booking</option><option value="view">Xem lịch, dự án</option></select>
       <button type="button" class="btn sm" onClick=${add}><${Ic} n="plus" s=${16}/>Thêm người dùng</button>
     </div>` : null}
   </section>`;
@@ -4201,7 +4211,7 @@ function IntakeForm({D, id, me}){
   <//>`;
 }
 function IntakeCard({b, D, me}){
-  const lead = canW() && isLead(D, me), mine = canW() && b.by === me;
+  const lead = canW() && isLead(D, me), mine = canBook() && b.by === me;
   const [ask, setAsk] = useState(''), [reason, setReason] = useState('');
   const late = b.due && b.due < D.t;
   const take = () => openModal({type: 'project', pre: {useCase: 'INT', src: 'new', intake: b.id, name: b.name, type: b.type || 'Internal', pn: intakePname(b), seqOn: true,
@@ -4225,7 +4235,7 @@ function IntakeCard({b, D, me}){
   </article>`;
 }
 function IntakeView({D, me}){
-  const lead = isLead(D, me), req = isReq(me);
+  const lead = isLead(D, me), req = bookOnly(me);
   const all = intakeList(D).filter(b => !req || b.by === me);
   const byDue = (a, b) => (b.prio === 'urgent') - (a.prio === 'urgent') || String(a.due).localeCompare(String(b.due));
   const fresh = all.filter(b => b.status === 'new').sort(byDue);
@@ -4234,7 +4244,7 @@ function IntakeView({D, me}){
   const [showPark, setShowPark] = useState(false);
   return html`
     <div class="ph"><div><h1>Booking nội bộ</h1><p>${req ? 'Gửi yêu cầu việc cho phòng Production và theo dõi tình trạng. Hào hoặc Hiếu sẽ nhận, chọn người làm và hạn giao.' : html`Nhận việc nội bộ, lập dự án và giao người làm. Mỗi yêu cầu được nhận thành một job <span class="code">YYMM_MX_…</span> trong Job Register.`}</p></div>
-      ${canW() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type: 'intake'})}><${Ic} n="plus" s=${18}/>Gửi yêu cầu</button>` : null}</div>
+      ${canBook() ? html`<button type="button" class="btn primary" onClick=${() => openModal({type: 'intake'})}><${Ic} n="plus" s=${18}/>Gửi yêu cầu</button>` : null}</div>
     <ol class="in-flow" aria-label="Các bước">
       <li><b>Gửi yêu cầu</b><span>Ai cũng gửi được: tên việc, người yêu cầu, brief, hạn xong, bản giao.</span></li>
       <li><b>Lead nhận và giao việc</b><span>${lead ? 'Bạn' : 'Hào hoặc Hiếu'} chọn quy trình, người làm, thời gian. Bảng tạo dự án và Job ID.</span></li>
@@ -4242,7 +4252,7 @@ function IntakeView({D, me}){
     </ol>
     <section class="panel flush" aria-label="Chờ nhận">
       <div class="panel-h"><h2>${req ? 'Đang chờ nhận' : 'Chờ nhận'} <span class=${'badge-n'+(fresh.length ? ' wait' : '')}>${fresh.length}</span></h2></div>
-      ${fresh.length ? html`<div class="in-list">${fresh.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : html`<div class="in-empty"><p class="empty">${req ? 'Bạn chưa có yêu cầu nào đang chờ.' : 'Không có yêu cầu nào đang chờ.'}${canW() ? ' Bấm Gửi yêu cầu khi có việc nội bộ mới.' : ''}</p></div>`}
+      ${fresh.length ? html`<div class="in-list">${fresh.map(b => html`<${IntakeCard} key=${b.id} b=${b} D=${D} me=${me}/>`)}</div>` : html`<div class="in-empty"><p class="empty">${req ? 'Bạn chưa có yêu cầu nào đang chờ.' : 'Không có yêu cầu nào đang chờ.'}${canBook() ? ' Bấm Gửi yêu cầu khi có việc nội bộ mới.' : ''}</p></div>`}
     </section>
     <section class="panel flush" aria-label="Đã giao">
       <div class="panel-h"><h2>Đã giao <span class="badge-n">${done.length}</span></h2></div>
@@ -4286,9 +4296,9 @@ function App(){
   });
   useEffect(() => { const t = setInterval(() => { if(S.localMe && !sessGet()) logout('Phiên đăng nhập đã hết hạn. Nhập lại mã PIN để tiếp tục.'); }, 60000); return () => clearInterval(t); }, []);
   useEffect(() => { if(route.view !== 'job') window.scrollTo(0, 0); }, [route.view]);
-  const req = isReq(me);
+  const req = isReq(me), only = bookOnly(me), viewer = isViewer(me);
   useEffect(() => { if(me && !req && S.phase === 'ready') regLoad(); }, [me, route.view, S.phase]);
-  useEffect(() => { if(req && route.view !== 'noi-bo') location.hash = 'noi-bo'; }, [req, route.view]);
+  useEffect(() => { if(only && route.view !== 'noi-bo') location.hash = 'noi-bo'; else if(viewer && VIEWER_ROUTES.indexOf(route.view) < 0) location.hash = 'lich'; }, [only, viewer, route.view]);
   useEffect(() => {
     /* giao trước lúc mở bảng: gom một thông báo; giao trong lúc đang mở: báo từng dự án */
     if(me && S.asgFor !== me){ S.asgFor = me; S.asgBase = Date.now(); }
@@ -4305,7 +4315,8 @@ function App(){
   let view;
   if(!free && S.phase === 'nodb') view = html`<${NoDb}/>`;
   else if(!free && S.phase === 'ready' && !me) view = html`<div class="boot"><div class="boot-card"><b>Đăng nhập để xem bảng</b><span>Chọn tên của bạn và nhập mã PIN 4 số. Phòng ban khác cần đặt việc nội bộ thì tạo tài khoản mới.</span><button type="button" class="btn primary" onClick=${() => openModal({type:'identity'})}><${Ic} n="user" s=${16}/>Đăng nhập</button></div></div>`;
-  else if(req) view = html`<${IntakeView} D=${D} me=${me}/>`;
+  else if(only) view = html`<${IntakeView} D=${D} me=${me}/>`;
+  else if(viewer && VIEWER_ROUTES.indexOf(route.view) < 0) view = html`<${CalendarView} D=${D} me=${me}/>`;
   else if(!free && (S.phase === 'boot' || !S.firstData)) view = html`<div class="boot"><div class="boot-card"><b>Đang tải dữ liệu phòng…</b><span>Lịch, dự án và credit Higgsfield.</span></div></div>`;
   else if(route.view === 'du-an') view = html`<${ProjectsView} D=${D}/>`;
   else if(route.view === 'qc') view = html`<${QCView} D=${D} me=${me}/>`;
