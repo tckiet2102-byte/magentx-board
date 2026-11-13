@@ -877,6 +877,7 @@ a.lg-pn:hover{color:var(--action)}
 .signup-cta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:14px 16px;border-radius:12px;background:var(--action-soft)}
 .signup-cta > div{display:flex;flex-direction:column;gap:2px}
 .cl-last{padding-bottom:20px}
+.jid-seq{display:flex;flex-direction:column;gap:4px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -1437,6 +1438,17 @@ function regAdd(pid, doc){
 
 /* ---------- booking nội bộ: config/intake = {b: {<id>: {…}}} ---------- */
 const IN_KINDS = ['Content ads', 'TVC khóa học', 'Showcase', 'Pitch', 'Khác'];
+/* Project của job từ booking: Loại-Người, VD ContentAds-Kiet; Job ID tự thêm -01, -02… trong tháng */
+const IN_KIND_CODE = {'Content ads': 'ContentAds', 'TVC khóa học': 'TVCKhoaHoc', 'Showcase': 'Showcase', 'Pitch': 'Pitch'};
+function intakePname(b){
+  const k = IN_KIND_CODE[b.kind] || pnameOf(b.kind || '') || 'NoiBo';
+  /* người yêu cầu: tên gọi (từ cuối của họ tên), bỏ "anh", "chị"… nếu ghi tay */
+  const raw = b.by && isReq(b.by) && S.staff[b.by] ? S.staff[b.by].name : String(b.req || '').split(',').pop();
+  const ws = unaccent(raw).trim().split(/\s+/).filter(w => w && !/^(anh|chi|em|ban|co|chu|a|c|mr|ms|mrs)$/i.test(w));
+  const acc = ws.length ? ws[ws.length - 1] : '';
+  const who = pnameOf(acc || '').replace(/-/g, '');
+  return cleanPname(k+(who ? '-'+who : '')).slice(0, 40);
+}
 const IN_STATUS = {new: 'Chờ nhận', assigned: 'Đã giao', hold: 'Tạm hoãn', declined: 'Từ chối'};
 function intakeSave(id, obj, text){
   const lg = text ? [{t: 'step', text}] : [];
@@ -3670,7 +3682,7 @@ function ProjectForm({D, pid, pre}){
     const pj0 = parseJob(rj0 ? rj0.id : pr.jobId), int0 = pr.useCase === 'INT' || (pj0 && pj0.cc === INT_CODE);
     const name0 = pr.name || (pj0 ? (int0 ? '' : clientFolder(D, pj0.cc).replace(/_/g, ' ')+' ')+pj0.pn.replace(/-/g, ' ') : '');
     return {name: name0, client: '', clientCode: '', newClient: false, yymm: ymOf(D.t), pn: pr.pn || '', pnTouched: !!pr.pn, jidMode: 'auto', jidText: '', parent: pr.parent || (rj0 && rj0.parent) || '',
-      src: pr.src || (pr.useCase === 'INT' ? 'new' : 'reg'), jobIn: pj0 ? (rj0 ? rj0.id : pr.jobId) : '', regPick: !!rj0, addReg: true, intake: pr.intake || '', type: pr.type || (rj0 && rj0.type) || (int0 ? 'Internal' : ''),
+      seqOn: !!pr.seqOn, src: pr.src || (pr.useCase === 'INT' ? 'new' : 'reg'), jobIn: pj0 ? (rj0 ? rj0.id : pr.jobId) : '', regPick: !!rj0, addReg: true, intake: pr.intake || '', type: pr.type || (rj0 && rj0.type) || (int0 ? 'Internal' : ''),
       useCase: int0 ? 'INT' : 'EXT', tier: pr.tier !== undefined ? pr.tier : 'B', workflow: 'Full AI', duration: pr.duration || '', value: '', pic: meId() || '', start: pr.start || D.t, deadline: pr.deadline || (rj0 && rj0.deadline) || addDays(D.t, 14), folder: (rj0 && safeUrl(rj0.folder) ? rj0.folder : '') || pr.folder || '', revAllowed: String(D.cfg.revDefault), note: pr.note || '', est: pr.est ? String(pr.est) : '', acc: '', kindSel: pr.kindSel || 'ads', kindOther: pr.kindOther || ''};
   });
   const [more, setMore] = useState(editing);
@@ -3734,7 +3746,14 @@ function ProjectForm({D, pid, pre}){
   };
   const cc = regMode ? (pjIn ? pjIn.cc : '') : isExt ? cleanCC(f.clientCode) : INT_CODE;
   const pnEff = f.pnTouched ? cleanPname(f.pn) : pnameOf(f.name);
-  const autoCode = /^\d{4}$/.test(f.yymm) && cc.length >= 2 && pnEff ? f.yymm+'_'+cc+'_'+pnEff : '';
+  const baseCode = /^\d{4}$/.test(f.yymm) && cc.length >= 2 && pnEff ? f.yymm+'_'+cc+'_'+pnEff : '';
+  /* Số thứ tự trong tháng (-01, -02…): bật sẵn cho job từ booking nội bộ, tự bật khi Job ID đã có trên bảng hoặc trong Job Register */
+  const taken = new Set(D.projects.filter(x => x.id !== pid && x.code).map(x => x.code).concat(regOn ? S.reg.jobs.map(j => j.id) : []));
+  const sibs = baseCode ? Array.from(taken).filter(c => c === baseCode || (c.indexOf(baseCode+'-') === 0 && /^\d{2,3}$/.test(c.slice(baseCode.length + 1)))).sort() : [];
+  const baseTaken = !!baseCode && taken.has(baseCode), hasNo = /-\d{2,3}$/.test(pnEff);
+  const seqNo = sibs.reduce((m, c) => Math.max(m, c === baseCode ? 1 : +c.slice(baseCode.length + 1)), 0) + 1;
+  const useSeq = !editing && !!baseCode && !hasNo && (f.seqOn || baseTaken);
+  const autoCode = useSeq ? baseCode+'-'+pad(seqNo) : baseCode;
   const code = regMode ? (pjIn ? f.jobIn.trim() : '') : f.jidMode === 'manual' ? f.jidText.trim() : autoCode;
   const legacy = editing && f.jidMode === 'manual' && !!code && code === (p0.code || '');
   const codeOk = !!code && (JOB_RE.test(code) || legacy) && (!regMode || !!pjIn);
@@ -3878,6 +3897,11 @@ function ProjectForm({D, pid, pre}){
               <label class="grow"><span class="hint">Project</span><input class="inp code" value=${f.pnTouched ? f.pn : pnEff} placeholder="VD Demo-TVC" aria-label="Project, không dấu, nối bằng gạch ngang" onInput=${e => setF(x => Object.assign({}, x, {pn: cleanPname(e.target.value), pnTouched: true}))}/></label>
             </div>
             <div class="out"><code class=${dup ? 'bad-t' : ''}>${code || (ext ? 'Chọn khách hàng và nhập tên dự án' : 'Nhập tên dự án')}</code>${code ? html`<${CopyBtn} text=${code} label="Copy Job ID"/>` : null}</div>
+            ${!editing && baseCode ? html`<div class="jid-seq">
+              <label class="check"><input type="checkbox" checked=${useSeq} disabled=${baseTaken || hasNo} onChange=${e => set('seqOn', e.target.checked)}/>Đánh số trong tháng (-01, -02…)</label>
+              ${baseTaken ? html`<span class="hint warn-t">Đã có ${baseCode}, bảng lấy số tiếp theo.</span>` : null}
+              ${sibs.length ? html`<span class="hint">Tháng ${f.yymm} đã có: ${sibs.map(c => html`<span key=${c} class="code">${c.slice(baseCode.length) || '(không số)'}</span>`).reduce((a, x, i) => i ? a.concat([', ', x]) : [x], [])}</span>` : useSeq ? html`<span class="hint">Chưa có job cùng tên trong tháng ${f.yymm}, bắt đầu từ -01.</span>` : null}
+            </div>` : null}
             <span class="hint">Kick-off là tháng ký quote hoặc confirm job, không lấy tháng giao. Thêm dòng Job Register với đúng ba giá trị này để cột A ra cùng Job ID.${editing && p0.code && p0.code !== code ? html` <span class="warn-t">Folder đã tạo theo Job ID cũ thì chạy Đồng bộ trong Job Register.</span>` : null}</span>
             ${!editing ? (regOn ? html`<label class="check"><input type="checkbox" checked=${f.addReg} onChange=${e => set('addReg', e.target.checked)}/>Thêm dòng này vào Job Register khi tạo dự án</label>` : html`<span class="hint">Job Register chưa kết nối: sau khi tạo, copy các ô ở thẻ "Folder và tên file" trong trang dự án.</span>`) : null}
             <div><button type="button" class="btn xs" onClick=${() => editing ? setF(x => Object.assign({}, x, {jidMode: 'manual', jidText: code || x.jidText})) : setF(x => Object.assign({}, x, {src: 'reg'}))}><${Ic} n="edit" s=${14}/>${editing ? 'Dán Job ID có sẵn' : 'Đã có Job ID trong Register'}</button></div>
@@ -4109,7 +4133,7 @@ function IntakeCard({b, D, me}){
   const lead = canW() && isLead(D, me), mine = canW() && b.by === me;
   const [ask, setAsk] = useState(''), [reason, setReason] = useState('');
   const late = b.due && b.due < D.t;
-  const take = () => openModal({type: 'project', pre: {useCase: 'INT', src: 'new', intake: b.id, name: b.name, type: b.type || 'Internal', pn: pnameOf(b.name),
+  const take = () => openModal({type: 'project', pre: {useCase: 'INT', src: 'new', intake: b.id, name: b.name, type: b.type || 'Internal', pn: intakePname(b), seqOn: true,
     kindSel: b.kind === 'Content ads' ? 'ads' : b.kind === 'TVC khóa học' ? 'course' : 'other', kindOther: ['Content ads', 'TVC khóa học'].indexOf(b.kind) < 0 ? b.kind : '',
     start: D.t, deadline: b.due && b.due >= D.t ? b.due : addDays(D.t, 7), est: b.est || '', tier: 'C', duration: b.deliv || '',
     note: ['Yêu cầu: '+b.req, b.brief, b.deliv ? 'Bản giao: '+b.deliv : '', b.links || ''].filter(Boolean).join('\n')}});
