@@ -49,6 +49,11 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Trong bước: dòng **Kết quả** và **Duyệt** luôn ghi rõ đang nói về bản nào; dòng **Bản trước** liệt kê các bản cũ kèm lúc nộp và ai yêu cầu sửa.
 - Góp ý của bản đang duyệt nằm trên. Góp ý và yêu cầu sửa của bản cũ gom vào **Góp ý của bản cũ**, hiện màu xám, không còn báo đỏ.
 
+## Khung mỗi bước
+- **Nộp V…** nằm riêng ở dòng trên cùng.
+- Khung **bản đang duyệt** gom mọi thứ của bản hiện tại: tên file (bấm để mở), **Sửa link** (người nộp hoặc Hào sửa khi dán nhầm, chỉ được khi chưa ai duyệt bản đó), **Duyệt trên player**, **Duyệt nội bộ** và phản hồi của **Khách**.
+- Bên dưới là **Góp ý** cho bản hiện tại, cuối cùng là **Các bản trước** (thu gọn), mỗi bản kèm tên file và góp ý của bản đó.
+
 ## Player duyệt video
 - Ở mỗi bước đã nộp link tới **file video trên Google Drive** (dạng `drive.google.com/file/d/…`), bấm **Duyệt trên player**: tua bằng thanh thời gian, lùi/tới từng khung hình (phím ← →), vẽ lên khung hình, ghi chú gắn với đúng thời điểm. Người làm tick **Đã sửa** cho từng ghi chú.
 - Nếu link kết quả là folder, bấm **Thêm link file video để duyệt trên player** và dán link file video trong folder đó.

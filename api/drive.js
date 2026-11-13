@@ -36,6 +36,36 @@ export default async function handler(req) {
   const id = q.get('id') || '';
   if (!/^[\w-]{20,100}$/.test(id)) return bad('Thiếu hoặc sai id file.', 400);
 
+  /* Tên file/folder để hiện thay cho đường link: /api/drive?meta=1&id=…&kind=file|folder */
+  if (q.get('meta') !== null) {
+    const kind = q.get('kind') === 'folder' ? 'folder' : 'file';
+    let name = '', size = 0;
+    if (kind === 'file') {
+      const up = await fromDrive(id, 'GET', 'bytes=0-0');
+      if (up && up.ok && !/text\/html/i.test(up.headers.get('content-type') || '')) {
+        const cd = up.headers.get('content-disposition') || '';
+        const star = cd.match(/filename\*=UTF-8''([^;]+)/i), plain = cd.match(/filename="([^"]*)"/i);
+        try { name = star ? decodeURIComponent(star[1]) : plain ? plain[1] : ''; } catch (e) { name = plain ? plain[1] : ''; }
+        if (/[\u0080-ÿ]/.test(name)) { try { name = new TextDecoder().decode(Uint8Array.from(name, c => c.charCodeAt(0))); } catch (e) {} }
+        size = +((up.headers.get('content-range') || '').split('/')[1] || 0);
+      }
+      if (up && up.body) { try { await up.body.cancel(); } catch (e) {} }
+    }
+    if (!name) {
+      try {
+        const r = await fetch(kind === 'folder' ? 'https://drive.google.com/drive/folders/' + id : 'https://drive.google.com/file/d/' + id + '/view', { redirect: 'follow' });
+        const m = r.ok ? (await r.text()).match(/<title>([\s\S]*?)<\/title>/i) : null;
+        if (m) name = m[1].replace(/\s*-\s*Google Drive\s*$/i, '').replace(/&#(\d+);/g, (x, n) => String.fromCharCode(+n)).replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+        if (/^(Google Drive|Sign-in|Đăng nhập)/i.test(name)) name = '';
+      } catch (e) {}
+    }
+    return new Response(JSON.stringify({ name, size, kind }), { status: 200, headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': name ? 'public, max-age=600' : 'no-store',
+      'cdn-cache-control': name ? 'public, s-maxage=3600' : 'no-store',
+    } });
+  }
+
   const part = q.get('part');
   if (part !== null) {
     const n = parseInt(part, 10), ps = Math.min(MAX_PS, Math.max(1024 * 1024, parseInt(q.get('ps') || '', 10) || 8 * 1024 * 1024));

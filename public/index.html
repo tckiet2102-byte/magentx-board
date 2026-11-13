@@ -385,11 +385,46 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .sbody{display:flex;flex-direction:column;gap:14px;margin:4px 0 16px;padding:16px 18px;border-radius:12px;background:var(--subtle);border:1px solid var(--rule)}
 .sb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .sb-head .meta{padding-top:5px}
-.sb-row{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start}
-.sb-lab{font-size:14px;font-weight:700;color:var(--ink);padding-top:8px}
-.sb-val{display:flex;flex-direction:column;gap:10px;min-width:0}
-.qc-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;min-height:36px}
-@media (max-width:780px){.sbody{padding:14px}.sb-row{grid-template-columns:minmax(0,1fr);gap:6px}.sb-lab{padding-top:0}}
+.sb-sec{display:flex;flex-direction:column;gap:10px}
+.sb-sec > h4{margin:0;font-size:14.5px;font-weight:700;color:var(--ink)}
+/* nộp bản mới: dòng riêng trên cùng */
+.vsubmit{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.vsubmit.open{flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;border:1.5px dashed var(--field);border-radius:12px;background:var(--surface)}
+.vsubmit.open.first{border-style:solid;border-color:var(--action);background:var(--action-soft)}
+.vsubmit-h{display:flex;align-items:center;gap:8px;font-size:14.5px}
+.vsubmit-h svg{color:var(--action)}
+/* khung bản đang duyệt */
+.vcard{display:flex;flex-direction:column;gap:12px;padding:14px 16px;border:1px solid var(--rule);border-left:4px solid var(--d-todo);border-radius:12px;background:var(--surface)}
+.vcard.s-review{border-left-color:var(--d-review)}
+.vcard.s-fix{border-left-color:var(--d-fix)}
+.vcard.s-done{border-left-color:var(--d-done)}
+.vcard.s-doing{border-left-color:var(--d-doing)}
+.vc-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.vc-h .vchip{height:28px;min-width:42px;font-size:15px;border-radius:8px}
+.vc-file{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.vc-edit{display:flex;flex-direction:column;gap:6px}
+.flink{display:inline-flex;align-items:center;gap:10px;min-width:0;max-width:100%;color:var(--ink);text-decoration:none}
+.flink-ic{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:8px;background:var(--tint);color:var(--ink-2)}
+.flink.big .flink-ic{width:38px;height:38px;border-radius:10px;background:var(--action-soft);color:var(--action)}
+.flink-t{display:flex;flex-direction:column;gap:1px;min-width:0;line-height:1.35}
+.flink-t b{font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--action)}
+.flink.big .flink-t b{font-size:15.5px;font-weight:700}
+.flink-t small{font-size:12.5px;color:var(--ink-3)}
+.flink:hover .flink-t b{text-decoration:underline;text-underline-offset:3px}
+.vc-play{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.vc-sec{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 12px;align-items:start;padding-top:12px;border-top:1px solid var(--rule)}
+.vc-lab{font-size:13.5px;font-weight:700;color:var(--ink-2);padding-top:6px}
+.vc-val{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qc-p{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-height:32px}
+.vc-quote{margin:0;padding:6px 10px;border-left:3px solid var(--rule);font-size:14.5px;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+/* các bản trước */
+.vold{gap:8px;padding-top:4px}
+.vold-t{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:6px 8px;margin:0 -8px;border:0;border-radius:8px;background:transparent;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.vold-t:hover{background:var(--tint)}
+.vold-t b{font-size:14.5px}
+.vold-i{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--subtle)}
+.vold-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+@media (max-width:780px){.sbody{padding:14px}.vc-sec{grid-template-columns:minmax(0,1fr)}.vc-lab{padding-top:0}.vcard{padding:12px}}
 .blk{display:flex;flex-direction:column;gap:10px}
 .linkline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-height:36px}
 .linkline .ext{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;overflow-wrap:anywhere}
@@ -401,16 +436,10 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .vchip.fix{background:var(--bad-soft);color:var(--bad)}
 .vchip.done{background:var(--ok-soft);color:var(--ok)}
 .vchip.old{background:var(--tint);color:var(--ink-3)}
-.vprev{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
-.vprev-i{display:inline-flex;align-items:center;gap:6px}
-.vprev a{display:inline-flex;text-decoration:none}
-.vprev a:hover .vchip{color:var(--action)}
 .qc-ver{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
 .cmts{display:flex;flex-direction:column;gap:12px}
 .cmt.old{border-left-color:var(--rule)}
 .cmt.old p,.cmt.old .cmt-h b{color:var(--ink-2)}
-.cm-old{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
-.cm-old .cmts{align-self:stretch}
 .cmt{padding-left:14px;border-left:3px solid var(--field)}
 .cmt.fix{border-left-color:var(--d-fix)}
 .cmt-h{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;font-size:13.5px;color:var(--ink-2)}
@@ -1455,6 +1484,8 @@ const ICONS = {
   upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
   download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',
   play: 'M6 4l14 8-14 8V4z',
+  film: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M7 3v18 M17 3v18 M3 8h4 M3 12h18 M3 16h4 M17 8h4 M17 16h4',
+  file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
   pause: 'M8 5v14 M16 5v14',
   undo: 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
   trash: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
@@ -1948,10 +1979,51 @@ function StepEditor({p, st, D}){
     <div class="field"><span class="lab">Người duyệt</span>${D.reviewers.length ? html`<div class="checks">${D.reviewers.map(r => html`<label key=${r.id} class="check"><input type="checkbox" checked=${st.qcBy.indexOf(r.id) >= 0} onChange=${e => toggle('qcBy', r.id, e.target.checked)}/>${r.name}${r.opt ? ' (không bắt buộc)' : ''}</label>`)}</div>` : html`<span class="meta">Chưa ai được đặt làm người duyệt. Đặt ở trang Cài đặt.</span>`}</div>
   </div>`;
 }
+/* Link Drive → {id, kind}; tên file/folder lấy qua /api/drive?meta=1, nhớ trong máy để không hỏi lại */
+function driveRef(u){
+  const s = String(u || ''), id = driveId(s);
+  if(id) return {id, kind: 'file'};
+  const m = s.match(/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]{10,})/);
+  return m ? {id: m[1], kind: 'folder'} : null;
+}
+const FN = {};
+function fetchLinkName(u){
+  const r = driveRef(u); if(!r) return Promise.resolve('');
+  const k = r.kind+':'+r.id;
+  if(FN[k]) return FN[k];
+  const cached = lsGet('mx.fn.'+k);
+  if(cached) return (FN[k] = Promise.resolve(cached));
+  FN[k] = fetch('/api/drive?meta=1&kind='+r.kind+'&id='+encodeURIComponent(r.id)).then(x => x.ok ? x.json() : {}).then(j => { const n = (j && j.name) || ''; if(n) lsSet('mx.fn.'+k, n); else delete FN[k]; return n; }, () => { delete FN[k]; return ''; });
+  return FN[k];
+}
+const withTimeout = (pr, ms, dflt) => Promise.race([pr, new Promise(r => setTimeout(() => r(dflt), ms))]);
+function useLinkName(u, stored){
+  const [n, setN] = useState(stored || '');
+  useEffect(() => { let on = true; setN(stored || ''); if(!stored && u) fetchLinkName(u).then(x => { if(on && x) setN(x); }); return () => { on = false; }; }, [u, stored]);
+  return n;
+}
+function FileLink({url, name, big}){
+  const ref = driveRef(url), nm = useLinkName(url, name);
+  const isVid = /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(nm || url || '');
+  const icon = ref && ref.kind === 'folder' ? 'folder' : isVid ? 'film' : ref ? 'file' : 'link';
+  let host = ''; try { host = new URL(url).hostname.replace(/^www\./, ''); } catch(e){}
+  const sub = ref ? (ref.kind === 'folder' ? 'Folder trên Google Drive' : 'File trên Google Drive') : host;
+  return html`<a class=${'flink'+(big ? ' big' : '')} href=${url} target="_blank" rel="noopener" title=${url}>
+    <span class="flink-ic" aria-hidden="true"><${Ic} n=${icon} s=${big ? 19 : 16}/></span>
+    <span class="flink-t"><b>${nm || (ref ? (ref.kind === 'folder' ? 'Folder Google Drive' : 'File Google Drive') : shortUrl(url))}</b>${big ? html`<small>${sub}</small>` : null}</span>
+  </a>`;
+}
+function LinkInput({value, onInput, onEnter, label, placeholder}){
+  const ref = useRef(null);
+  useEffect(() => { if(ref.current) ref.current.focus(); }, []);
+  return html`<input ref=${ref} class="inp sm" type="url" placeholder=${placeholder} value=${value} aria-label=${label} onInput=${e => onInput(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') onEnter(); if(e.key === 'Escape') onEnter('cancel'); }}/>`;
+}
 function StepBody({p, st, D, me}){
   const w = canW();
   const [link, setLink] = useState('');
-  const [linkOpen, setLinkOpen] = useState(!st.link);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [editLink, setEditLink] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [compose, setCompose] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -1959,75 +2031,120 @@ function StepBody({p, st, D, me}){
   const [showOld, setShowOld] = useState(null);
   const patch = o => W.project(p.id, {steps: {[st.id]: o}});
   const myReview = !!(me && st.qcBy.indexOf(me) >= 0);
-  const submit = () => {
-    const v = link.trim(); if(!v) return;
-    if(!/^https?:\/\//i.test(v)){ toast('Link cần bắt đầu bằng http:// hoặc https://', 'warn'); return; }
-    const now = Date.now(), nv = st.ver + 1, vh = {['v'+nv]: {at: now, by: me || null, link: v}};
+  const nextV = vTag(st.ver + 1), curV = vTag(st.ver);
+  const okLink = v => { if(!/^https?:\/\//i.test(v)){ toast('Link cần bắt đầu bằng http:// hoặc https://', 'warn'); return false; } return true; };
+  const submit = async () => {
+    const v = link.trim(); if(!v || busy || !okLink(v)) return;
+    setBusy(true);
+    const name = await withTimeout(fetchLinkName(v), 4000, '');
+    const now = Date.now(), nv = st.ver + 1, vh = {['v'+nv]: {at: now, by: me || null, link: v, name: name || null}};
     /* bản đang có mà chưa ghi lịch sử (nộp trước khi có tính năng này) thì ghi bù trước khi bị thay */
-    if(st.ver >= 1 && st.link && !st.hist['v'+st.ver]) vh['v'+st.ver] = {at: st.subAt || null, by: st.subBy || null, link: st.link};
-    patch({link: v, ver: nv, subAt: now, subBy: me || null, vh});
-    setLink(''); setLinkOpen(false); toast('Đã nộp '+vTag(nv)+', đang chờ duyệt');
+    if(st.ver >= 1 && st.link && !st.hist['v'+st.ver]) vh['v'+st.ver] = {at: st.subAt || null, by: st.subBy || null, link: st.link, name: st.lname || null};
+    else if(st.ver >= 1 && st.lname && !st.hist['v'+st.ver].name) vh['v'+st.ver] = {name: st.lname};
+    patch({link: v, lname: name || null, ver: nv, subAt: now, subBy: me || null, vh});
+    setBusy(false); setLink(''); setSubmitOpen(false); toast('Đã nộp '+vTag(nv)+', đang chờ duyệt');
+  };
+  /* sửa link của bản đang duyệt (dán nhầm): giữ nguyên số bản, chỉ khi chưa ai duyệt bản này */
+  const approvedAny = st.ver > 0 && Object.keys(st.qc || {}).some(r => st.qc[r] && st.qc[r].ok && (+st.qc[r].ver || 0) === st.ver);
+  const canEditLink = w && !!st.link && (st.subBy === me || me === 'hao');
+  const saveLink = async () => {
+    const v = (editLink || '').trim(); if(!v || busy || !okLink(v)) return;
+    if(v === st.link){ setEditLink(null); return; }
+    setBusy(true);
+    const name = await withTimeout(fetchLinkName(v), 4000, '');
+    const now = Date.now(), old = st.link;
+    const o = {link: v, lname: name || null, vh: {['v'+st.ver]: Object.assign({at: st.subAt || null, by: st.subBy || null}, st.hist['v'+st.ver] || {}, {link: v, name: name || null, edAt: now, edBy: me || null})}};
+    patch(o);
+    /* link khách đang mở cho đúng bản này thì chuyển sang file mới luôn */
+    if(canReview(v)){ const sh = {}; st.shares.forEach(x => { if((+x.ver || 0) === st.ver && x.url === old) sh[x.tok] = {url: v}; }); if(Object.keys(sh).length) W.project(p.id, {shares: sh}); }
+    setBusy(false); setEditLink(null); toast('Đã sửa link của '+curV);
   };
   const comment = kind => {
     const text = note.trim(); if(!text) return;
     const now = Date.now(); const o = {cm: {[rid('c')]: {by: me || null, at: now, text, kind, ver: st.ver}}};
     if(kind === 'fix' && me){ o.fix = {by: me, at: now, ver: st.ver}; o.qc = {[me]: {ok: false, ver: st.ver, at: now, uid: S.uid || null}}; }
-    patch(o); setNote(''); setCompose(false); toast(kind === 'fix' ? 'Đã gửi yêu cầu sửa' : 'Đã gửi góp ý');
+    patch(o); setNote(''); setCompose(false); toast(kind === 'fix' ? 'Đã gửi yêu cầu sửa '+curV : 'Đã gửi góp ý');
   };
   const approve = ok => {
     const now = Date.now(); const o = {qc: {[me]: {ok, ver: st.ver, at: now, uid: S.uid || null}}};
     if(ok && st.fix && st.fix.by === me) o.fix = null;
-    patch(o); toast(ok ? 'Đã duyệt '+vTag(st.ver) : 'Đã bỏ duyệt');
+    patch(o); toast(ok ? 'Đã duyệt '+curV : 'Đã bỏ duyệt');
   };
   const chk = st.chk || {};
-  /* góp ý chia theo bản: bản đang duyệt ở trên, bản cũ gom riêng và không còn báo đỏ */
+  /* góp ý chia theo bản: bản đang duyệt ở giữa, bản cũ nằm trong "Các bản trước" và không còn báo đỏ */
   const isOldCm = c => (+c.ver || 0) > 0 && (+c.ver || 0) < st.ver;
   const curCm = st.comments.filter(c => !isOldCm(c)), oldCm = st.comments.filter(isOldCm);
   const list = all ? curCm : curCm.slice(-3);
-  const oldOpen = showOld === null ? (st.state === 'review' || st.state === 'fix') : showOld;
+  const oldOpen = showOld === null ? false : showOld;
   const fixLive = st.fixOn && st.state === 'fix';
   const cmItem = c => {
     const cv = +c.ver || 0, old = isOldCm(c), fx = c.kind === 'fix';
-    const tag = !fx ? null : old ? html`<span class="st todo sm">Yêu cầu sửa ở ${vTag(cv)}, đã nộp ${vTag(cv + 1)}</span>` : fixLive ? html`<span class="st fix sm">Yêu cầu sửa</span>` : html`<span class="st done sm">Yêu cầu sửa, đã xử lý</span>`;
-    return html`<div key=${c.cid} class=${'cmt'+(fx && !old && fixLive ? ' fix' : '')+(old ? ' old' : '')}><div class="cmt-h"><b>${nameOf(D, c.by)}</b>${cv ? html`<${VChip} v=${cv} tone=${old ? 'old' : st.state} sm=${true}/>` : null}<span>${fT(c.at)}</span>${tag}</div><p>${c.text}</p></div>`;
+    const tag = !fx ? null : old ? html`<span class="st todo sm">Yêu cầu sửa, đã nộp ${vTag(cv + 1)}</span>` : fixLive ? html`<span class="st fix sm">Yêu cầu sửa</span>` : html`<span class="st done sm">Yêu cầu sửa, đã xử lý</span>`;
+    return html`<div key=${c.cid} class=${'cmt'+(fx && !old && fixLive ? ' fix' : '')+(old ? ' old' : '')}><div class="cmt-h"><b>${nameOf(D, c.by)}</b><span>${fT(c.at)}</span>${tag}</div><p>${c.text}</p></div>`;
   };
   const active = compose || !!note.trim();
-  const names = st.qcBy.map(r => nameOf(D, r)).join(' và ');
   const vurl = videoLinkOf(st);
   const vnCur = st.vnotes.filter(n => (+n.ver || 0) === st.ver), vnOld = st.vnotes.length - vnCur.length, vnOpen = vnCur.filter(n => !n.ok).length;
-  const nextV = vTag(st.ver + 1);
+  const ss = stepStatus(st, D);
+  const decCur = st.cdec && (+st.cdec.ver || 0) === st.ver ? st.cdec : null;
+  const liveShares = st.shares.filter(x => x.on !== false && !(x.exp && x.exp < Date.now()) && (+x.ver || 0) === st.ver);
+
+  const submitBar = !w ? (st.link ? null : html`<p class="meta">Chưa nộp kết quả.</p>`)
+    : !st.link || submitOpen
+      ? html`<div class=${'vsubmit open'+(st.link ? '' : ' first')}>
+          <div class="vsubmit-h"><${Ic} n="upload" s=${16}/><b>${st.link ? 'Nộp '+nextV+' (bản sửa mới)' : 'Nộp kết quả '+nextV}</b></div>
+          <div class="slot"><${LinkInput} value=${link} onInput=${setLink} onEnter=${x => { if(x === 'cancel'){ if(st.link){ setSubmitOpen(false); setLink(''); } } else submit(); }} label=${'Link kết quả '+nextV} placeholder="Dán link file hoặc folder Google Drive, Frame.io, Higgsfield"/>
+            <button type="button" class="btn primary sm" disabled=${!link.trim() || busy} onClick=${submit}><${Ic} n="send" s=${16}/>${busy ? 'Đang nộp…' : 'Nộp '+nextV}</button>
+            ${st.link ? html`<button type="button" class="btn sm" onClick=${() => { setSubmitOpen(false); setLink(''); }}>Hủy</button>` : null}</div>
+          ${st.link ? html`<span class="hint">${curV} chuyển xuống "Các bản trước". Người duyệt duyệt lại từ đầu với ${nextV}.</span>` : null}
+        </div>`
+      : html`<div class="vsubmit"><button type="button" class="btn sm" onClick=${() => setSubmitOpen(true)}><${Ic} n="upload" s=${16}/>Nộp ${nextV}</button><span class="meta">Có bản sửa thì nộp ở đây.</span></div>`;
+
+  const card = st.link ? html`<section class=${'vcard s-'+st.state} aria-label=${'Bản đang duyệt '+curV}>
+      <div class="vc-h"><${VChip} v=${st.ver} tone=${st.state}/><span class=${'st sm '+ss.cls}>${ss.text}</span><span class="sp"></span><span class="meta">${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}${st.hist['v'+st.ver] && st.hist['v'+st.ver].edAt ? ', đã sửa link '+rel(st.hist['v'+st.ver].edAt) : ''}</span></div>
+      ${editLink !== null
+        ? html`<div class="vc-edit"><div class="slot"><${LinkInput} value=${editLink} onInput=${setEditLink} onEnter=${x => x === 'cancel' ? setEditLink(null) : saveLink()} label=${'Sửa link của '+curV} placeholder="Dán link đúng"/><button type="button" class="btn primary sm" disabled=${!editLink.trim() || busy} onClick=${saveLink}>${busy ? 'Đang lưu…' : 'Lưu link'}</button><button type="button" class="btn sm" onClick=${() => setEditLink(null)}>Hủy</button></div><span class="hint">Chỉ thay link của ${curV}, không tạo bản mới.</span></div>`
+        : html`<div class="vc-file"><${FileLink} url=${st.link} name=${st.lname} big=${true}/>${canEditLink ? html`<button type="button" class="btn xs" disabled=${approvedAny} title=${approvedAny ? 'Đã có người duyệt '+curV+'. Cần đổi file thì nộp '+nextV+'.' : 'Dán nhầm link thì sửa ở đây'} onClick=${() => setEditLink(st.link)}><${Ic} n="edit" s=${14}/>Sửa link</button>` : null}</div>`}
+      ${vurl || (w && VIDEO_STEPS[st.id]) ? html`<div class="vc-play">
+          ${vurl ? html`<button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${vnCur.length ? vnCur.length+' ghi chú trên '+curV+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>` : null}
+          ${w && (!vurl || !canReview(st.link)) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${!!vurl}/>` : null}
+        </div>` : null}
+      <div class="vc-sec"><span class="vc-lab">Duyệt nội bộ</span><div class="vc-val">
+        ${!st.qcBy.length ? html`<span class="meta">Bước này không cần duyệt.</span>` : st.qcBy.map(r => {
+          const ok = st.approvedBy.indexOf(r) >= 0, fx = st.fixOn && st.fix && st.fix.by === r, opt = st.optBy.indexOf(r) >= 0, q = (st.qc || {})[r];
+          return html`<div key=${r} class="qc-p"><span class=${'st sm '+(ok ? 'done' : fx ? 'fix' : opt ? 'todo' : 'review')}>${ok ? nameOf(D, r)+' đã duyệt' : fx ? nameOf(D, r)+' yêu cầu sửa' : opt ? nameOf(D, r)+' chưa duyệt' : 'Chờ '+nameOf(D, r)+' duyệt'}</span>${opt ? html`<span class="meta">(không bắt buộc)</span>` : null}${ok && q && q.at ? html`<span class="meta">${fT(q.at)}</span>` : null}
+            ${r === me && w ? (ok ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt ${curV}</button>`) : null}</div>`;
+        })}
+        ${!me && st.qcBy.length ? html`<span class="hint">Đăng nhập để duyệt.</span>` : null}
+      </div></div>
+      ${decCur || st.shares.length ? html`<div class="vc-sec"><span class="vc-lab">Khách</span><div class="vc-val">
+        ${decCur ? html`<div class="qc-p"><span class=${'st sm '+(decCur.ok ? 'done' : 'fix')}>${decCur.name} ${decCur.ok ? 'đồng ý' : 'yêu cầu sửa'}</span><span class="meta">${fT(decCur.at)}</span></div>${decCur.text ? html`<p class="vc-quote">${decCur.text}</p>` : null}`
+          : html`<span class="meta">${liveShares.length ? 'Đã gửi link '+curV+', chưa có phản hồi.' : st.cdec ? 'Chưa gửi '+curV+' cho khách. Bản trước: '+st.cdec.name+' '+(st.cdec.ok ? 'đồng ý' : 'yêu cầu sửa')+' '+vTag(st.cdec.ver)+'.' : 'Chưa gửi '+curV+' cho khách.'}</span>`}
+      </div></div>` : null}
+    </section>` : null;
+
+  const prev = st.prev;
   return html`<div class="sbody">
     <div class="sb-head"><p class="meta">${st.def.out}</p>${w ? html`<button type="button" class="btn xs" aria-pressed=${editing} onClick=${() => setEditing(!editing)}><${Ic} n=${editing ? 'check' : 'edit'} s=${14}/>${editing ? 'Xong' : 'Sửa bước'}</button>` : null}</div>
     ${editing ? html`<${StepEditor} p=${p} st=${st} D=${D}/>` : null}
-    <div class="sb-row"><span class="sb-lab">Kết quả</span><div class="sb-val">
-      ${st.link && !linkOpen
-        ? html`<div class="linkline"><${VChip} v=${st.ver} tone=${st.state}/><a class="ext" href=${st.link} target="_blank" rel="noopener"><${Ic} n="link" s=${17}/>${shortUrl(st.link)}</a><span class="meta">${nameOf(D, st.subBy)} nộp ${rel(st.subAt)}</span>${w ? html`<button type="button" class="btn xs" onClick=${() => setLinkOpen(true)}><${Ic} n="upload" s=${14}/>Nộp ${nextV}</button>` : null}</div>`
-        : (w ? html`<div class="slot"><input class="inp sm" type="url" placeholder=${st.link ? 'Dán link của '+nextV : 'Dán link Drive, Frame.io hoặc Higgsfield'} value=${link} aria-label=${'Link kết quả '+nextV} onInput=${e => setLink(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') submit(); }}/><button type="button" class="btn primary sm" disabled=${!link.trim()} onClick=${submit}><${Ic} n="send" s=${16}/>Nộp ${nextV}</button>${st.link ? html`<button type="button" class="btn sm" onClick=${() => { setLinkOpen(false); setLink(''); }}>Hủy</button>` : null}</div>${st.link ? html`<span class="hint">${vTag(st.ver)} vẫn được giữ trong mục Bản trước. Nộp ${nextV} thì người duyệt cần duyệt lại.</span>` : null}`
-        : html`<span class="meta linkline">Chưa nộp link.</span>`)}
-      ${st.link && !linkOpen ? (vurl
-        ? html`<div class="linkline"><button type="button" class="btn sm" onClick=${() => openModal({type:'review', pid: p.id, sid: st.id})}><${Ic} n="play" s=${16}/>Duyệt trên player</button><span class="meta">${vnCur.length ? vnCur.length+' ghi chú trên '+vTag(st.ver)+(vnOpen ? ', '+vnOpen+' chưa xử lý' : ', đã xử lý hết') : vnOld ? 'Chưa có ghi chú trên '+vTag(st.ver)+', '+vnOld+' ghi chú ở bản cũ' : 'Tua từng khung hình, vẽ và ghi chú lên video.'}</span>${w && !canReview(st.link) ? html`<${VideoLinkAdd} p=${p} st=${st} has=${true}/>` : null}</div>`
-        : (w && VIDEO_STEPS[st.id] ? html`<div class="linkline"><${VideoLinkAdd} p=${p} st=${st}/></div>` : null)) : null}
-      ${st.cdec ? html`<div class="linkline cdec"><span class=${'st sm '+((+st.cdec.ver || 0) !== st.ver ? 'todo' : st.cdec.ok ? 'done' : 'fix')}>Khách ${st.cdec.name} ${st.cdec.ok ? 'đồng ý' : 'yêu cầu sửa'} ${vTag(st.cdec.ver)}</span><span class="meta">${fT(st.cdec.at)}${st.cdec.text ? ': '+st.cdec.text : ''}</span></div>` : null}
-      ${st.prev.length ? html`<div class="vprev"><span class="meta">Bản trước</span>${st.prev.map(x => html`<span key=${x.v} class="vprev-i">${x.h && safeUrl(x.h.link) ? html`<a href=${x.h.link} target="_blank" rel="noopener" title=${'Mở link của '+vTag(x.v)}><${VChip} v=${x.v} tone="old" sm=${true}/></a>` : html`<${VChip} v=${x.v} tone="old" sm=${true}/>`}<span class="meta">${[x.h && x.h.at ? 'nộp '+fT(x.h.at) : '', x.fx ? nameOf(D, x.fx.by)+' yêu cầu sửa '+fT(x.fx.at) : ''].filter(Boolean).join(', ') || 'đã thay bằng '+vTag(x.v + 1)}</span></span>`)}</div>` : null}
-    </div></div>
-    <div class="sb-row"><span class="sb-lab">Duyệt</span><div class="sb-val">
-      ${!st.qcBy.length ? html`<span class="meta linkline">Bước này không cần duyệt.</span>`
-        : !st.link ? html`<span class="meta linkline">Có link thì ${st.mustBy.map(r => nameOf(D, r)).join(' và ')} duyệt${st.optBy.length ? ', '+st.optBy.map(r => nameOf(D, r)).join(', ')+' duyệt thêm nếu cần' : ''}.</span>`
-        : html`<div class="qc-row"><${VChip} v=${st.ver} tone=${st.state}/>${st.qcBy.map(r => {
-            const ok = st.approvedBy.indexOf(r) >= 0, fx = st.fixOn && st.fix && st.fix.by === r, opt = st.optBy.indexOf(r) >= 0;
-            return html`<span key=${r} class=${'st sm '+(ok ? 'done' : fx ? 'fix' : opt ? 'todo' : 'review')}>${ok ? nameOf(D, r)+' đã duyệt' : fx ? nameOf(D, r)+' yêu cầu sửa' : opt ? nameOf(D, r)+' chưa duyệt, không bắt buộc' : 'Chờ '+nameOf(D, r)+' duyệt'}</span>`;
-          })}${myReview && w ? (st.approvedBy.indexOf(me) >= 0 ? html`<button type="button" class="btn xs" onClick=${() => approve(false)}>Bỏ duyệt</button>` : html`<button type="button" class="btn ok sm" onClick=${() => approve(true)}><${Ic} n="check" s=${16}/>Duyệt ${vTag(st.ver)}</button>`) : null}</div>
-          ${!me ? html`<span class="hint">Bấm “Bạn là ai?” ở góc trên để duyệt.</span>` : null}`}
-    </div></div>
-    ${st.id === 's09' ? html`<div class="sb-row"><span class="sb-lab">Tự kiểm</span><div class="sb-val"><div class="checks col">${QC_GROUPS.map(g => html`<label key=${g.k} class="check al-top"><input type="checkbox" checked=${!!chk[g.k]} disabled=${!w} onChange=${e => patch({chk: {[g.k]: e.target.checked}, chkBy: me || null, chkAt: Date.now()})}/><span><b>${g.name}:</b> <span class="meta">${g.desc}</span></span></label>`)}</div></div></div>` : null}
-    <div class="sb-row"><span class="sb-lab">Góp ý${curCm.length ? html` <span class="faint">${curCm.length}</span>` : null}</span><div class="sb-val">
+    ${submitBar}
+    ${card}
+    ${st.id === 's09' ? html`<div class="sb-sec"><h4>Tự kiểm 6 nhóm trước khi gửi khách</h4><div class="checks col">${QC_GROUPS.map(g => html`<label key=${g.k} class="check al-top"><input type="checkbox" checked=${!!chk[g.k]} disabled=${!w} onChange=${e => patch({chk: {[g.k]: e.target.checked}, chkBy: me || null, chkAt: Date.now()})}/><span><b>${g.name}:</b> <span class="meta">${g.desc}</span></span></label>`)}</div></div>` : null}
+    <div class="sb-sec">
+      <h4>${st.link ? html`Góp ý cho ${curV}` : 'Góp ý'}${curCm.length ? html` <span class="faint">${curCm.length}</span>` : null}</h4>
       ${curCm.length > 3 && !all ? html`<div><button type="button" class="btn xs" onClick=${() => setAll(true)}>Xem cả ${curCm.length} góp ý</button></div>` : null}
       ${list.length ? html`<div class="cmts">${list.map(cmItem)}</div>` : null}
-      ${w ? html`<div class="composer"><textarea class="inp" rows=${active ? 3 : 1} placeholder=${myReview && st.link ? 'Viết góp ý cho người làm…' : 'Viết trao đổi về bước này…'} value=${note} aria-label="Góp ý" onFocus=${() => setCompose(true)} onBlur=${() => { if(!note.trim()) setCompose(false); }} onInput=${e => setNote(e.target.value)}></textarea>
-        ${active ? html`<div class="acts"><button type="button" class="btn sm" disabled=${!note.trim()} onClick=${() => comment('note')}><${Ic} n="send" s=${16}/>Gửi góp ý</button>${myReview && st.link ? html`<button type="button" class="btn sm danger" disabled=${!note.trim()} onClick=${() => comment('fix')}>Gửi và yêu cầu sửa</button>` : null}</div>` : null}</div>`
-        : (st.comments.length ? null : html`<span class="meta linkline">Chưa có góp ý.</span>`)}
-      ${oldCm.length ? html`<div class="cm-old"><button type="button" class="btn xs" aria-expanded=${oldOpen} onClick=${() => setShowOld(!oldOpen)}><${Ic} n=${oldOpen ? 'down' : 'right'} s=${14}/>Góp ý của bản cũ (${oldCm.length})</button>${oldOpen ? html`<div class="cmts">${oldCm.map(cmItem)}</div>` : null}</div>` : null}
-    </div></div>
+      ${w ? html`<div class="composer"><textarea class="inp" rows=${active ? 3 : 1} placeholder=${myReview && st.link ? 'Viết góp ý cho '+curV+'…' : 'Viết trao đổi về bước này…'} value=${note} aria-label="Góp ý" onFocus=${() => setCompose(true)} onBlur=${() => { if(!note.trim()) setCompose(false); }} onInput=${e => setNote(e.target.value)}></textarea>
+        ${active ? html`<div class="acts"><button type="button" class="btn sm" disabled=${!note.trim()} onClick=${() => comment('note')}><${Ic} n="send" s=${16}/>Gửi góp ý</button>${myReview && st.link ? html`<button type="button" class="btn sm danger" disabled=${!note.trim()} onClick=${() => comment('fix')}>Gửi và yêu cầu sửa ${curV}</button>` : null}</div>` : null}</div>`
+        : (curCm.length ? null : html`<span class="meta">Chưa có góp ý.</span>`)}
+    </div>
+    ${prev.length ? html`<div class="sb-sec vold">
+      <button type="button" class="vold-t" aria-expanded=${oldOpen} onClick=${() => setShowOld(!oldOpen)}><${Ic} n=${oldOpen ? 'down' : 'right'} s=${16}/><b>Các bản trước</b><span class="meta">${prev.map(x => vTag(x.v)).join(', ')}${oldCm.length ? ', '+oldCm.length+' góp ý' : ''}${vnOld ? ', '+vnOld+' ghi chú video' : ''}</span></button>
+      ${oldOpen ? prev.map(x => { const cms = oldCm.filter(c => (+c.ver || 0) === x.v); return html`<div key=${x.v} class="vold-i">
+        <div class="vold-h"><${VChip} v=${x.v} tone="old"/>${x.h && safeUrl(x.h.link) ? html`<${FileLink} url=${x.h.link} name=${x.h.name}/>` : html`<span class="meta">Không còn lưu link</span>`}<span class="meta">${[x.h && x.h.at ? 'nộp '+fT(x.h.at) : '', x.fx ? nameOf(D, x.fx.by)+' yêu cầu sửa '+fT(x.fx.at) : ''].filter(Boolean).join(', ')}</span></div>
+        ${cms.length ? html`<div class="cmts">${cms.map(cmItem)}</div>` : null}
+      </div>`; }) : null}
+    </div>` : null}
   </div>`;
 }
 function StepItem({p, st, D, me, open, onToggle, cls}){
@@ -2734,7 +2851,7 @@ function ReviewPlayer({D, pid, sid, me}){
   const canDel = n => w && (n.src === 'client' ? me === 'hao' : (n.by === me || me === 'hao'));
   return html`<div class="rv" role="dialog" aria-modal="true" aria-label=${'Duyệt video: '+st.def.name}>
     <header class="rv-h">
-      <div class="rv-title"><b>${st.def.no} ${st.def.name} <${VChip} v=${st.ver} tone=${st.state}/></b><span class="meta">${p.name}</span></div>
+      <div class="rv-title"><b>${st.def.no} ${st.def.name} <${VChip} v=${st.ver} tone=${st.state}/></b><span class="meta">${p.name}${st.lname ? ', '+st.lname : ''}</span></div>
       <span class="sp"></span>
       ${w && link ? html`<div class="rv-share-wrap"><button type="button" class=${'btn sm rv-share-btn'+(shareOpen ? ' on' : '')} aria-expanded=${shareOpen} onClick=${() => setShareOpen(!shareOpen)}><${Ic} n="send" s=${16}/>Gửi khách${st.shares.length ? ' ('+st.shares.filter(x => x.on !== false && !(x.exp && x.exp < Date.now())).length+')' : ''}</button>${shareOpen ? html`<${SharePanel} p=${p} st=${st} link=${link} me=${me} onClose=${() => setShareOpen(false)}/>` : null}</div>` : null}
       <a class="btn sm" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
