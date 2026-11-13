@@ -1161,6 +1161,8 @@ async function boot(){
     if(!snap.metadata.fromCache) S.got[name] = true;
     if(name === 'projects') S.firstData = true;
     if(name === 'staff' && meId() && !S.bootPriv){ S.bootPriv = true; S.startPrivate(); }
+    /* được nâng lên quyền xem lịch, dự án trong lúc đang mở bảng: tải cả bảng ngay, không cần đăng nhập lại */
+    else if(name === 'staff' && meId() && !S.privOn && isViewer(meId()) && S.startPrivate) S.startPrivate();
     settle(); emit();
   }, onErr(name));
   /* người đặt booking chỉ theo dõi dự án lập từ yêu cầu của mình, không tải cả bảng */
