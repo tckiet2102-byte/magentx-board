@@ -988,14 +988,20 @@ a.lg-pn:hover{color:var(--action)}
     return { path: c, doc: id => docRef(c + '/' + (id || r.doc().id)), get: () => wrap(r.get()),
       onSnapshot: (n, err) => r.onSnapshot(META, n, e => err && err(mapErr(e))) };
   };
-  /* Lần đầu dùng database trống: ghi sẵn nhân sự, account và thông số mẫu. */
+  /* Lần đầu dùng database trống: ghi sẵn nhân sự, account và thông số mẫu.
+     Chỉ ghi khi server xác nhận trong transaction rằng chưa có doc mẫu nào; không bao giờ ghi đè doc đã có.
+     (Trước đây chỉ hỏi config/main một lần; một lần đọc trả sai "chưa có" đã ghi đè nhân sự, account và thông số thật.) */
   let seeded = null;
   const withTimeout = (pr, ms) => Promise.race([pr, new Promise(r => setTimeout(r, ms))]);
+  const seedRefs = () => { const o = []; for (const col of ['staff', 'accounts', 'config']) for (const id of Object.keys(SEED[col] || {})) o.push([fs.doc(col + '/' + id), SEED[col][id]]); return o; };
   const seedOnce = () => seeded || (seeded = withTimeout(fs.doc('config/main').get({ source: 'server' }).then(d => {
-    if (d.exists) return;
-    const b = fs.batch();
-    for (const col of ['staff', 'accounts', 'config']) for (const id of Object.keys(SEED[col] || {})) b.set(fs.doc(col + '/' + id), SEED[col][id]);
-    return b.commit();
+    if (d.exists || d.metadata.fromCache) return;
+    return fs.runTransaction(async tx => {
+      const refs = seedRefs(); let any = false;
+      for (const [ref] of refs) { const x = await tx.get(ref); if (x.exists) any = true; }
+      if (any) return;
+      for (const [ref, data] of refs) tx.set(ref, data);
+    });
   }).catch(() => {}), 5000));
   const user = { id: async () => null, me: async () => ({ id: null, name: '', isOwner: true, canEdit: true }),
     isOwner: async () => true, canEdit: async () => true, can: async () => true, search: async () => [], profiles: async () => ({}) };
@@ -1657,7 +1663,8 @@ function enrich(id, raw, t, cfg, reviewers){
   p.doneN = p.steps.filter(s => s.state === 'done').length;
   p.cur = p.steps.find(s => s.state !== 'done') || null;
   p.closed = p.status === 'done' || p.status === 'cancelled';
-  p.late = !!(p.deadline && p.deadline < t && !p.closed);
+  p.allDone = p.total > 0 && !p.cur;
+  p.late = !!(p.deadline && p.deadline < t && !p.closed && !p.allDone);
   p.daysLeft = p.deadline ? diffDays(t, p.deadline) : null;
   const bk = raw.bookings || {};
   p.bookings = Object.keys(bk).filter(k => bk[k]).map(bid => {
@@ -1831,6 +1838,7 @@ function stepStatus(st, D){
 function dlInfo(p){
   if(p.status === 'done') return {t:'Hoàn thành', c:'good-t'};
   if(p.status === 'cancelled') return {t:'Đã hủy', c:'faint'};
+  if(p.allDone) return {t:'Đã xong', c:'good-t'};
   if(p.daysLeft === null) return {t:'', c:''};
   if(p.daysLeft < 0) return {t:'Quá hạn '+(-p.daysLeft)+' ngày', c:'bad-t'};
   if(p.daysLeft === 0) return {t:'Hạn hôm nay', c:'bad-t'};
@@ -2459,7 +2467,7 @@ function AttnBar({D, me}){
   const qc = uniqSteps(D.qcPending.filter(q => !isRev || q.reviewer === me)).length;
   const open = D.projects.filter(p => !p.closed);
   const late = open.filter(p => p.late).length;
-  const soon = open.filter(p => p.daysLeft !== null && p.daysLeft >= 0 && p.daysLeft <= 7).length;
+  const soon = open.filter(p => !p.allDone && p.daysLeft !== null && p.daysLeft >= 0 && p.daysLeft <= 7).length;
   const fixes = D.allSteps.filter(x => x.st.state === 'fix' && (!me || x.st.who.indexOf(me) >= 0)).length;
   const pendB = me === 'hao' ? D.bookings.filter(b => b.status === 'open' && b.chk.k === 'CHỜ DUYỆT').length : 0;
   const items = [];
