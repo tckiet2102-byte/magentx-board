@@ -667,7 +667,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 @media (max-width:420px){.drp-field > b{font-size:14px}.drp-field{padding:8px 10px}}
 
 /* video review player: sân khấu và bảng điều khiển luôn tối để nhìn rõ hình, cột ghi chú theo giao diện chung */
-.rv{position:fixed;inset:0;z-index:60;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--paper)}
+.rv{position:fixed;inset:0;z-index:60;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);background:var(--paper)}
 .rv .sp{flex:1}
 .rv-h{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--rule)}
 .rv-title{display:flex;flex-direction:column;min-width:0}
@@ -751,6 +751,17 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
   .rv-title .meta{display:none}
   .rv-share{position:fixed;left:12px;right:12px;top:64px;width:auto}
 }
+@media (max-width:640px){
+  .rv-h{flex-wrap:wrap;gap:8px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top,0px))}
+  .rv-h > .sp{display:none}
+  .rv-title{flex:1 1 0;order:0;min-width:calc(100% - 56px)}
+  .rv-title b{font-size:16px}
+  .rv-close{order:1;flex:none;width:44px;height:44px;padding:0;justify-content:center}
+  .rv-close-t{display:none}
+  .rv-h > .rv-share-wrap,.rv-h > .rv-drive{order:2}
+  .rv-share{top:auto;bottom:max(12px,env(safe-area-inset-bottom,0px));max-height:75vh}
+}
+.rv-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--wait-soft);color:var(--ink);font-size:14px;line-height:1.5}
 /* modal, popover, toast */
 .scrim{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow-y:auto}
 .modal{width:100%;max-width:600px;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;margin:auto 0}
@@ -3694,7 +3705,7 @@ function VideoLinkAdd({p, st, has}){
 const SHARE_DAYS = 30;
 function newToken(){ const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', a = crypto.getRandomValues(new Uint8Array(24)); let t = A[a[0] % 52]; for(let i = 1; i < 24; i++) t += A[a[i] % 62]; return t; }
 function shareUrl(p, tok){ return location.origin+'/r/'+encodeURIComponent(p.id)+'/'+tok; }
-function SharePanel({p, st, link, me, onClose}){
+function SharePanel({p, st, link, me, priv, onClose}){
   const ref = useRef(null);
   useEffect(() => {
     const d = e => { if(ref.current && !ref.current.contains(e.target) && !(e.target.closest && e.target.closest('.rv-share-btn'))) onClose(); };
@@ -3710,6 +3721,7 @@ function SharePanel({p, st, link, me, onClose}){
   const list = st.shares;
   return html`<div class="rv-share" ref=${ref} role="dialog" aria-label="Link gửi khách">
     <div class="rv-share-h"><b>Link gửi khách</b><button type="button" class="icon-btn sm bare" aria-label="Đóng" onClick=${onClose}><${Ic} n="x" s=${16}/></button></div>
+    ${priv ? html`<p class="rv-warn"><b>Khách chưa xem được video này.</b> File trên Drive đang để chế độ hạn chế. Đổi sang “Bất kỳ ai có đường liên kết” trước khi gửi link.</p>` : null}
     <p class="meta">Khách mở link là xem được video, tua, vẽ và gửi góp ý theo từng khung hình, không cần đăng nhập. Khách không thấy dữ liệu nào khác của MagentX. Góp ý của khách hiện ngay trong player này.</p>
     ${list.length ? html`<div class="rv-share-list">${list.map(x => {
       const exp = x.exp && x.exp < now, off = x.on === false, live = !exp && !off, url = shareUrl(p, x.tok);
@@ -3733,8 +3745,9 @@ function ReviewPlayer({D, pid, sid, me}){
   const link = st ? videoLinkOf(st) : '';
   const did = driveId(link), src = reviewSrc(link);
   const vref = useRef(null), cref = useRef(null), stageRef = useRef(null), tlRef = useRef(null), taRef = useRef(null);
-  const drawing = useRef(null), scrub = useRef(null), restore = useRef(null), retries = useRef(0);
+  const drawing = useRef(null), scrub = useRef(null), restore = useRef(null), retries = useRef(0), pre = useRef(false), streamErr = useRef(false);
   const [failed, setFailed] = useState(false);
+  const [why, setWhy] = useState('');
   const [blobUrl, setBlobUrl] = useState('');
   const [load, setLoad] = useState({s: 'idle', p: 0, total: 0});
   const [waiting, setWaiting] = useState(false);
@@ -3765,17 +3778,25 @@ function ReviewPlayer({D, pid, sid, me}){
   /* tải sẵn cả file về máy: tua tức thì, không phụ thuộc mạng */
   useEffect(() => {
     if(!did || failed || !window.RV) return;
+    pre.current = true; streamErr.current = false;
     const job = RV.preload(did, {key: 'v'+(st ? st.ver : 0), onProgress: (l, t) => setLoad({s: 'loading', p: l, total: t})});
     let url = '';
     job.promise.then(b => {
-      url = URL.createObjectURL(b);
+      pre.current = false; url = URL.createObjectURL(b);
       const v = vref.current; restore.current = v ? {t: v.currentTime, play: !v.paused} : null;
       setBlobUrl(url); setLoad(x => ({s: 'done', p: x.total || b.size, total: x.total || b.size}));
-    }, e => setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})));
-    return () => { job.cancel(); if(url) URL.revokeObjectURL(url); };
+    }, e => { pre.current = false; if(e && e.status === 403){ setWhy('private'); setFailed(true); return; } if(streamErr.current){ setFailed(true); return; } setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})); });
+    return () => { pre.current = false; job.cancel(); if(url) URL.revokeObjectURL(url); };
   }, [did, failed]);
-  /* không đọc được video trong 25 giây thì chuyển sang trình xem của Drive */
-  useEffect(() => { if(mode !== 'video' || meta) return; const t = setTimeout(() => setFailed(true), 25000); return () => clearTimeout(t); }, [mode, !!meta, src]);
+  /* không đọc được video trong 25 giây thì chuyển sang trình xem của Drive; đang tải sẵn có tiến độ thì chờ tiếp
+     (iPhone không tự tải video trước khi bấm phát, nên thường chỉ có phần tải sẵn chạy) */
+  useEffect(() => { if(mode !== 'video' || meta || load.s === 'loading' || load.s === 'done') return; const t = setTimeout(() => setFailed(true), 25000); return () => clearTimeout(t); }, [mode, !!meta, src, load.s]);
+  /* rơi về trình xem Drive: hỏi /api/drive lý do (file để chế độ hạn chế hay lỗi khác) */
+  useEffect(() => {
+    if(!failed || !did || why) return; let off = false;
+    fetch('/api/drive?id='+did+'&check=1', {cache: 'no-store'}).then(r => r.json()).then(o => { if(!off && o && o.reason) setWhy(o.reason); }).catch(() => {});
+    return () => { off = true; };
+  }, [failed, did, why]);
   useEffect(() => {
     const el = stageRef.current; if(!el) return;
     const fit = () => { const W = el.clientWidth, H = el.clientHeight; const ar = meta && meta.w && meta.h ? meta.w / meta.h : 16 / 9; let bw = W, bh = W / ar; if(bh > H){ bh = H; bw = H * ar; } setBox(b => b && b.w === Math.floor(bw) && b.h === Math.floor(bh) ? b : {w: Math.floor(bw), h: Math.floor(bh)}); };
@@ -3872,9 +3893,9 @@ function ReviewPlayer({D, pid, sid, me}){
     <header class="rv-h">
       <div class="rv-title"><b>${st.def.no} ${st.def.name} <${VChip} v=${st.ver} tone=${st.state}/></b><span class="meta">${p.name}${st.lname ? ', '+st.lname : ''}</span></div>
       <span class="sp"></span>
-      ${w && link ? html`<div class="rv-share-wrap"><button type="button" class=${'btn sm rv-share-btn'+(shareOpen ? ' on' : '')} aria-expanded=${shareOpen} onClick=${() => setShareOpen(!shareOpen)}><${Ic} n="send" s=${16}/>Gửi khách${st.shares.length ? ' ('+st.shares.filter(x => x.on !== false && !(x.exp && x.exp < Date.now())).length+')' : ''}</button>${shareOpen ? html`<${SharePanel} p=${p} st=${st} link=${link} me=${me} onClose=${() => setShareOpen(false)}/>` : null}</div>` : null}
-      <a class="btn sm" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
-      <button type="button" class="btn sm" onClick=${closeModal}><${Ic} n="x" s=${16}/>Đóng</button>
+      ${w && link ? html`<div class="rv-share-wrap"><button type="button" class=${'btn sm rv-share-btn'+(shareOpen ? ' on' : '')} aria-expanded=${shareOpen} onClick=${() => setShareOpen(!shareOpen)}><${Ic} n="send" s=${16}/>Gửi khách${st.shares.length ? ' ('+st.shares.filter(x => x.on !== false && !(x.exp && x.exp < Date.now())).length+')' : ''}</button>${shareOpen ? html`<${SharePanel} p=${p} st=${st} link=${link} me=${me} priv=${why === 'private'} onClose=${() => setShareOpen(false)}/>` : null}</div>` : null}
+      <a class="btn sm rv-drive" href=${link} target="_blank" rel="noopener"><${Ic} n="ext" s=${16}/>Mở trên Drive</a>
+      <button type="button" class="btn sm rv-close" aria-label="Đóng player" onClick=${closeModal}><${Ic} n="x" s=${16}/><span class="rv-close-t">Đóng</span></button>
     </header>
     <div class="rv-main">
       <div class="rv-left">
@@ -3886,7 +3907,7 @@ function ReviewPlayer({D, pid, sid, me}){
                   onWaiting=${() => setWaiting(true)} onPlaying=${() => { setWaiting(false); retries.current = 0; }} onCanPlay=${() => setWaiting(false)}
                   onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
                   onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => { setCur(e.target.currentTime); setWaiting(false); }}
-                  onError=${() => { const v = vref.current; if(!meta){ if(!blobUrl) setFailed(true); return; } if(retries.current < 4 && v){ retries.current++; restore.current = {t: v.currentTime || cur, play: !v.paused}; const s0 = v.src; v.removeAttribute('src'); v.load(); setTimeout(() => { v.src = s0; v.load(); }, 600 * retries.current); } else toast('Mạng đang chập chờn. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
+                  onError=${() => { const v = vref.current; if(!meta){ if(!blobUrl && pre.current){ streamErr.current = true; return; } setFailed(true); return; } if(retries.current < 4 && v){ retries.current++; restore.current = {t: v.currentTime || cur, play: !v.paused}; const s0 = v.src; v.removeAttribute('src'); v.load(); setTimeout(() => { v.src = s0; v.load(); }, 600 * retries.current); } else toast('Mạng đang chập chờn. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
                   onClick=${() => { if(!tool) toggle(); }}></video>`
               : html`<iframe src=${'https://drive.google.com/file/d/'+did+'/preview'} allow="autoplay; fullscreen" title="Video trên Google Drive"></iframe>`}
             <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
@@ -3901,7 +3922,7 @@ function ReviewPlayer({D, pid, sid, me}){
               <i class="head" style=${'left:'+pct(cur)}></i>
             </div>
             <div class="rv-bar">
-              <button type="button" class="btn sm primary rv-play" disabled=${!meta} onClick=${toggle} aria-label=${playing ? 'Dừng' : 'Phát'}><${Ic} n=${playing ? 'pause' : 'play'} s=${17}/>${playing ? 'Dừng' : 'Phát'}</button>
+              <button type="button" class="btn sm primary rv-play" onClick=${toggle} aria-label=${playing ? 'Dừng' : 'Phát'}><${Ic} n=${playing ? 'pause' : 'play'} s=${17}/>${playing ? 'Dừng' : 'Phát'}</button>
               <button type="button" class="icon-btn sm" disabled=${!meta} onClick=${() => stepF(-1)} title="Lùi 1 khung hình (phím ←)" aria-label="Lùi 1 khung hình"><${Ic} n="left" s=${16}/></button>
               <button type="button" class="icon-btn sm" disabled=${!meta} onClick=${() => stepF(1)} title="Tới 1 khung hình (phím →)" aria-label="Tới 1 khung hình"><${Ic} n="right" s=${16}/></button>
               <span class="rv-tc" aria-live="off"><b>${tc(cur)}</b> / ${tc(dur)}</span>
@@ -3911,7 +3932,9 @@ function ReviewPlayer({D, pid, sid, me}){
               <button type="button" class="icon-btn sm" onClick=${() => setMuted(!muted)} title=${muted ? 'Bật tiếng' : 'Tắt tiếng'} aria-label=${muted ? 'Bật tiếng' : 'Tắt tiếng'}><${Ic} n=${muted ? 'mute' : 'vol'} s=${16}/></button>
             </div>
             ${load.s !== 'idle' ? html`<div class="rv-load" aria-live="polite">${load.s === 'done' ? 'Video đã tải xong, tua tức thì.' : load.s === 'loading' && load.total ? 'Đang tải sẵn video '+Math.floor(load.p / load.total * 100)+'% ('+RV.mb(load.p)+' / '+RV.mb(load.total)+'). Tua sẽ mượt hơn khi tải xong.' : load.s === 'big' ? 'File lớn ('+RV.mb(load.total)+'), video phát trực tiếp.' : load.s === 'stream' ? 'Đang phát trực tiếp.' : ''}</div>` : null}`
-            : mode === 'frame' ? html`<p class="rv-note">Không phát trực tiếp được file này nên đang dùng trình xem của Google Drive: không tua theo khung hình được, thời điểm ghi chú phải nhập tay. Để dùng đủ tính năng, file cần là MP4 (H.264) và chia sẻ “Bất kỳ ai có đường liên kết”. <button type="button" class="btn xs" onClick=${() => { setMeta(null); setFailed(false); }}>Thử phát lại</button></p>` : null}
+            : mode === 'frame' ? html`<p class=${'rv-note'+(why === 'private' ? ' rv-warn' : '')}>${why === 'private'
+              ? html`<b>File trên Drive đang để chế độ hạn chế</b>, nên player của bảng không tải được và đang mở bằng trình xem của Google Drive (chỉ xem được khi máy đã đăng nhập Google có quyền với file, không tua theo khung hình). Khách mở link duyệt cũng sẽ không xem được. Cách sửa: trên Drive bấm Chia sẻ › Quyền truy cập chung › <b>Bất kỳ ai có đường liên kết</b>, rồi bấm Thử phát lại. `
+              : 'Không phát trực tiếp được file này nên đang dùng trình xem của Google Drive: không tua theo khung hình được, thời điểm ghi chú phải nhập tay. Để dùng đủ tính năng, file cần là MP4 (H.264) và chia sẻ “Bất kỳ ai có đường liên kết”. '}<button type="button" class="btn xs" onClick=${() => { setMeta(null); setWhy(''); setFailed(false); }}>Thử phát lại</button></p>` : null}
           ${w && mode !== 'none' ? html`
             <div class="rv-bar">
               <button type="button" class=${'btn sm'+(tool ? ' on' : '')} aria-pressed=${tool} onClick=${() => toolOn(!tool)} title="Vẽ lên khung hình (phím D)"><${Ic} n="edit" s=${16}/>${tool ? 'Đang vẽ' : 'Vẽ lên khung hình'}</button>

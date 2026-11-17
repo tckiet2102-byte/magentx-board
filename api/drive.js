@@ -5,7 +5,9 @@
    - Phát trực tiếp: /api/drive?id=… (giữ header Range để tua).
    - Tải sẵn theo khúc: /api/drive?id=…&part=N&ps=<bytes>&k=<khóa bản> trả về đúng một khúc, kèm
      x-total-size. Khúc có URL cố định nên CDN của Vercel giữ lại được, lần xem sau nhanh hơn.
-   Chỉ dùng được với file chia sẻ "Bất kỳ ai có đường liên kết". */
+   - Kiểm tra: /api/drive?id=…&check=1 → {ok, reason: 'private'|'missing'|'drive'} để player báo đúng lý do.
+   Chỉ dùng được với file chia sẻ "Bất kỳ ai có đường liên kết". File để chế độ hạn chế thì Drive chuyển sang
+   trang đăng nhập (HTML): trả 403 kèm x-drive-error: private. */
 export const config = { runtime: 'edge' };
 
 const PASS = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
@@ -25,7 +27,15 @@ async function fromDrive(id, method, range) {
   }
   return last;
 }
-const bad = (msg, status) => new Response(msg, { status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
+const bad = (msg, status, code) => new Response(msg, { status, headers: Object.assign({ 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }, code ? { 'x-drive-error': code } : {}) });
+/* Drive trả HTML (trang đăng nhập) khi file không chia sẻ công khai */
+const PRIV = 'File trên Google Drive đang để chế độ hạn chế. Đổi sang "Bất kỳ ai có đường liên kết" để player phát được.';
+function upErr(up) {
+  if (!up) return bad('Không kết nối được Google Drive.', 502, 'drive');
+  if (up.status === 404) return bad('Không tìm thấy file trên Google Drive.', 404, 'missing');
+  if (/text\/html/i.test(up.headers.get('content-type') || '') || up.status === 401 || up.status === 403) return bad(PRIV, 403, 'private');
+  return bad('Không lấy được file từ Google Drive.', 502, 'drive');
+}
 
 export default async function handler(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
@@ -66,15 +76,21 @@ export default async function handler(req) {
     } });
   }
 
+  if (q.get('check') !== null) {
+    const up = await fromDrive(id, 'GET', 'bytes=0-0');
+    const ok = !!(up && up.ok && !/text\/html/i.test(up.headers.get('content-type') || ''));
+    const e = ok ? null : upErr(up);
+    if (up && up.body) { try { await up.body.cancel(); } catch (x) {} }
+    return new Response(JSON.stringify(ok ? { ok: true, type: up.headers.get('content-type') || '' } : { ok: false, reason: e.headers.get('x-drive-error') }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+  }
+
   const part = q.get('part');
   if (part !== null) {
     const n = parseInt(part, 10), ps = Math.min(MAX_PS, Math.max(1024 * 1024, parseInt(q.get('ps') || '', 10) || 8 * 1024 * 1024));
     if (!(n >= 0 && n < 100000)) return bad('Sai số khúc.', 400);
     const up = await fromDrive(id, 'GET', 'bytes=' + (n * ps) + '-' + ((n + 1) * ps - 1));
-    if (!up) return bad('Không kết nối được Google Drive.', 502);
-    const type = up.headers.get('content-type') || '';
-    if (up.status === 416) return bad('Khúc nằm ngoài file.', 416);
-    if (!up.ok || /text\/html/i.test(type)) return bad('Không lấy được file từ Google Drive. Kiểm tra file đã chia sẻ "Bất kỳ ai có đường liên kết".', up.status === 404 ? 404 : 502);
+    if (up && up.status === 416) return bad('Khúc nằm ngoài file.', 416);
+    if (!up || !up.ok || /text\/html/i.test(up.headers.get('content-type') || '')) { if (up && up.body) { try { await up.body.cancel(); } catch (x) {} } return upErr(up); }
     const cr = up.headers.get('content-range') || '';
     const total = (cr.match(/\/(\d+)\s*$/) || [])[1] || up.headers.get('content-length') || '';
     const buf = await up.arrayBuffer();
@@ -90,12 +106,8 @@ export default async function handler(req) {
 
   const range = req.headers.get('range');
   const up = await fromDrive(id, req.method, range);
-  if (!up) return bad('Không kết nối được Google Drive.', 502);
-  const type = up.headers.get('content-type') || '';
   /* file chưa chia sẻ công khai hoặc không tồn tại: Drive trả trang HTML thay vì file */
-  if (!up.ok || /text\/html/i.test(type)) {
-    return bad('Không lấy được file từ Google Drive. Kiểm tra file đã chia sẻ "Bất kỳ ai có đường liên kết".', up.status === 404 ? 404 : 502);
-  }
+  if (!up || !up.ok || /text\/html/i.test(up.headers.get('content-type') || '')) { if (up && up.body) { try { await up.body.cancel(); } catch (x) {} } return upErr(up); }
   const out = new Headers();
   for (const k of PASS) { const v = up.headers.get(k); if (v) out.set(k, v); }
   if (!out.has('accept-ranges')) out.set('accept-ranges', 'bytes');
