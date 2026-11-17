@@ -22,6 +22,7 @@
   --heat1:#e8eefc; --heat2:#c6d6f8; --heat3:#f8cfca;
   --shadow:0 14px 44px rgb(23 27 46 / .2);
   --brand:#1B1BE0;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
   --scrim:rgb(15 18 30 / .46);
   --f:"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --f-code:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -39,6 +40,7 @@
     --heat1:#1b2643; --heat2:#27427f; --heat3:#5d2824;
     --shadow:0 14px 44px rgb(0 0 0 / .55);
     --brand:#9C9EFF;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
     --scrim:rgb(0 0 0 / .62);
     color-scheme:dark;
   }
@@ -54,6 +56,7 @@
   --heat1:#1b2643; --heat2:#27427f; --heat3:#5d2824;
   --shadow:0 14px 44px rgb(0 0 0 / .55);
   --brand:#9C9EFF;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
   --scrim:rgb(0 0 0 / .62);
   color-scheme:dark;
 }
@@ -534,9 +537,18 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .stat b{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .stat span{font-size:13.5px;color:var(--ink-2)}
 .stat.bad b{color:var(--bad)}
-.capbar{position:relative;display:flex;gap:2px;height:10px;width:140px;margin-top:8px;margin-left:auto}
-.capbar i{display:block;height:100%;min-width:3px;border-radius:2px}
-.cb-used{background:var(--d-doing)} .cb-res{background:var(--c-doing)} .cb-unl{background:var(--d-review)} .cb-free{background:var(--c-done)} .cb-empty{background:var(--tint);flex:1}
+.resbar{position:relative;display:flex;gap:2px;height:8px;width:176px;margin:9px 0 2px auto}
+.resbar i{display:block;height:100%;min-width:4px;border-radius:4px;cursor:pointer;outline-offset:3px}
+.resbar i.rs-free{background:var(--tint);min-width:0;cursor:default}
+.resbar i.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+.rs1{background:var(--s1)} .rs2{background:var(--s2)} .rs3{background:var(--s3)} .rs4{background:var(--s4)} .rs5{background:var(--s5)} .rs6{background:var(--s6)} .rs7{background:var(--s7)} .rs8{background:var(--s8)}
+.rs-o{background:var(--ink-3)}
+.rs-u{background:repeating-linear-gradient(135deg,var(--ink-3) 0 2px,var(--tint) 2px 5px)}
+.rs-tip{position:fixed;z-index:60;transform:translate(-50%,calc(-100% - 10px));max-width:280px;padding:9px 12px;border-radius:10px;background:var(--ink);color:var(--surface);font-size:13px;line-height:1.45;text-align:left;pointer-events:none;box-shadow:var(--shadow);white-space:normal}
+.rs-tip b{display:block;font-size:13.5px}
+.rs-tip .code{opacity:.75;font-size:12px}
+.rs-key{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.rs-key i{display:inline-block;width:18px;height:8px;border-radius:4px;vertical-align:middle}
 .cap-tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:1px}
 .acc-mail{display:flex;align-items:center;gap:6px;margin-top:4px}
 .acc-mail .code{font-size:13px;font-weight:500;color:var(--ink-2)}
@@ -1120,7 +1132,7 @@ const ST_ORDER = ['todo','doing','review','fix','done'];
 const ST_LABEL = {todo:'Chưa tới', doing:'Đang làm', review:'Chờ QC', fix:'Cần sửa', done:'Đã duyệt'};
 const CHECK_CLS = {'OK':'done', 'CHỜ DUYỆT':'review', 'VƯỢT CAP':'fix', 'ACC CHỈ CHO EXT':'fix', 'QUA KỲ RESET':'review', 'ĐÃ XONG':'todo', 'ĐÃ HỦY':'todo', 'THIẾU ƯỚC LƯỢNG':'review', 'THIẾU NGÀY BOOK':'review', 'CHƯA CHỌN ACC':'review'};
 const CHECK_TXT = {'OK':'OK · được gen', 'CHỜ DUYỆT':'Chờ Hào duyệt', 'VƯỢT CAP':'Vượt cap account', 'ACC CHỈ CHO EXT':'Account chỉ cho job EXT', 'QUA KỲ RESET':'Account đã qua kỳ reset', 'ĐÃ XONG':'Đã chốt', 'ĐÃ HỦY':'Đã hủy', 'THIẾU ƯỚC LƯỢNG':'Thiếu credit dự kiến', 'THIẾU NGÀY BOOK':'Thiếu ngày book', 'CHƯA CHỌN ACC':'Chưa chọn account'};
-const DEF_CFG = {prefix:'MX', buffer:300, nearFull:1000, unloggedWarn:200, revDefault:2, payMin:300, clients:{}, models:{}, registerUrl:'', driveUrl:''};
+const DEF_CFG = {prefix:'MX', buffer:0, nearFull:1000, unloggedWarn:200, revDefault:2, payMin:300, clients:{}, models:{}, registerUrl:'', driveUrl:''};
 const WD = ['CN','T2','T3','T4','T5','T6','T7'];
 
 /* ---------- utils ---------- */
@@ -1328,7 +1340,7 @@ function notifyOS(title, body, pid){
 
 /* Mọi lần ghi đi qua W; mô tả thao tác lấy trước khi ghi (so với dữ liệu cũ), ghi xong mới vào nhật ký. */
 const W = {
-  project: (pid, patch) => { const ag = asgPatch(S.projects[pid] || {}, patch); if(ag) patch = Object.assign({}, patch, {asg: ag}); const lg = logDescProject(pid, patch).concat(asgLog(ag, pid)); return logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); },
+  project: (pid, patch) => { const ag = asgPatch(S.projects[pid] || {}, patch); if(ag) patch = Object.assign({}, patch, {asg: ag}); const lg = logDescProject(pid, patch).concat(asgLog(ag, pid)); const pr = logAfter(wdoc('projects/'+pid, r => r.update(Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: meId()}))), lg); if(patch.bookings) pr.then(ok => { if(ok) regCreditSoon(pid); }); return pr; },
   newProject: (pid, doc) => { const ag = asgPatch({}, doc); if(ag) doc = Object.assign({}, doc, {asg: ag}); return logAfter(wdoc('projects/'+pid, r => r.set(doc)), [{t: 'project', text: 'tạo dự án', pid, pn: doc.name}].concat(asgLog(ag, pid).map(x => Object.assign(x, {pn: doc.name})))); },
   delProject: pid => { const pr = S.projects[pid]; const lg = [{t: 'project', text: 'xóa dự án '+((pr && (pr.name || pr.code)) || pid)}]; return logAfter(wdoc('projects/'+pid, r => r.delete()), lg); },
   delStaff: sid => { const st = S.staff[sid]; const lg = [{t: 'admin', text: 'xóa người dùng '+((st && st.name) || sid)}]; return logAfter(wdoc('staff/'+sid, r => r.delete()), lg); },
@@ -1584,6 +1596,34 @@ function regAdd(pid, doc){
     });
 }
 
+/* Credit đã log của mỗi job ghi ngược sang cột Credits Higgsfield của Job Register: tổng credit log thật (mọi kỳ, mọi account),
+   không phải số giữ chỗ. Tự gửi 2 giây sau mỗi lần sửa booking của dự án; Hào có nút ghi lại toàn bộ ở trang Credit. */
+function projLogged(raw){ let n = 0; const bk = (raw && raw.bookings) || {}; Object.keys(bk).forEach(k => { const u = (bk[k] && bk[k].usage) || {}; Object.keys(u).forEach(x => { if(u[x]) n += +u[x].n || 0; }); }); return n; }
+const regCq = {ids: new Set(), t: 0, sent: {}, warned: false};
+function regCreditSoon(pid){ regCq.ids.add(pid); clearTimeout(regCq.t); regCq.t = setTimeout(() => { const ids = Array.from(regCq.ids); regCq.ids.clear(); regCredit(ids); }, 2000); }
+function regCredit(pids, force){
+  const items = [];
+  pids.forEach(pid => { const p = S.projects[pid]; if(!p || !p.code || !parseJob(p.code)) return; const n = projLogged(p); if(!force && regCq.sent[p.code] === n) return; items.push({id: p.code, n}); });
+  if(!items.length) return Promise.resolve({ok: true, updated: [], missing: []});
+  return fetch('/api/register', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({op: 'credit', items})})
+    .then(r => r.json()).catch(() => ({ok: false, error: 'Không kết nối được Job Register.'}))
+    .then(o => {
+      o = o || {ok: false};
+      if(o.ok) items.forEach(x => { regCq.sent[x.id] = x.n; });
+      else if(o.configured !== false && !force && !regCq.warned && meId() === 'hao'){ regCq.warned = true; toast('Chưa ghi được credit sang Job Register: '+(o.error || 'lỗi không rõ'), 'warn'); }
+      return o;
+    });
+}
+function regCreditAll(D){
+  const pids = D.projects.filter(p => p.bookings.length && p.jobOk).map(p => p.id);
+  if(!pids.length){ toast('Chưa có dự án nào có booking credit và Job ID đúng dạng.', 'warn'); return; }
+  regCredit(pids, true).then(o => {
+    if(o.configured === false) toast('Bảng chưa nối Job Register (thiếu REGISTER_URL trên Vercel).', 'warn');
+    else if(!o.ok) toast(o.error || 'Không ghi được credit sang Job Register.', 'warn');
+    else toast('Đã ghi credit đã log của '+(o.updated || []).length+' job vào Job Register'+((o.missing || []).length ? ', '+o.missing.length+' job chưa có trong Register: '+o.missing.join(', ') : ''));
+  });
+}
+
 /* ---------- booking nội bộ: config/intake = {b: {<id>: {…}}} ---------- */
 const IN_KINDS = ['Content ads', 'TVC khóa học', 'Showcase', 'Pitch', 'Khác'];
 /* Project của job từ booking: Loại-Người, VD ContentAds-Kiet; Job ID tự thêm -01, -02… trong tháng */
@@ -1705,10 +1745,12 @@ function accMetrics(a, bookings, t, cfg){
   const mine = bookings.filter(b => b.acc === a.id);
   const logs = []; mine.forEach(b => b.usage.forEach(u => { if(inPer(u.date || b.date, per)) logs.push(u); }));
   const reserved = sum(mine.map(b => creditIn(b, per)));
+  /* phần giữ chỗ của từng dự án, theo thứ tự book, để vẽ thanh chia màu */
+  const parts = []; mine.slice().sort(cmpBooking).forEach(b => { const n = creditIn(b, per); if(n <= 0) return; let g = parts.find(x => x.pid === b.pid); if(!g){ g = {pid: b.pid, name: (b.p && b.p.name) || 'Dự án', code: (b.p && b.p.code) || '', n: 0, used: 0, open: false}; parts.push(g); } g.n += n; g.used += usedIn(b, per); if(b.status === 'open') g.open = true; });
   const used = sum(logs.map(u => +u.n || 0));
   const topup = a.topupFrom === per.start ? (+a.topup || 0) : 0;
   const base = (+a.perPeriod || 0) + topup;
-  const cap = base - cfg.buffer;
+  const cap = base;
   const balOk = a.balance !== null && a.balance !== undefined && a.balance !== '' && !!a.balanceAt && a.balanceAt >= per.start && a.balanceAt < per.end;
   /* Số dư Hào nhập là ảnh chụp lúc check. Chỉ credit log tới lúc đó mới nằm trong phần đã trừ trên Higgsfield;
      credit log sau lần check trừ tiếp vào số dư, không được bù vào Dùng chưa log. Dữ liệu cũ chỉ có ngày check thì log cùng ngày tính là trước. */
@@ -1719,7 +1761,7 @@ function accMetrics(a, bookings, t, cfg){
   const balNow = balOk ? (+a.balance) - usedSince : null;
   const bookable = cap - reserved - unlogged;
   const state = a.active === false ? 'off' : bookable <= 0 ? 'lock' : bookable < cfg.nearFull ? 'near' : 'open';
-  return {rd, per, reserved, used, usedAtCheck, usedSince, balNow, topup, base, cap, balOk, unlogged, bookable, state, daysLeft: diffDays(t, per.end)};
+  return {rd, per, reserved, parts, used, usedAtCheck, usedSince, balNow, topup, base, cap, balOk, unlogged, bookable, state, daysLeft: diffDays(t, per.end)};
 }
 function bookingCheck(b, ctx){
   const a = ctx.amap[b.acc];
@@ -1739,7 +1781,7 @@ function bookingCheck(b, ctx){
   if(a.scope === 'ext' && b.p.useCase === 'INT') return {k:'ACC CHỈ CHO EXT'};
   if(per.end <= ctx.t) return {k:'QUA KỲ RESET'};
   const isCur = per.start === a.m.per.start;
-  const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0) - ctx.cfg.buffer;
+  const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0);
   if(cum + (isCur ? a.m.unlogged : 0) > cap) return {k:'VƯỢT CAP'};
   if(!b.approved) return {k:'CHỜ DUYỆT'};
   return {k:'OK'};
@@ -1751,7 +1793,7 @@ function suggestAcc(D, useCase, need, date, excl){
     const per = periodFor(a.m.rd, date || D.t);
     const isCur = per.start === a.m.per.start;
     const list = D.bookings.filter(x => x.acc === a.id && !(excl && x.pid === excl.pid && x.bid === excl.bid));
-    const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0) - D.cfg.buffer;
+    const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0);
     const room = cap - sum(list.map(x => creditIn(x, per))) - (isCur ? a.m.unlogged : 0);
     const okScope = !(a.scope === 'ext' && useCase === 'INT');
     const fits = okScope && room >= (need || 0) && room > 0;
@@ -3038,13 +3080,35 @@ function QCView({D, me}){
 }
 
 /* ---------- Higgsfield view ---------- */
-function CapBar({m}){
-  const segs = [['used', m.used, 'Đã dùng'], ['res', Math.max(0, m.reserved - m.used), 'Giữ chỗ chưa dùng'], ['unl', m.unlogged, 'Dùng chưa log'], ['free', Math.max(0, m.bookable), 'Còn book được']];
-  const total = Math.max(m.cap, sum(segs.map(s => s[1]))) || 1;
-  const shown = segs.filter(s => s[1] > 0);
-  return html`<div class="capbar" role="img" aria-label=${segs.map(s => s[2]+' '+fN(s[1])).join(', ')}>
-    ${shown.length ? shown.map(s => html`<i key=${s[0]} class=${'cb-'+s[0]} style=${'flex-grow:'+s[1]} title=${s[2]+': '+fN(s[1])}></i>`) : html`<i class="cb-empty"></i>`}
-    ${total > m.cap && m.cap > 0 ? html`<span class="cap-tick" style=${'left:calc('+(m.cap / total * 100)+'% - 1px)'} title=${'Cap '+fN(m.cap)}></span>` : null}
+/* Thanh giữ chỗ: mỗi dự án một màu (tối đa 8, còn lại gộp "job khác"), phần sọc là credit dùng chưa log, phần nền là còn trống tới cap.
+   Rê chuột (hoặc chạm, hoặc Tab tới) một đoạn để xem tên dự án; bấm để mở dự án. */
+function ResBar({m}){
+  const [tip, setTip] = useState(null);
+  const touch = useRef(false);
+  useEffect(() => { if(!tip) return; const off = () => setTip(null); window.addEventListener('scroll', off, true); window.addEventListener('resize', off); return () => { window.removeEventListener('scroll', off, true); window.removeEventListener('resize', off); }; }, [tip]);
+  const segs = m.parts.slice(0, 8).map((g, i) => Object.assign({k: g.pid, cls: 'rs'+(i+1)}, g));
+  if(m.parts.length > 8){ const rest = m.parts.slice(8); segs.push({k: 'other', cls: 'rs-o', name: rest.length+' job khác', n: sum(rest.map(x => x.n)), used: sum(rest.map(x => x.used)), many: rest}); }
+  if(m.balOk && m.unlogged > 0) segs.push({k: 'unl', cls: 'rs-u', name: 'Dùng chưa log', n: m.unlogged, unl: true});
+  const taken = sum(segs.map(x => x.n)), free = Math.max(0, m.cap - taken), total = Math.max(m.cap, taken) || 1;
+  const pct = n => m.cap > 0 ? Math.round(n / m.cap * 100) : 0;
+  const show = (x, el) => { const r = el.getBoundingClientRect(); setTip({x, left: Math.min(window.innerWidth - 150, Math.max(150, r.left + r.width / 2)), top: r.top}); };
+  const label = x => x.unl ? x.name+' '+fN(x.n)+' credit' : x.name+', giữ '+fN(x.n)+' credit'+(x.used ? ', đã log '+fN(x.used) : '');
+  const go = (x, e) => {
+    const tapFirst = touch.current || (window.matchMedia && window.matchMedia('(hover: none)').matches);
+    if(tapFirst && !(tip && tip.x.k === x.k)){ touch.current = false; show(x, e.currentTarget); return; }
+    touch.current = false;
+    if(!x.unl && !x.many) openJob(x.pid);
+  };
+  if(!segs.length) return html`<div class="resbar" role="img" aria-label=${'Chưa giữ chỗ, còn trống '+fN(m.cap)+' credit'}><i class="rs-free" style="flex-grow:1"></i></div>`;
+  return html`<div class="resbar" role="group" aria-label=${'Giữ chỗ theo dự án, cap '+fN(m.cap)}>
+    ${segs.map(x => html`<i key=${x.k} class=${x.cls+(tip && tip.x.k === x.k ? ' on' : '')} style=${'flex-grow:'+x.n} tabindex="0" role=${x.unl || x.many ? 'img' : 'link'} aria-label=${label(x)}
+      onPointerDown=${e => { touch.current = e.pointerType === 'touch'; }} onPointerEnter=${e => { if(e.pointerType !== 'touch') show(x, e.currentTarget); }} onPointerLeave=${e => { if(e.pointerType !== 'touch') setTip(null); }}
+      onFocus=${e => { let kb = true; try { kb = e.currentTarget.matches(':focus-visible'); } catch(err){} if(kb) show(x, e.currentTarget); }} onBlur=${() => setTip(null)} onClick=${e => go(x, e)} onKeyDown=${e => { if(e.key === 'Enter' && !x.unl && !x.many) openJob(x.pid); if(e.key === 'Escape') setTip(null); }}></i>`)}
+    ${free > 0 ? html`<i class="rs-free" style=${'flex-grow:'+free} aria-hidden="true"></i>` : null}
+    ${taken > m.cap && m.cap > 0 ? html`<span class="cap-tick" style=${'left:calc('+(m.cap / total * 100)+'% - 1px)'} aria-hidden="true"></span>` : null}
+    ${tip ? html`<div class="rs-tip" role="tooltip" style=${'left:'+tip.left+'px;top:'+tip.top+'px'}>${tip.x.unl
+      ? html`<b>Dùng chưa log ${fN(tip.x.n)}</b><span>Đã trừ trên Higgsfield nhưng chưa ai log vào dự án.</span>`
+      : html`<b>${tip.x.name}</b>${tip.x.code ? html`<span class="code">${tip.x.code}</span><br/>` : null}<span>Giữ ${fN(tip.x.n)} credit, ${pct(tip.x.n)}% cap${tip.x.used ? ', đã log '+fN(tip.x.used) : ''}${tip.x.many ? '' : tip.x.open ? '' : ', booking đã đóng'}</span>`}</div>` : null}
   </div>`;
 }
 function AccRow({a, D}){
@@ -3055,9 +3119,9 @@ function AccRow({a, D}){
     <td><div class="acts" style="gap:6px 12px"><b class="code" style="font-size:16px">${a.code || a.id}</b><span class=${'st sm '+stx[0]}>${stx[1]}</span></div><div class="acc-mail"><span class="code">${a.email || '—'}</span>${a.email ? html`<${CopyBtn} text=${a.email} label="Copy email đăng nhập"/>` : null}</div>${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => openModal({type:'account', aid: a.id})}><${Ic} n="edit" s=${14}/>Sửa account</button></div>` : null}</td>
     <td class="nw">${fD(m.per.start)} – ${fD(m.per.end)}<div class="meta">reset ngày ${m.rd}, còn ${m.daysLeft} ngày</div></td>
     <td class="n">${fN(m.cap)}${m.topup ? html`<div class="meta">có top-up ${fN(m.topup)}</div>` : null}</td>
-    <td class="n">${fN(m.reserved)}</td>
+    <td class="n">${fN(m.reserved)}<${ResBar} m=${m}/></td>
     <td class=${'n'+(m.unlogged > D.cfg.unloggedWarn ? ' bad' : '')}>${m.balOk ? fN(m.unlogged) : '—'}</td>
-    <td class=${'n strong'+(m.bookable <= 0 ? ' bad' : '')}>${fN(m.bookable)}<${CapBar} m=${m}/></td>
+    <td class=${'n strong'+(m.bookable <= 0 ? ' bad' : '')}>${fN(m.bookable)}</td>
     <td>${edit ? html`<${InlineEdit} value=${a.balance === null || a.balance === undefined ? '' : String(a.balance)} placeholder="Số dư" onDone=${saveBal}/>`
       : html`<div>${a.balance === null || a.balance === undefined || a.balance === '' ? html`<span class="faint">Chưa nhập</span>` : html`<b class="num">${fN(a.balance)}</b>`}</div>${a.balanceAt ? html`<div class="meta">check ${fD(a.balanceAt)}${a.balanceBy && S.staff[a.balanceBy] ? ', '+S.staff[a.balanceBy].name : ''}${m.balOk ? '' : ', kỳ cũ'}</div>` : null}${m.balOk && m.usedSince ? html`<div class="bal-now"><span>Còn khoảng <b class="num">${fN(m.balNow)}</b></span><span class="meta">đã trừ ${fN(m.usedSince)} credit log sau lần check</span></div>` : null}${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => setEdit(true)}><${Ic} n="edit" s=${14}/>Điều chỉnh số dư</button></div>` : null}`}</td>
   </tr>`;
@@ -3070,7 +3134,7 @@ function CreditView({D, me}){
   const rows = (scope === 'cur' ? D.bookings.filter(b => { const a = D.amap[b.acc]; return !a || (b.date >= a.m.per.start && b.date < a.m.per.end) || b.status === 'open'; }) : D.bookings.slice()).sort((x, y) => cmpBooking(y, x));
   const pend = D.bookings.filter(b => b.status === 'open' && b.chk.k === 'CHỜ DUYỆT');
   return html`
-    <div class="ph"><div><h1>Credit Higgsfield</h1><p>Không có booking thì không gen. Mỗi account chỉ book tới Cap = Credit/kỳ + Top-up − buffer ${fN(D.cfg.buffer)}.</p></div>${canCredit() ? html`<button type="button" class="btn" onClick=${() => openModal({type:'account'})}><${Ic} n="plus"/>Thêm account</button>` : null}</div>
+    <div class="ph"><div><h1>Credit Higgsfield</h1><p>Không có booking thì không gen. Mỗi account chỉ book tới Cap = Credit/kỳ + Top-up.</p></div><div class="acts">${lead ? html`<button type="button" class="btn" title="Ghi tổng credit đã log của từng job vào cột Credits Higgsfield. Bảng cũng tự ghi sau mỗi lần log." onClick=${() => regCreditAll(D)}><${Ic} n="upload"/>Ghi credit sang Job Register</button>` : null}${canCredit() ? html`<button type="button" class="btn" onClick=${() => openModal({type:'account'})}><${Ic} n="plus"/>Thêm account</button>` : null}</div></div>
     <div class="stats">
       <div class="stat"><b>${fN(tot.book)}</b><span>Còn book được</span></div>
       <div class="stat"><b>${fN(tot.res)}</b><span>Đã giữ chỗ kỳ này</span></div>
@@ -3079,7 +3143,7 @@ function CreditView({D, me}){
     </div>
     ${pend.length ? html`<div class="banner warn">${pend.length} booking chờ Hào duyệt: ${pend.map((b, i) => html`<span key=${b.pid+b.bid}>${i ? ', ' : ''}<a href=${'#job-'+b.pid}>${b.p.name}</a></span>`)}</div>` : null}
     <section class="panel flush" aria-label="Account">
-      <div class="panel-h"><h2>Account</h2>${!lead ? html`<span class="meta">Hào cập nhật số dư sau khi check trên Higgsfield.</span>` : null}</div>
+      <div class="panel-h"><h2>Account</h2><span class="rs-key"><span><i class="rs1"></i><i class="rs2" style="margin-left:2px"></i><i class="rs3" style="margin-left:2px"></i> mỗi màu một dự án giữ chỗ, rê chuột để xem tên</span><span><i class="rs-u"></i> dùng chưa log</span></span>${!lead ? html`<span class="meta">Hào cập nhật số dư sau khi check trên Higgsfield.</span>` : null}</div>
       ${D.accounts.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Kỳ hiện tại</th><th class="n">Cap</th><th class="n">Giữ chỗ</th><th class="n">Dùng chưa log</th><th class="n">Còn book</th><th>Số dư trên Higgsfield<div class="meta" style="font-weight:500">Chỉ Hào điều chỉnh</div></th></tr></thead><tbody>${D.accounts.map(a => html`<${AccRow} key=${a.id} a=${a} D=${D}/>`)}</tbody></table></div>` : html`<p class="empty" style="margin:0 22px 22px">Chưa có account. Hào thêm bằng nút Thêm account.</p>`}
     </section>
     <div class="legend"><span class="lg"><i class="sw" style="background:var(--d-doing)"></i>Đã dùng</span><span class="lg"><i class="sw doing"></i>Giữ chỗ chưa dùng</span><span class="lg"><i class="sw" style="background:var(--d-review)"></i>Dùng chưa log</span><span class="lg"><i class="sw done"></i>Còn book được</span><span class="lg">Vạch đen là Cap</span></div>
@@ -3418,7 +3482,6 @@ function SettingsView({D, me}){
       <div class="grid3">
         <div class="field"><span class="lab">Vòng sửa mặc định</span><${InlineNum} value=${c.revDefault} label="Vòng sửa mặc định" onSave=${v => W.config({revDefault: v || 0})}/></div>
         <div class="field"><span class="lab">Thu 50/30/20 khi HĐ từ (triệu)</span><${InlineNum} value=${c.payMin} label="Ngưỡng giá trị HĐ" onSave=${v => W.config({payMin: v || 0})}/></div>
-        <div class="field"><span class="lab">Buffer mỗi account</span><${InlineNum} value=${c.buffer} disabled=${!lead} label="Buffer" onSave=${v => W.config({buffer: v || 0})}/></div>
         <div class="field"><span class="lab">Ngưỡng sắp đầy</span><${InlineNum} value=${c.nearFull} disabled=${!lead} label="Ngưỡng sắp đầy" onSave=${v => W.config({nearFull: v || 0})}/></div>
         <div class="field"><span class="lab">Cảnh báo dùng chưa log</span><${InlineNum} value=${c.unloggedWarn} disabled=${!lead} label="Cảnh báo dùng chưa log" onSave=${v => W.config({unloggedWarn: v || 0})}/></div>
       </div>

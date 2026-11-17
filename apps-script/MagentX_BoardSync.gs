@@ -8,6 +8,9 @@
  * - POST {token, op:'add', job:{kickoff, cc, project, type, parent, status, pic, deadline, notes}}
  *        thêm một dòng vào tab Jobs, chỉ ghi các cột nhập tay (B, C, E–J, P);
  *        cột A, D, N là ARRAYFORMULA nên không đụng tới. Trả về Job ID ở cột A.
+ * - POST {token, op:'credit', items:[{id, n}]}
+ *        ghi tổng credit đã log trên bảng (n) vào cột "Credits Higgsfield" của dòng có Job ID = id.
+ *        Tìm cột theo tên ở dòng tiêu đề; không thấy thì báo lỗi, không ghi bừa. Trả {ok, updated, missing}.
  *
  * Token đặt ở Project Settings › Script properties, tên BOARD_TOKEN. Không ghi token vào code.
  * Script chạy dưới quyền chủ sheet (Execute as: Me) nên ghi được vào vùng đang khóa.
@@ -39,6 +42,7 @@ function doPost(e) {
   try { b = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { b = {}; }
   if (!mxbAuth_(b.token)) return mxbOut_({ ok: false, error: 'auth' });
   if (b.op === 'add') return mxbOut_(mxbAdd_(b.job || {}));
+  if (b.op === 'credit') return mxbOut_(mxbCredit_(b.items || []));
   return mxbOut_({ ok: false, error: 'op' });
 }
 
@@ -96,6 +100,33 @@ function mxbAdd_(j) {
     if (j.notes) js.getRange(row, 16).setValue(String(j.notes).slice(0, 500));
     SpreadsheetApp.flush();
     return { ok: true, id: String(js.getRange(row, 1).getValue() || id), row: row };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function mxbCredit_(items) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var js = SpreadsheetApp.getActive().getSheetByName(MXB.jobs);
+    var head = js.getRange(1, 1, 1, js.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim().toLowerCase(); });
+    var col = head.indexOf('credits higgsfield') + 1;
+    if (!col) head.forEach(function (h, i) { if (!col && /credit/.test(h)) col = i + 1; });
+    if (!col) return { ok: false, error: 'Không thấy cột Credits Higgsfield ở dòng tiêu đề tab Jobs' };
+    var last = mxbLastRow_(js);
+    var ids = last > 1 ? js.getRange(2, 1, last - 1, 1).getValues().map(function (r) { return String(r[0]); }) : [];
+    var updated = [], missing = [];
+    (Array.isArray(items) ? items : []).slice(0, 300).forEach(function (x) {
+      var id = String((x && x.id) || ''), n = Math.round(Number(x && x.n));
+      if (!id || !isFinite(n) || n < 0) return;
+      var i = ids.indexOf(id);
+      if (i < 0) { missing.push(id); return; }
+      js.getRange(i + 2, col).setValue(n);
+      updated.push(id);
+    });
+    SpreadsheetApp.flush();
+    return { ok: true, updated: updated, missing: missing, col: col };
   } finally {
     lock.releaseLock();
   }

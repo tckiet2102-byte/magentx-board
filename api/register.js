@@ -4,6 +4,7 @@
    - REGISTER_TOKEN: chuỗi trùng với Script property BOARD_TOKEN
    GET  /api/register         → {configured, ok, jobs, clients}
    POST /api/register {op:'add', job:{…}} → {ok, id, row} hoặc {ok:false, error}
+   POST /api/register {op:'credit', items:[{id, n}]} → {ok, updated, missing}: ghi tổng credit đã log vào cột Credits Higgsfield
    Chưa đặt biến môi trường thì trả {configured:false} để bảng chạy chế độ nhập tay. */
 export const config = { runtime: 'edge' };
 
@@ -33,6 +34,15 @@ export default async function handler(req) {
   }
   if (req.method === 'POST') {
     let b = null; try { b = await req.json(); } catch (e) {}
+    if (b && b.op === 'credit') {
+      const items = (Array.isArray(b.items) ? b.items : []).slice(0, 300)
+        .map(x => ({ id: String((x && x.id) || '').slice(0, 90), n: Math.round(+(x && x.n)) }))
+        .filter(x => /^[A-Za-z0-9_-]{3,90}$/.test(x.id) && Number.isFinite(x.n) && x.n >= 0 && x.n < 1e7);
+      if (!items.length) return json({ ok: false, error: 'Thiếu dữ liệu credit.' }, 400);
+      const o = await call(URL0, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN, op: 'credit', items }) });
+      if (o && o.error === 'op') o.error = 'Apps Script trong Job Register là bản cũ, chưa ghi được credit. Dán lại apps-script/MagentX_BoardSync.gs và deploy bản mới (xem docs/register-sync.md).';
+      return json(Object.assign({ configured: true }, o));
+    }
     const j = b && b.op === 'add' && b.job;
     if (!j) return json({ ok: false, error: 'Thiếu dữ liệu job.' }, 400);
     const job = {

@@ -35,7 +35,13 @@ Rồi **Redeploy** bản mới nhất. Token chỉ nằm ở Vercel và Apps Scr
 Vào bảng › **Cài đặt › Khách hàng và Job Register**. Dòng trạng thái phải là "Đã kết nối Job Register, N job, M khách". Nếu báo lỗi token thì kiểm tra hai chuỗi có khớp không. Sửa Apps Script xong phải **Deploy › Manage deployments › Edit › New version** thì web app mới nhận code mới.
 
 ## Lưu ý
-- Script ghi vào các cột nhập tay B, C, E–J, P. Cột A, D, N là ARRAYFORMULA nên không ghi đè.
+- Script ghi vào các cột nhập tay B, C, E–J, P khi thêm job, và cột **Credits Higgsfield** (tìm theo tên ở dòng tiêu đề) khi ghi credit. Cột A, D, N là ARRAYFORMULA nên không ghi đè.
+- Credit: bảng ghi tổng credit **đã log** của mỗi job (mọi kỳ, mọi account, không phải số giữ chỗ) vào cột Credits Higgsfield, 2 giây sau mỗi lần log, sửa hay xóa dòng log. Nút **Ghi credit sang Job Register** ở trang Credit (chỉ Hào) ghi lại toàn bộ job có booking. Số nhập tay ở cột này sẽ bị thay bằng số log.
 - Script kiểm Kick-off 4 chữ số, Client code có trong tab Clients, Project chỉ có chữ không dấu, số và gạch ngang, và không thêm Job ID trùng.
 - Bảng không tự tạo folder: folder vẫn tạo bằng menu MagentX trong sheet (script hiện có).
 - API của bảng không có đăng nhập phía server (giống phần còn lại của bảng), nên ai biết địa chỉ bảng vẫn gọi được. Vì vậy web app không trả giá trị báo giá và ghi chú.
+
+## Cập nhật script (khi repo đổi `MagentX_BoardSync.gs`)
+1. Mở sheet › **Extensions › Apps Script**, mở file `MagentX_BoardSync.gs`, xóa hết nội dung, dán bản mới trong repo, bấm **Save**.
+2. **Deploy › Manage deployments**, chọn bản đang chạy, bấm biểu tượng bút (**Edit**), ở **Version** chọn **New version**, bấm **Deploy**. URL web app giữ nguyên nên không cần sửa Vercel.
+3. Vào trang Credit trên bảng, bấm **Ghi credit sang Job Register** để thử. Script cũ sẽ báo "Apps Script trong Job Register là bản cũ".
