@@ -3748,6 +3748,7 @@ function ReviewPlayer({D, pid, sid, me}){
   const drawing = useRef(null), scrub = useRef(null), restore = useRef(null), retries = useRef(0), pre = useRef(false), streamErr = useRef(false);
   const [failed, setFailed] = useState(false);
   const [why, setWhy] = useState('');
+  const [ft, setFt] = useState(null);
   const [blobUrl, setBlobUrl] = useState('');
   const [load, setLoad] = useState({s: 'idle', p: 0, total: 0});
   const [waiting, setWaiting] = useState(false);
@@ -3783,7 +3784,7 @@ function ReviewPlayer({D, pid, sid, me}){
     let url = '';
     job.promise.then(b => {
       pre.current = false; url = URL.createObjectURL(b);
-      const v = vref.current; restore.current = v ? {t: v.currentTime, play: !v.paused} : null;
+      const v = vref.current; restore.current = v ? (v.readyState < 1 && restore.current ? restore.current : {t: v.currentTime, play: !v.paused}) : null;
       setBlobUrl(url); setLoad(x => ({s: 'done', p: x.total || b.size, total: x.total || b.size}));
     }, e => { pre.current = false; if(e && e.status === 403){ setWhy('private'); setFailed(true); return; } if(streamErr.current){ setFailed(true); return; } setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})); });
     return () => { pre.current = false; job.cancel(); if(url) URL.revokeObjectURL(url); };
@@ -3825,10 +3826,19 @@ function ReviewPlayer({D, pid, sid, me}){
   };
   useEffect(repaint);
 
-  const seek = (t, keep) => { const v = vref.current, d = meta ? meta.dur : 0; const x = Math.max(0, Math.min(d || 0, t)); if(v) v.currentTime = x; setCur(x); if(!keep) setSel(''); };
-  const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); v.play().catch(() => {}); } else v.pause(); };
+  /* Chưa có metadata (đang tải, hoặc iPhone chưa tải vì chưa bấm phát) thì không kẹp về 0: ghi lại mốc, khi video sẵn sàng sẽ tới đó */
+  const seek = (t, keep) => { const v = vref.current, d = meta ? meta.dur : 0; const x = Math.max(0, d ? Math.min(d, t) : t);
+    if(v){ if(v.readyState >= 1) v.currentTime = x; else restore.current = {t: x, play: !!(restore.current && restore.current.play)}; }
+    setCur(x); if(!keep) setSel(''); };
+  const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); if(v.readyState < 1 && restore.current) restore.current.play = true; v.play().catch(() => {}); } else v.pause(); };
   const stepF = k => { const v = vref.current; if(!v || !meta) return; v.pause(); seek((Math.round(v.currentTime * fps) + k) / fps + 0.001); };
-  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } setSel(n.nid); };
+  /* Trình xem của Drive nhận ?t=<giây> (đã thử trên Drive thật): bấm ghi chú thì nạp lại khung Drive tại mốc đó */
+  const jump = n => {
+    const v = vref.current;
+    if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); }
+    else if(mode === 'frame') setFt(x => ({t: Math.max(0, Math.floor(+n.t || 0)), k: (x ? x.k : 0) + 1}));
+    setSel(n.nid);
+  };
   const anchor = draft.length && draftT !== null ? draftT : cur;
 
   const patchNote = (nid, o) => W.project(p.id, {steps: {[st.id]: {vn: {[nid]: o}}}});
@@ -3909,7 +3919,7 @@ function ReviewPlayer({D, pid, sid, me}){
                   onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => { setCur(e.target.currentTime); setWaiting(false); }}
                   onError=${() => { const v = vref.current; if(!meta){ if(!blobUrl && pre.current){ streamErr.current = true; return; } setFailed(true); return; } if(retries.current < 4 && v){ retries.current++; restore.current = {t: v.currentTime || cur, play: !v.paused}; const s0 = v.src; v.removeAttribute('src'); v.load(); setTimeout(() => { v.src = s0; v.load(); }, 600 * retries.current); } else toast('Mạng đang chập chờn. Tải lại trang nếu video không chạy tiếp.', 'warn'); }}
                   onClick=${() => { if(!tool) toggle(); }}></video>`
-              : html`<iframe src=${'https://drive.google.com/file/d/'+did+'/preview'} allow="autoplay; fullscreen" title="Video trên Google Drive"></iframe>`}
+              : html`<iframe key=${'f'+(ft ? ft.k : 0)} src=${'https://drive.google.com/file/d/'+did+'/preview'+(ft ? '?t='+ft.t : '')} allow="autoplay; fullscreen" title="Video trên Google Drive"></iframe>`}
             <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
             ${mode === 'video' && !meta ? html`<p class="rv-msg over">Đang tải video từ Google Drive…</p>` : mode === 'video' && waiting ? html`<p class="rv-msg over">Đang tải…</p>` : null}
           </div>`}
@@ -3954,6 +3964,7 @@ function ReviewPlayer({D, pid, sid, me}){
       </div>
       <aside class="rv-side" aria-label="Ghi chú trên video">
         <div class="rv-side-h"><h2>Ghi chú <span class="faint">${notes.length}</span></h2>${openN ? html`<span class="st sm review">${openN} chưa xử lý</span>` : (notes.length ? html`<span class="st sm done">Đã xử lý hết</span>` : null)}</div>
+        ${mode === 'frame' && notes.length ? html`<p class="rv-old">Đang dùng trình xem của Drive: bấm ghi chú sẽ mở lại video tại mốc đó (chính xác tới giây, không theo khung hình).${why === 'private' ? ' Mở quyền “Bất kỳ ai có đường liên kết” cho file để tua theo khung hình.' : ''}</p>` : null}
         ${st.cdec && (+st.cdec.ver || 0) === st.ver ? html`<div class=${'rv-cdec '+(st.cdec.ok ? 'ok' : 'bad')}><b>Khách ${st.cdec.name} ${st.cdec.ok ? 'đồng ý' : 'yêu cầu sửa'} ${vTag(st.cdec.ver)}</b><span class="meta">${fT(st.cdec.at)}</span>${st.cdec.text ? html`<span>${st.cdec.text}</span>` : null}</div>` : null}
         ${older.length ? html`<label class="check rv-old"><input type="checkbox" checked=${old} onChange=${e => setOld(e.target.checked)}/>Hiện cả ${older.length} ghi chú của bản cũ</label>` : null}
         <div class="rv-list">

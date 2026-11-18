@@ -223,12 +223,13 @@ function Player({data, setData, toast}){
     let url = '';
     job.promise.then(b => {
       url = URL.createObjectURL(b);
-      const v = vref.current; restore.current = v ? {t: v.currentTime, play: !v.paused, rate: v.playbackRate} : null;
+      const v = vref.current; restore.current = v ? (v.readyState < 1 && restore.current ? restore.current : {t: v.currentTime, play: !v.paused, rate: v.playbackRate}) : null;
       setBlobUrl(url); setLoad(x => ({s: 'done', p: x.total || b.size, total: x.total || b.size}));
     }, e => setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})));
     return () => { job.cancel(); if(url) URL.revokeObjectURL(url); };
   }, [id, failed]);
-  useEffect(() => { if(mode !== 'video' || meta) return; const t = setTimeout(() => { if(!meta) setFailed(true); }, 30000); return () => clearTimeout(t); }, [mode, !!meta]);
+  /* đang tải sẵn có tiến độ thì chờ tiếp (iPhone không tự tải video trước khi bấm phát) */
+  useEffect(() => { if(mode !== 'video' || meta || load.s === 'loading' || load.s === 'done') return; const t = setTimeout(() => { if(!meta) setFailed(true); }, 30000); return () => clearTimeout(t); }, [mode, !!meta, load.s]);
   useEffect(() => {
     const el = stageRef.current; if(!el) return;
     const fit = () => { const W = el.clientWidth, H = el.clientHeight; const ar = meta && meta.w && meta.h ? meta.w / meta.h : 16 / 9; let bw = W, bh = W / ar; if(bh > H){ bh = H; bw = H * ar; } setBox({w: Math.floor(bw), h: Math.floor(bh)}); };
@@ -249,10 +250,15 @@ function Player({data, setData, toast}){
   useEffect(() => { const cv = cref.current; if(!cv || !box) return; const dpr = Math.min(2, window.devicePixelRatio || 1), W = Math.round(box.w * dpr), H = Math.round(box.h * dpr); if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } paint(cv, shown); });
 
   const dur = meta ? meta.dur : 0;
-  const seek = (t, keep) => { const v = vref.current; const x = Math.max(0, Math.min(dur || 0, t)); if(v) v.currentTime = x; setCur(x); if(!keep) setSel(''); };
-  const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); v.play().catch(() => {}); } else v.pause(); };
+  /* chưa có metadata thì không kẹp về 0: ghi lại mốc, video sẵn sàng sẽ tới đó */
+  const seek = (t, keep) => { const v = vref.current; const x = Math.max(0, dur ? Math.min(dur, t) : t);
+    if(v){ if(v.readyState >= 1) v.currentTime = x; else restore.current = {t: x, play: !!(restore.current && restore.current.play), rate: v.playbackRate}; }
+    setCur(x); if(!keep) setSel(''); };
+  const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); if(v.readyState < 1 && restore.current) restore.current.play = true; v.play().catch(() => {}); } else v.pause(); };
   const stepF = k => { const v = vref.current; if(!v || !meta) return; v.pause(); seek((Math.round(v.currentTime * fps) + k) / fps + 0.001); };
-  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } setSel(n.nid); };
+  /* trình xem của Drive nhận ?t=<giây>: bấm ghi chú thì nạp lại khung Drive tại mốc đó */
+  const [ft, setFt] = useState(null);
+  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } else if(mode === 'frame') setFt(x => ({t: Math.max(0, Math.floor(+n.t || 0)), k: (x ? x.k : 0) + 1})); setSel(n.nid); };
   const anchor = draft.length && draftT !== null ? draftT : cur;
   const needName = () => { if(name.trim()) return false; toast('Nhập tên của bạn trước, để MagentX biết ai góp ý.', 'bad'); const el = document.getElementById('cname'); if(el) el.focus(); return true; };
   const send = async () => {
@@ -331,7 +337,7 @@ function Player({data, setData, toast}){
             ${mode === 'video'
               ? html`<video ref=${vref} src=${src} playsinline preload="auto" muted=${muted} onLoadedMetadata=${onMeta} onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
                   onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => { setCur(e.target.currentTime); setWaiting(false); }} onWaiting=${() => setWaiting(true)} onPlaying=${() => { setWaiting(false); retries.current = 0; }} onCanPlay=${() => setWaiting(false)} onProgress=${onProg} onError=${onErr} onClick=${() => { if(!tool) toggle(); }}></video>`
-              : html`<iframe src=${'https://drive.google.com/file/d/'+id+'/preview'} allow="autoplay; fullscreen" title="Video"></iframe>`}
+              : html`<iframe key=${'f'+(ft ? ft.k : 0)} src=${'https://drive.google.com/file/d/'+id+'/preview'+(ft ? '?t='+ft.t : '')} allow="autoplay; fullscreen" title="Video"></iframe>`}
             <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
             ${mode === 'video' && (!meta || waiting) ? html`<div class="msg"><div class="spin" aria-label="Đang tải"></div></div>` : null}
           </div>`}
@@ -344,7 +350,7 @@ function Player({data, setData, toast}){
               <i class="head" style=${'left:'+pct(cur)}></i>
             </div>
             <div class="bar">
-              <button type="button" class="btn sm primary" style="min-width:96px" disabled=${!meta} onClick=${toggle}><${Ic} n=${playing ? 'pause' : 'play'} s=${17}/>${playing ? 'Dừng' : 'Phát'}</button>
+              <button type="button" class="btn sm primary" style="min-width:96px" onClick=${toggle}><${Ic} n=${playing ? 'pause' : 'play'} s=${17}/>${playing ? 'Dừng' : 'Phát'}</button>
               <button type="button" class="icon-btn" disabled=${!meta} onClick=${() => stepF(-1)} title="Lùi 1 khung hình (phím ←)" aria-label="Lùi 1 khung hình"><${Ic} n="left" s=${16}/></button>
               <button type="button" class="icon-btn" disabled=${!meta} onClick=${() => stepF(1)} title="Tới 1 khung hình (phím →)" aria-label="Tới 1 khung hình"><${Ic} n="right" s=${16}/></button>
               <span class="tc"><b>${tc(cur)}</b> / ${tc(dur)}</span>
