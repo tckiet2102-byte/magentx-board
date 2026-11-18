@@ -66,6 +66,7 @@ textarea.inp{height:auto;padding:9px 12px;line-height:1.5;resize:none}
 .stage{position:relative;display:grid;place-items:center;min-height:0;overflow:hidden}
 .fit{position:relative;background:#000}
 .fit video,.fit iframe{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;background:#000}
+.fit,.fit video{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .fit canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
 .fit canvas.on{pointer-events:auto;cursor:crosshair;outline:2px solid var(--action);outline-offset:-2px}
 .msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#aeb5c7;pointer-events:none}
@@ -186,8 +187,9 @@ function App(){
 }
 
 function Player({data, setData, toast}){
-  const id = data.video.id;
-  const stream = id ? '/api/drive?id='+id : (/^https?:\/\/[^?#]+\.(mp4|webm|m4v|mov)(\?|#|$)/i.test(data.video.url) ? data.video.url : '');
+  /* Khách không nhận mã file Drive: video phát qua /api/drive?s=<dự án>.<mã link>, máy chủ tự tra file */
+  const sk = data.video.s || '';
+  const stream = sk ? '/api/drive?s='+encodeURIComponent(sk) : (/^https?:\/\/[^?#]+\.(mp4|webm|m4v|mov)(\?|#|$)/i.test(data.video.url || '') ? data.video.url : '');
   const vref = useRef(null), cref = useRef(null), stageRef = useRef(null), tlRef = useRef(null), taRef = useRef(null), drawing = useRef(null), scrub = useRef(null), restore = useRef(null), retries = useRef(0);
   const [blobUrl, setBlobUrl] = useState('');
   const [load, setLoad] = useState({s: 'idle', p: 0, total: 0});
@@ -214,12 +216,13 @@ function Player({data, setData, toast}){
   const [decMode, setDecMode] = useState(data.dec ? '' : 'ask');
   const [decText, setDecText] = useState('');
   const frame = 1 / fps, tc = t => tcOf(t, fps), src = blobUrl || stream;
-  const mode = failed ? (id ? 'frame' : 'none') : 'video';
+  /* không có trình xem Drive dự phòng: khung Drive có nút mở sang Drive để tải file */
+  const mode = failed ? 'none' : 'video';
 
   /* tải sẵn cả file về máy để tua mượt và không phụ thuộc mạng */
   useEffect(() => {
-    if(!id || failed) return;
-    const job = RV.preload(id, {key: 'v'+data.ver, onProgress: (l, t) => setLoad({s: 'loading', p: l, total: t})});
+    if(!sk || failed) return;
+    const job = RV.preload('', {q: 's='+encodeURIComponent(sk), key: 'v'+data.ver, onProgress: (l, t) => setLoad({s: 'loading', p: l, total: t})});
     let url = '';
     job.promise.then(b => {
       url = URL.createObjectURL(b);
@@ -227,7 +230,7 @@ function Player({data, setData, toast}){
       setBlobUrl(url); setLoad(x => ({s: 'done', p: x.total || b.size, total: x.total || b.size}));
     }, e => setLoad(x => ({s: e && e.code === 'too_big' ? 'big' : 'stream', p: x.p, total: (e && e.total) || x.total})));
     return () => { job.cancel(); if(url) URL.revokeObjectURL(url); };
-  }, [id, failed]);
+  }, [sk, failed]);
   /* đang tải sẵn có tiến độ thì chờ tiếp (iPhone không tự tải video trước khi bấm phát) */
   useEffect(() => { if(mode !== 'video' || meta || load.s === 'loading' || load.s === 'done') return; const t = setTimeout(() => { if(!meta) setFailed(true); }, 30000); return () => clearTimeout(t); }, [mode, !!meta, load.s]);
   useEffect(() => {
@@ -256,9 +259,7 @@ function Player({data, setData, toast}){
     setCur(x); if(!keep) setSel(''); };
   const toggle = () => { const v = vref.current; if(!v) return; if(v.paused){ setSel(''); if(v.readyState < 1 && restore.current) restore.current.play = true; v.play().catch(() => {}); } else v.pause(); };
   const stepF = k => { const v = vref.current; if(!v || !meta) return; v.pause(); seek((Math.round(v.currentTime * fps) + k) / fps + 0.001); };
-  /* trình xem của Drive nhận ?t=<giây>: bấm ghi chú thì nạp lại khung Drive tại mốc đó */
-  const [ft, setFt] = useState(null);
-  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } else if(mode === 'frame') setFt(x => ({t: Math.max(0, Math.floor(+n.t || 0)), k: (x ? x.k : 0) + 1})); setSel(n.nid); };
+  const jump = n => { const v = vref.current; if(v && mode === 'video'){ v.pause(); seek(n.t + 0.0005, true); } setSel(n.nid); };
   const anchor = draft.length && draftT !== null ? draftT : cur;
   const needName = () => { if(name.trim()) return false; toast('Nhập tên của bạn trước, để MagentX biết ai góp ý.', 'bad'); const el = document.getElementById('cname'); if(el) el.focus(); return true; };
   const send = async () => {
@@ -333,11 +334,11 @@ function Player({data, setData, toast}){
     <div class="main">
       <div class="left">
         <div class="stage" ref=${stageRef}>
-          ${mode === 'none' ? html`<p class="msg">Không phát được video này. Liên hệ MagentX để nhận link khác.</p>` : html`<div class="fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'}>
+          ${mode === 'none' ? html`<p class="msg">Chưa phát được video này. Thử tải lại trang; nếu vẫn chưa xem được, báo MagentX để gửi link khác.</p>` : html`<div class="fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'} onContextMenu=${e => e.preventDefault()} onDragStart=${e => e.preventDefault()}>
             ${mode === 'video'
-              ? html`<video ref=${vref} src=${src} playsinline preload="auto" muted=${muted} onLoadedMetadata=${onMeta} onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
+              ? html`<video ref=${vref} src=${src} playsinline preload="auto" muted=${muted} draggable=${false} controlslist="nodownload noremoteplayback noplaybackrate" disablepictureinpicture="" disableremoteplayback="" x-webkit-airplay="deny" onLoadedMetadata=${onMeta} onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
                   onTimeUpdate=${e => { if(!playing) setCur(e.target.currentTime); }} onSeeked=${e => { setCur(e.target.currentTime); setWaiting(false); }} onWaiting=${() => setWaiting(true)} onPlaying=${() => { setWaiting(false); retries.current = 0; }} onCanPlay=${() => setWaiting(false)} onProgress=${onProg} onError=${onErr} onClick=${() => { if(!tool) toggle(); }}></video>`
-              : html`<iframe key=${'f'+(ft ? ft.k : 0)} src=${'https://drive.google.com/file/d/'+id+'/preview'+(ft ? '?t='+ft.t : '')} allow="autoplay; fullscreen" title="Video"></iframe>`}
+              : null}
             <canvas ref=${cref} class=${tool ? 'on' : ''} onPointerDown=${dDown} onPointerMove=${dMove} onPointerUp=${dUp} onPointerCancel=${dUp}></canvas>
             ${mode === 'video' && (!meta || waiting) ? html`<div class="msg"><div class="spin" aria-label="Đang tải"></div></div>` : null}
           </div>`}
@@ -360,7 +361,7 @@ function Player({data, setData, toast}){
               <button type="button" class="icon-btn" onClick=${() => setMuted(!muted)} aria-label=${muted ? 'Bật tiếng' : 'Tắt tiếng'} title=${muted ? 'Bật tiếng' : 'Tắt tiếng'}><${Ic} n=${muted ? 'mute' : 'vol'} s=${16}/></button>
             </div>
             ${loadText ? html`<div class="load" aria-live="polite">${loadText}</div>` : null}`
-          : mode === 'frame' ? html`<p class="load">Video đang mở bằng trình xem của Google Drive nên không tua theo khung hình được. Ghi thời điểm dạng phút:giây khi góp ý.</p>` : null}
+          : null}
           ${mode !== 'none' ? html`
             <div class="bar">
               <button type="button" class=${'btn sm'+(tool ? ' on' : '')} aria-pressed=${tool} onClick=${() => toolOn(!tool)}><${Ic} n="edit" s=${16}/>${tool ? 'Đang vẽ' : 'Vẽ lên khung hình'}</button>

@@ -9,8 +9,9 @@
     try { if (navigator.deviceMemory && navigator.deviceMemory <= 4) return true; } catch (e) {}
     try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; }
   }
-  function getPart(id, n, key, signal) {
-    var url = '/api/drive?id=' + encodeURIComponent(id) + '&part=' + n + '&ps=' + PS + '&k=' + encodeURIComponent(key || '');
+  /* q: chuỗi truy vấn chỉ ra file, 'id=…' (bảng nội bộ) hoặc 's=<dự án>.<mã link>' (trang khách) */
+  function getPart(q, n, key, signal) {
+    var url = '/api/drive?' + q + '&part=' + n + '&ps=' + PS + '&k=' + encodeURIComponent(key || '');
     var tries = 0;
     function go() {
       return fetch(url, { signal: signal }).then(function (r) {
@@ -27,13 +28,14 @@
     }
     return go();
   }
-  /* opts: {key, onProgress(loaded, total), maxBytes} → {promise: Promise<Blob>, cancel()} */
+  /* opts: {key, onProgress(loaded, total), maxBytes, q} → {promise: Promise<Blob>, cancel()} */
   function preload(id, opts) {
     opts = opts || {};
+    var q = opts.q || ('id=' + encodeURIComponent(id));
     var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var signal = ctl ? ctl.signal : undefined;
     var maxBytes = opts.maxBytes || (small() ? 260 : 900) * 1024 * 1024;
-    var promise = getPart(id, 0, opts.key, signal).then(function (first) {
+    var promise = getPart(q, 0, opts.key, signal).then(function (first) {
       var total = first.total || first.buf.byteLength;
       if (total > maxBytes) { var e = new Error('too_big'); e.code = 'too_big'; e.total = total; throw e; }
       var count = Math.max(1, Math.ceil(total / PS));
@@ -44,7 +46,7 @@
       function worker() {
         if (next >= count) return Promise.resolve();
         var n = next++;
-        return getPart(id, n, opts.key, signal).then(function (p) {
+        return getPart(q, n, opts.key, signal).then(function (p) {
           parts[n] = p.buf; loaded += p.buf.byteLength;
           if (opts.onProgress) opts.onProgress(Math.min(loaded, total), total);
           return worker();

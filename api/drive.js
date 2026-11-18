@@ -6,6 +6,9 @@
    - Tải sẵn theo khúc: /api/drive?id=…&part=N&ps=<bytes>&k=<khóa bản> trả về đúng một khúc, kèm
      x-total-size. Khúc có URL cố định nên CDN của Vercel giữ lại được, lần xem sau nhanh hơn.
    - Kiểm tra: /api/drive?id=…&check=1 → {ok, reason: 'private'|'missing'|'drive'} để player báo đúng lý do.
+   - Trang khách: /api/drive?s=<dự án>.<mã link> thay cho id. Máy chủ tự tra mã file trong dự án
+     (projects.shares.<mã>), chỉ phục vụ khi link còn bật và chưa hết hạn, nên trình duyệt của khách
+     không bao giờ thấy mã file Drive (không mở được Drive để tải về).
    Chỉ dùng được với file chia sẻ "Bất kỳ ai có đường liên kết". File để chế độ hạn chế thì Drive chuyển sang
    trang đăng nhập (HTML): trả 403 kèm x-drive-error: private. */
 export const config = { runtime: 'edge' };
@@ -37,14 +40,59 @@ function upErr(up) {
   return bad('Không lấy được file từ Google Drive.', 502, 'drive');
 }
 
+/* ---- mã link duyệt của khách → mã file Drive (đọc dự án qua Firestore REST như api/review.js) ---- */
+const FS_KEY = (typeof process !== 'undefined' && process.env && process.env.FIREBASE_API_KEY) || 'AIzaSyColNZZrCvNtN4Uy8zRtc2wT1yJH4XckWI';
+const FS_BASE = (typeof process !== 'undefined' && process.env && process.env.FIRESTORE_BASE) || 'https://firestore.googleapis.com/v1/projects/magentx-board/databases/(default)/documents/';
+const fsVal = v => {
+  if (!v || typeof v !== 'object') return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return Number(v.doubleValue);
+  if ('booleanValue' in v) return !!v.booleanValue;
+  if ('mapValue' in v) { const o = {}, f = v.mapValue.fields || {}; for (const k in f) o[k] = fsVal(f[k]); return o; }
+  return null;
+};
+function fileIdOf(u) {
+  const s = String(u || '');
+  const m = s.match(/(?:drive|docs)\.google\.com\/file\/d\/([\w-]{20,})/) || s.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]{20,})/) || s.match(/drive\.usercontent\.google\.com\/download\?(?:[^#]*&)?id=([\w-]{20,})/);
+  return m ? m[1] : '';
+}
+const shareCache = new Map();
+async function shareFile(s) {
+  const m = /^([A-Za-z0-9_-]{1,64})\.([A-Za-z][A-Za-z0-9]{15,40})$/.exec(s || '');
+  if (!m) return { err: 'Link không đúng.', status: 404 };
+  const hit = shareCache.get(s);
+  if (hit && hit.until > Date.now()) return hit.v;
+  let v;
+  const r = await fetch(FS_BASE + 'projects/' + m[1] + '?key=' + FS_KEY + '&mask.fieldPaths=' + encodeURIComponent('shares.' + m[2]));
+  if (!r.ok && r.status !== 404) return { err: 'Máy chủ đang bận, thử lại sau.', status: 502 };
+  const sh = r.ok ? fsVal((((await r.json()).fields || {}).shares || {})) : null;
+  const x = sh && sh[m[2]];
+  if (!x) v = { err: 'Link không đúng hoặc đã bị xóa.', status: 404 };
+  else if (x.on === false) v = { err: 'Link này đã được tắt.', status: 410 };
+  else if (x.exp && x.exp < Date.now()) v = { err: 'Link này đã hết hạn.', status: 410 };
+  else { const id = fileIdOf(x.url); v = id ? { id } : { err: 'Link này không có video trên Google Drive.', status: 404 }; }
+  shareCache.set(s, { v, until: Date.now() + 60000 });
+  if (shareCache.size > 500) shareCache.delete(shareCache.keys().next().value);
+  return v;
+}
+
 export default async function handler(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
   /* chỉ phục vụ trang của chính app, không cho web khác nhúng nhờ */
   const site = req.headers.get('sec-fetch-site');
   if (site && site !== 'same-origin') return bad('Forbidden', 403);
   const q = new URL(req.url).searchParams;
-  const id = q.get('id') || '';
+  const viaShare = q.get('s') !== null;
+  let id = q.get('id') || '';
+  if (viaShare) {
+    const r = await shareFile(q.get('s'));
+    if (r.err) return bad(r.err, r.status);
+    id = r.id;
+  }
   if (!/^[\w-]{20,100}$/.test(id)) return bad('Thiếu hoặc sai id file.', 400);
+  /* khách không được hỏi tên file */
+  if (viaShare && q.get('meta') !== null) return bad('Forbidden', 403);
 
   /* Tên file/folder để hiện thay cho đường link: /api/drive?meta=1&id=…&kind=file|folder */
   if (q.get('meta') !== null) {
@@ -99,8 +147,9 @@ export default async function handler(req) {
       'content-length': String(buf.byteLength),
       'x-total-size': String(total),
       'access-control-expose-headers': 'x-total-size',
-      'cache-control': 'public, max-age=3600',
-      'cdn-cache-control': 'public, s-maxage=43200',
+      /* khúc của link khách: giữ ngắn để tắt link là thôi phát sớm */
+      'cache-control': viaShare ? 'private, max-age=900' : 'public, max-age=3600',
+      'cdn-cache-control': viaShare ? 'public, s-maxage=900' : 'public, s-maxage=43200',
     } });
   }
 
@@ -112,5 +161,6 @@ export default async function handler(req) {
   for (const k of PASS) { const v = up.headers.get(k); if (v) out.set(k, v); }
   if (!out.has('accept-ranges')) out.set('accept-ranges', 'bytes');
   out.set('cache-control', 'private, max-age=3600');
+  out.set('content-disposition', 'inline');
   return new Response(up.body, { status: up.status, headers: out });
 }

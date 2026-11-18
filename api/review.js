@@ -79,7 +79,7 @@ async function load(pid, tok) {
   if (!st) return { err: fail('Bước này không còn trong dự án.', 404) };
   return { doc, sh, st };
 }
-function view(doc, sh, st) {
+function view(doc, sh, st, pid, tok) {
   const vn = st.vn || {};
   const notes = Object.keys(vn).filter(k => vn[k] && vn[k].src === 'client' && typeof vn[k].t === 'number').map(k => {
     const n = vn[k];
@@ -89,7 +89,8 @@ function view(doc, sh, st) {
   return {
     project: doc.name || '', code: doc.code || '',
     step: { no: sh.sno || '', name: sh.sname || '' },
-    ver: sh.ver || 0, video: { id, url: id ? '' : (sh.url || '') },
+    /* không trả mã file Drive: trang khách phát qua /api/drive?s=<dự án>.<mã link> */
+    ver: sh.ver || 0, video: { s: id ? pid + '.' + tok : '', url: id ? '' : (sh.url || '') },
     notes, dec: sh.dec && (sh.dec.ver || 0) === (sh.ver || 0) ? sh.dec : null, exp: sh.exp || 0,
   };
 }
@@ -102,7 +103,7 @@ export default async function handler(req) {
       const q = new URL(req.url).searchParams;
       const r = await load(q.get('p') || '', q.get('t') || '');
       if (r.err) return r.err;
-      const out = view(r.doc, r.sh, r.st);
+      const out = view(r.doc, r.sh, r.st, q.get('p'), q.get('t'));
       const ckh = q.get('ck') ? await sha(q.get('ck')) : '';
       out.notes.forEach(n => { n.mine = !!ckh && n.ck === ckh; delete n.ck; });
       return json(out);
@@ -141,7 +142,7 @@ export default async function handler(req) {
     } else return fail('Thao tác không đúng.', 400);
     const again = await load(pid, tok);
     if (again.err) return again.err;
-    const out = view(again.doc, again.sh, again.st);
+    const out = view(again.doc, again.sh, again.st, pid, tok);
     const ckh = ck ? await sha(ck) : '';
     out.notes.forEach(n => { n.mine = !!ckh && n.ck === ckh; delete n.ck; });
     return json(out);
