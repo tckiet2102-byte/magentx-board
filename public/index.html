@@ -504,9 +504,20 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .meter{height:7px;border-radius:4px;background:var(--tint);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--d-doing);border-radius:4px}
 .meter i.over{background:var(--d-fix)}
-.bk{display:flex;flex-direction:column;gap:12px;padding-top:16px;border-top:1px solid var(--rule)}
-.bk-acc{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
-.bk-acc .code{font-size:16px}
+.lane{display:flex;flex-direction:column;gap:12px;padding-top:16px;border-top:1px solid var(--rule)}
+.lane-h{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+.lane-h > b.code{font-size:16px}
+.lane-h .meta.code{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lane-num{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.lane-num b.num{font-size:22px;line-height:1.1}
+.lane.done .lane-num b.num{color:var(--ink-2)}
+.meter.sm{height:5px}
+.tform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.lane-bk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lane-bk > li{display:flex;flex-direction:column;gap:10px;padding:10px 12px;border-radius:10px;background:var(--subtle);border:1px solid var(--rule)}
+.bk-row{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;font-size:14.5px}
+.bk-st{display:flex;align-items:center;gap:8px;margin-left:auto}
+.lane.done .meter i{background:var(--d-todo)}
 .uform{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:8px}
 .mini{width:100%;border-collapse:collapse;font-size:14px}
 .mini td{padding:7px 4px;border-top:1px solid var(--rule);vertical-align:top}
@@ -1465,7 +1476,8 @@ function logDescBooking(o, old, add){
   if(!o || typeof o !== 'object') return;
   if(!old){ if('est' in o) add('credit', 'book '+fN(o.est)+' credit ở '+acc(o.acc)); return; }
   if('approved' in o && !logSame(!!o.approved, !!old.approved)) add('credit', (o.approved ? 'duyệt booking ' : 'bỏ duyệt booking ')+fN(old.est)+' credit ở '+acc(o.acc || old.acc));
-  if(o.usage) Object.keys(o.usage).forEach(u => { const x = o.usage[u], was = (old.usage || {})[u]; if(x === null){ if(was) add('credit', 'xóa dòng log '+fN(was.n)+' credit ở '+acc(old.acc)); } else if(x && !was) add('credit', 'log dùng '+fN(x.n)+' credit ở '+acc(old.acc)+(x.note ? ': '+logQ(x.note) : '')); else if(x) add('credit', 'sửa log credit ở '+acc(old.acc)); });
+  /* dòng có tot là một phần của lần "cập nhật tổng": logDescProject ghi gộp một dòng cho cả lần đó */
+  if(o.usage) Object.keys(o.usage).forEach(u => { const x = o.usage[u], was = (old.usage || {})[u]; if(x === null){ if(was && was.tot == null) add('credit', 'xóa dòng log '+fN(was.n)+' credit ở '+acc(old.acc)); } else if(x && !was){ if(x.tot == null) add('credit', 'log dùng '+fN(x.n)+' credit ở '+acc(old.acc)+(x.note ? ': '+logQ(x.note) : '')); } else if(x) add('credit', 'sửa log credit ở '+acc(old.acc)); });
   if('status' in o && !logSame(o.status, old.status)) add('credit', (o.status === 'open' ? 'mở lại booking ở ' : 'đóng booking ở ')+acc(old.acc));
   if('acc' in o && !logSame(o.acc, old.acc)) add('credit', 'chuyển booking từ '+acc(old.acc)+' sang '+acc(o.acc));
   if('est' in o && !logSame(o.est, old.est)) add('credit', 'sửa credit dự kiến từ '+fN(old.est)+' thành '+fN(o.est));
@@ -1488,7 +1500,16 @@ function logDescProject(pid, patch){
     if(k === 'updatedAt' || k === 'updatedBy' || k === 'c' || k === 'asg' || k === 'seen') return;
     if(k === 'steps'){ Object.keys(v || {}).forEach(sid => logDescStep(sid, v[sid], (raw.steps || {})[sid] || {}, add, bk)); return; }
     if(k === 'gates'){ Object.keys(v || {}).forEach(g => { const o = v[g], lb = GATES[g] ? GATES[g].label : g, was = (raw.gates || {})[g] || {}; if(!o) return; if('ok' in o && !logSame(!!o.ok, !!was.ok)) add('project', (o.ok ? 'xác nhận ' : 'bỏ xác nhận ')+lb); if('paid' in o && !logSame(!!o.paid, !!was.paid)) add('project', (o.paid ? 'đánh dấu đã thu tiền ' : 'bỏ đánh dấu thu tiền ')+lb); }); return; }
-    if(k === 'bookings'){ Object.keys(v || {}).forEach(b => logDescBooking(v[b], (raw.bookings || {})[b], add)); return; }
+    if(k === 'bookings'){
+      Object.keys(v || {}).forEach(b => logDescBooking(v[b], (raw.bookings || {})[b], add));
+      /* cập nhật tổng credit (có thể chia vào nhiều booking cùng account): một dòng mỗi lần */
+      const tg = {}, accC = id => (id && S.accounts[id] && S.accounts[id].code) || 'chưa chọn account';
+      Object.keys(v || {}).forEach(b => { const o = v[b], old = (raw.bookings || {})[b]; if(!o || !o.usage || !old) return; Object.keys(o.usage).forEach(u => { const x = o.usage[u], was = (old.usage || {})[u];
+        if(x && !was && x.tot != null){ const g = tg['s'+x.at+old.acc] || (tg['s'+x.at+old.acc] = {acc: old.acc, tot: x.tot, n: 0}); g.n += +x.n || 0; }
+        else if(x === null && was && was.tot != null){ tg['d'+was.at+old.acc] = {acc: old.acc, undo: true, tot: was.tot}; } }); });
+      Object.keys(tg).forEach(k2 => { const g = tg[k2]; if(!g.undo && g.n === 0) return; add('credit', g.undo ? 'hoàn tác lần cập nhật tổng credit '+fN(g.tot)+' ở '+accC(g.acc) : 'cập nhật tổng credit đã dùng ở '+accC(g.acc)+': '+fN(g.tot)+' ('+(g.n >= 0 ? '+' : '−')+fN(Math.abs(g.n))+')'); });
+      return;
+    }
     if(k === 'revs'){ Object.keys(v || {}).forEach(r => { const o = v[r], was = (raw.revs || {})[r]; if(o === null){ if(was) add('project', 'xóa một vòng sửa'); } else if(o && !was) add('project', 'ghi vòng sửa'+(o.to && STEP[o.to] ? ', quay về bước '+STEP[o.to].no : '')+(o.note ? ': '+logQ(o.note) : '')); }); return; }
     if(k === 'shares'){ Object.keys(v || {}).forEach(tok => logDescShare(v[tok], (raw.shares || {})[tok], add)); return; }
     if(k === 'reg'){ if(v) add('project', v.how === 'auto' ? 'thêm job vào Job Register' : v.how === 'had' ? 'xác nhận job đã có trong Job Register' : 'đánh dấu đã nhập Job Register'); return; }
@@ -2034,10 +2055,10 @@ function stepsRows(D){
   return rows;
 }
 function usageRows(D){
-  const rows = [['Ngày','Mã job','Dự án','Account','Người gen','Credit','Ghi chú']];
+  const rows = [['Ngày','Mã job','Dự án','Account','Người cập nhật','Credit (phần tăng)','Tổng đã dùng khi cập nhật','Ghi chú']];
   const list = []; D.bookings.forEach(b => b.usage.forEach(u => list.push({b, u})));
   list.sort((x, y) => (x.u.date || '').localeCompare(y.u.date || '') || (x.u.at || 0) - (y.u.at || 0));
-  list.forEach(x => { const a = D.amap[x.b.acc]; rows.push([fDY(x.u.date), x.b.p.code, x.b.p.name, a ? a.code : '', nameOf(D, x.u.by), +x.u.n || 0, x.u.note || '']); });
+  list.forEach(x => { const a = D.amap[x.b.acc]; rows.push([fDY(x.u.date), x.b.p.code, x.b.p.name, a ? a.code : '', nameOf(D, x.u.by), +x.u.n || 0, x.u.tot != null ? +x.u.tot : '', x.u.note || '']); });
   return rows;
 }
 function accountsRows(D){
@@ -2905,59 +2926,143 @@ function ToolStrip({p, D, tool, done}){
   if(tool === 'assign') return html`<div class="tool-strip"><span>Giao các bước chưa duyệt cho</span><select class="sel sm auto" value=${who} onChange=${e => setWho(e.target.value)} aria-label="Người nhận">${D.staffList.filter(s => s.active !== false).map(s => html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select><span class="sp"></span><button type="button" class="btn sm primary" disabled=${!who} onClick=${() => { const steps = {}; p.steps.forEach(s => { if(s.state !== 'done') steps[s.id] = {who: [who]}; }); W.project(p.id, {steps}); done(); toast('Đã giao cho '+nameOf(D, who)); }}>Giao</button><button type="button" class="btn sm" onClick=${done}>Thôi</button></div>`;
   return null;
 }
-function BookingView({p, b, D, me}){
-  const a = D.amap[b.acc]; const w = canW(); const lead = isLead(D, me);
-  const [log, setLog] = useState(false);
+/* ---------- Credit trong trang dự án ----------
+   Mỗi account job dùng là một khung: đã dùng / đã book, trạng thái (Đang dùng, Chờ Hào duyệt, Đã chốt), các lần book trên account đó.
+   Ghi credit theo kiểu cập nhật tổng: Cinema Studio hiện tổng đã dùng của project trên account, người làm nhập số tổng đó,
+   app tính phần chênh so với lần trước và ghi vào booking đang mở (lấp booking cũ tới mức đã book rồi mới sang booking sau).
+   Mỗi dòng usage của lần cập nhật có tot = tổng vừa nhập, cùng at; dòng cũ không có tot là log cộng dồn trước đây. */
+const BK_ISSUE = ['VƯỢT CAP', 'ACC CHỈ CHO EXT', 'QUA KỲ RESET', 'CHƯA CHỌN ACC', 'THIẾU ƯỚC LƯỢNG', 'THIẾU NGÀY BOOK'];
+function creditLanes(p, D){
+  const m = {};
+  p.bookings.filter(b => b.status !== 'cancelled').forEach(b => { const k = b.acc || ''; (m[k] = m[k] || {acc: k, a: D.amap[k] || null, bks: []}).bks.push(b); });
+  return Object.keys(m).map(k => {
+    const l = m[k];
+    l.bks.sort(cmpBooking);
+    l.used = sum(l.bks.map(b => b.used)); l.booked = sum(l.bks.map(b => b.est));
+    l.open = l.bks.filter(b => b.status === 'open');
+    l.usable = l.open.filter(b => b.approved && b.chk.k !== 'CHƯA CHỌN ACC');
+    /* trạng thái khung theo lần book đang dùng; lỗi của một lần book thêm chỉ hiện ở dòng của nó */
+    const isBad = b => BK_ISSUE.indexOf(b.chk.k) >= 0;
+    const bad = l.usable.length ? l.usable.find(isBad) : l.open.find(isBad);
+    l.state = !l.open.length ? 'done' : bad ? 'issue' : l.usable.length ? 'run' : 'wait';
+    l.issue = bad ? (CHECK_TXT[bad.chk.k] || bad.chk.k) : '';
+    const g = {}, hist = [];
+    l.bks.forEach(b => b.usage.forEach(u => {
+      if(u.tot != null){ const key = 't'+u.at; if(!g[key]){ g[key] = {k: key, at: u.at, date: u.date, by: u.by, tot: +u.tot, n: 0, ids: []}; hist.push(g[key]); } g[key].n += +u.n || 0; g[key].ids.push([b.bid, u.uid]); }
+      else hist.push({k: u.uid, at: u.at || 0, date: u.date, by: u.by, n: +u.n || 0, note: u.note || '', ids: [[b.bid, u.uid]], legacy: true});
+    }));
+    hist.sort((x, y) => (y.at || 0) - (x.at || 0) || (y.date || '').localeCompare(x.date || ''));
+    l.hist = hist.filter(h => h.legacy || h.n !== 0); l.last = hist.find(h => !h.legacy) || null;
+    return l;
+  }).sort((x, y) => (x.state === 'done' ? 1 : 0) - (y.state === 'done' ? 1 : 0) || cmpBooking(x.bks[0], y.bks[0]));
+}
+/* Chia tổng T cho các lần book đang dùng (theo thứ tự book): lần trước lấp tới mức đã book, lần cuối nhận phần còn lại.
+   Trả về {bid: {usage: {…}}} chỉ gồm phần chênh; null nếu T thấp hơn phần đã chốt hoặc đang chờ duyệt. */
+function laneAlloc(l, usable, T, base){
+  let rem = T - (l.used - sum(usable.map(b => b.used)));
+  if(rem < 0) return null;
+  const out = {};
+  usable.forEach((b, i) => {
+    const target = i === usable.length - 1 ? rem : Math.min(rem, Math.max(0, b.est));
+    rem -= target;
+    const n = target - b.used;
+    if(n) (out[b.bid] = out[b.bid] || {usage: {}}).usage[rid('u')] = Object.assign({n}, base);
+  });
+  return out;
+}
+const LANE_ST = {run: ['done', 'Đang dùng'], wait: ['review', 'Chờ Hào duyệt'], done: ['todo', 'Đã chốt']};
+const BK_ST = b => b.status === 'done' ? ['todo', 'Đã chốt'] : b.chk.k === 'OK' ? ['done', 'Đang dùng'] : [CHECK_CLS[b.chk.k] || 'review', CHECK_TXT[b.chk.k] || b.chk.k];
+/* một lần book trên account: ngày, số book, trạng thái, nút duyệt / sửa */
+function BookRow({p, b, D, me, i, l}){
+  const w = canW();
   const [edit, setEdit] = useState(false);
-  const [n, setN] = useState(''); const [note, setNote] = useState(''); const [by, setBy] = useState('');
   const patch = o => W.project(p.id, {bookings: {[b.bid]: o}});
-  const k = b.chk.k;
-  const addUsage = () => { const v = toInt(n); if(!v){ toast('Nhập số credit.', 'warn'); return; } const who = me || by || null; patch({usage: {[rid('u')]: {date: today(), by: who, n: v, note: note.trim(), at: Date.now()}}}); setN(''); setNote(''); toast('Đã ghi '+fN(v)+' credit'); };
+  const k = b.chk.k, st = BK_ST(b);
+  /* duyệt lần book thêm: phần lần trước dùng vượt chuyển sang lần vừa duyệt (rb = chỉ chia lại, tổng không đổi) */
+  const approve = () => {
+    const o = {[b.bid]: {approved: true, approvedBy: me, approvedAt: Date.now()}};
+    if(l && b.status === 'open' && l.usable.length){
+      const usable = l.usable.concat([b]).sort(cmpBooking);
+      const re = laneAlloc(l, usable, l.used, {date: today(), by: me || null, at: Date.now(), tot: l.used, rb: true}) || {};
+      Object.keys(re).forEach(bid => { o[bid] = Object.assign(o[bid] || {}, re[bid]); });
+    }
+    W.project(p.id, {bookings: o});
+  };
   const split = () => { const rest = Math.max(0, b.est - b.used); W.project(p.id, {bookings: {[b.bid]: {status: 'done'}, [rid('b')]: {acc: b.acc, date: today(), est: rest, status: 'open', approved: false, n: Date.now(), usage: {}}}}); toast('Đã tách: phần còn lại '+fN(rest)+' credit chờ duyệt'); };
   const sg = (k === 'VƯỢT CAP' || k === 'ACC CHỈ CHO EXT' || k === 'CHƯA CHỌN ACC') && b.status === 'open' ? suggestAcc(D, p.useCase, Math.max(b.est - b.used, 0), b.date, {pid: p.id, bid: b.bid}).best : null;
-  return html`<div class="bk">
-    <div class="bk-acc"><b class="code">${a ? a.code : 'Chưa chọn account'}</b>${a ? html`<span class="meta code" style="font-weight:500">${a.email}</span><${CopyBtn} text=${a.email || ''} label="Copy email đăng nhập"/>` : null}</div>
-    <div class="acts"><span class=${'st '+(CHECK_CLS[k] || 'todo')}>${CHECK_TXT[k] || k}</span>${p.bookings.length > 1 ? html`<span class="meta">${fN(b.used)} / ${fN(b.est)}, book ${fD(b.date)}</span>` : null}</div>
-    ${k === 'CHỜ DUYỆT' ? (canApproveBooking() ? html`<div><button type="button" class="btn ok" onClick=${() => patch({approved: true, approvedBy: me, approvedAt: Date.now()})}><${Ic} n="check"/>Duyệt booking</button></div>` : html`<p class="meta">Hào duyệt xong mới được gen.</p>`) : null}
-    ${sg ? html`<div class="acts"><span class="meta">Gợi ý đổi sang ${sg.a.code} (còn ${fN(sg.room)})</span><button type="button" class="btn xs" disabled=${!w} onClick=${() => patch({acc: sg.a.id, approved: false})}>Đổi sang ${sg.a.code}</button></div>` : (k === 'VƯỢT CAP' ? html`<p class="meta bad-t">Không account nào đủ chỗ. Mua top-up, thêm account hoặc dời sang kỳ reset sau.</p>` : null)}
-    ${k === 'QUA KỲ RESET' && w ? html`<div class="acts"><span class="meta">Account đã reset.</span><button type="button" class="btn xs" onClick=${split}>Tách phần còn lại sang kỳ mới</button></div>` : null}
-    ${b.status === 'open' && w ? html`<div class="field"><span class="lab">Ghi credit đã dùng hôm nay</span><div class="uform">
-      <input class="inp sm" inputmode="numeric" placeholder="Số credit" aria-label="Số credit đã dùng hôm nay" value=${n} onInput=${e => setN(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') addUsage(); }}/>
-      <input class="inp sm" placeholder="Ghi chú: shot, model" aria-label="Ghi chú" value=${note} onInput=${e => setNote(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') addUsage(); }}/>
-      <button type="button" class="btn sm" disabled=${!n} onClick=${addUsage}>Ghi</button>
-      ${!me ? html`<select class="sel sm" style="grid-column:1 / -1" value=${by} aria-label="Ai gen" onChange=${e => setBy(e.target.value)}><option value="">Ai gen?</option>${D.staffList.map(s => html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select>` : null}
-    </div><span class="hint">Mỗi người tự ghi phần mình gen, app cộng tổng cho job.</span></div>` : null}
-    <div class="acts">${b.usage.length ? html`<button type="button" class="btn xs" aria-pressed=${log} onClick=${() => setLog(!log)}><${Ic} n="history" s=${14}/>${log ? 'Ẩn lịch sử' : 'Lịch sử ghi ('+b.usage.length+')'}</button>` : null}${w ? html`<button type="button" class="btn xs" aria-pressed=${edit} onClick=${() => setEdit(!edit)}><${Ic} n=${edit ? 'check' : 'edit'} s=${14}/>${edit ? 'Xong' : 'Sửa booking'}</button>` : null}</div>
-    ${log ? html`<table class="mini"><tbody>${b.usage.slice().reverse().map(x => html`<tr key=${x.uid}><td class="nw">${fD(x.date)}</td><td>${nameOf(D, x.by)}</td><td class="n">${fN(x.n)}</td><td>${x.note || ''}</td><td>${w ? html`<button type="button" class="icon-btn sm" title="Xóa dòng" aria-label="Xóa dòng" onClick=${() => patch({usage: {[x.uid]: null}})}><${Ic} n="x" s=${14}/></button>` : null}</td></tr>`)}</tbody></table>` : null}
+  return html`<li>
+    <div class="bk-row"><span><b>${i ? 'Book thêm' : 'Book'} ${fN(b.est)}</b> <span class="meta">ngày ${fD(b.date)}${b.used ? ', đã dùng '+fN(b.used) : ''}</span></span><span class="bk-st"><span class=${'st sm '+st[0]}>${st[1]}</span>${w ? html`<button type="button" class="icon-btn sm" aria-pressed=${edit} title="Sửa lần book này" aria-label=${'Sửa lần book '+fN(b.est)+' ngày '+fD(b.date)} onClick=${() => setEdit(!edit)}><${Ic} n=${edit ? 'x' : 'edit'} s=${14}/></button>` : null}</span></div>
+    ${k === 'CHỜ DUYỆT' ? (canApproveBooking() ? html`<div><button type="button" class="btn sm ok" onClick=${() => approve()}><${Ic} n="check" s=${16}/>Duyệt ${fN(b.est)} credit</button></div>` : html`<p class="meta">Hào duyệt xong mới gen phần này.</p>`) : null}
+    ${sg ? html`<div class="acts"><span class="meta">Gợi ý đổi sang ${sg.a.code} (còn ${fN(sg.room)})</span><button type="button" class="btn xs" disabled=${!w} onClick=${() => patch({acc: sg.a.id, approved: false})}>Đổi sang ${sg.a.code}</button></div>` : (k === 'VƯỢT CAP' && b.status === 'open' ? html`<p class="meta bad-t">Không account nào đủ chỗ. Mua top-up, thêm account hoặc dời sang kỳ reset sau.</p>` : null)}
+    ${k === 'QUA KỲ RESET' && w ? html`<div class="acts"><span class="meta">Account đã reset kỳ mới.</span><button type="button" class="btn xs" onClick=${split}>Tách phần còn lại sang kỳ mới</button></div>` : null}
     ${edit ? html`<div class="editor">
-      <div class="field"><span class="lab">Account</span><select class="sel sm" value=${b.acc || ''} onChange=${e => patch({acc: e.target.value, approved: false})}><option value="">Chọn account…</option>${D.accounts.map(x => html`<option key=${x.id} value=${x.id}>${x.code}, còn ${fN(x.m.bookable)}${x.scope === 'ext' ? ', chỉ job khách' : ''}</option>`)}</select></div>
-      <div class="grid2"><div class="field"><span class="lab">Credit dự kiến</span><${InlineNum} value=${b.est} label="Credit dự kiến" onSave=${v => patch({est: v || 0})}/></div><div class="field"><span class="lab">Ngày book</span><input class="inp sm" type="date" value=${b.date || ''} aria-label="Ngày book" onChange=${e => e.target.value && patch({date: e.target.value})}/></div></div>
-      <div class="field"><span class="lab">Trạng thái booking</span><select class="sel sm" value=${b.status} disabled=${p.closed} onChange=${e => patch({status: e.target.value})}><option value="open">Đang dùng</option><option value="done">Xong, chốt theo số thực tế</option><option value="cancelled">Hủy</option></select></div>
+      <div class="field"><span class="lab">Account</span><select class="sel sm" value=${b.acc || ''} onChange=${e => patch({acc: e.target.value, approved: false})}><option value="">Chọn account…</option>${D.accounts.map(x => html`<option key=${x.id} value=${x.id}>${x.code}, còn ${fN(x.m.bookable)}${x.scope === 'ext' ? ', chỉ job khách' : ''}</option>`)}</select><span class="hint">Đổi account thì Hào duyệt lại.</span></div>
+      <div class="grid2"><div class="field"><span class="lab">Số credit book</span><${InlineNum} value=${b.est} label="Số credit book" onSave=${v => patch({est: v || 0})}/></div><div class="field"><span class="lab">Ngày book</span><input class="inp sm" type="date" value=${b.date || ''} aria-label="Ngày book" onChange=${e => e.target.value && patch({date: e.target.value})}/></div></div>
+      <div class="acts">${b.status === 'open' ? html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => { patch({status: 'done'}); setEdit(false); }}>Chốt lần book này</button>` : html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => patch({status: 'open'})}>Mở lại</button>`}<button type="button" class="btn sm danger" disabled=${b.used !== 0} title=${b.used ? 'Đã có credit dùng, chốt thay vì hủy' : ''} onClick=${() => { patch({status: 'cancelled'}); setEdit(false); toast('Đã hủy lần book '+fN(b.est)+' credit'); }}>Hủy lần book</button></div>
     </div>` : null}
+  </li>`;
+}
+function AccLane({p, l, D, me}){
+  const w = canW(), a = l.a, code = a ? a.code : 'Chưa chọn account';
+  const [val, setVal] = useState('');
+  const [hist, setHist] = useState(false);
+  const over = l.used - l.booked;
+  const pct = l.booked ? Math.min(100, l.used / l.booked * 100) : (l.used ? 100 : 0);
+  const st = l.state === 'issue' ? ['fix', l.issue] : LANE_ST[l.state];
+  const setTotal = () => {
+    const T = toInt(val);
+    if(T === null || T < 0){ toast('Nhập tổng credit Cinema Studio đang hiện.', 'warn'); return; }
+    const d = T - l.used;
+    if(d === 0){ setVal(''); toast('Tổng vẫn là '+fN(T)+', không có gì mới.'); return; }
+    /* chia lại tổng cho các lần book đang dùng; phần đã chốt hoặc đang chờ duyệt giữ nguyên */
+    const out = laneAlloc(l, l.usable, T, {date: today(), by: me || null, at: Date.now(), tot: T});
+    if(!out){ toast('Tổng mới thấp hơn phần đã chốt ở lần book trước ('+fN(l.used - sum(l.usable.map(b => b.used)))+'). Kiểm tra lại số trên Cinema Studio.', 'warn'); return; }
+    W.project(p.id, {bookings: out}); setVal('');
+    toast('Đã cập nhật '+code+': tổng '+fN(T)+' ('+(d > 0 ? '+' : '−')+fN(Math.abs(d))+')');
+  };
+  const closeLane = () => { const o = {}; l.open.forEach(b => { o[b.bid] = {status: 'done'}; }); W.project(p.id, {bookings: o}); toast('Đã chốt '+code+': dùng '+fN(l.used)+(l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' credit cho account' : '')); };
+  const undo = h => { const o = {}; h.ids.forEach(x => { (o[x[0]] = o[x[0]] || {usage: {}}).usage[x[1]] = null; }); W.project(p.id, {bookings: o}); toast(h.legacy ? 'Đã xóa dòng log' : 'Đã hoàn tác, tổng về '+fN(l.used - h.n)); };
+  const newest = l.hist.find(h => !h.legacy);
+  return html`<div class=${'lane'+(l.state === 'done' ? ' done' : '')}>
+    <div class="lane-h"><b class="code">${code}</b>${a ? html`<span class="meta code">${a.email}</span><${CopyBtn} text=${a.email || ''} label="Copy email đăng nhập"/>` : null}<span class="sp"></span><span class=${'st sm '+st[0]}>${st[1]}</span></div>
+    <div class="lane-num"><b class="num">${fN(l.used)}</b><span class="meta">/ ${fN(l.booked)} đã book${over <= 0 && l.booked > l.used ? (l.state === 'done' ? ', trả lại ' : ', còn ')+fN(l.booked - l.used) : ''}</span>${over > 0 ? html`<span class="bad-t">vượt ${fN(over)}</span>` : null}</div>
+    <div class="meter sm"><i class=${over > 0 ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>
+    ${w && l.usable.length ? html`<div class="field"><span class="lab">Tổng đã dùng trên ${code}</span>
+      <div class="tform"><input class="inp sm" inputmode="numeric" placeholder=${'Đang là '+fN(l.used)} aria-label=${'Tổng credit đã dùng trên '+code} value=${val} onInput=${e => setVal(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') setTotal(); }}/><button type="button" class="btn sm primary" disabled=${!val.trim()} onClick=${setTotal}>Cập nhật</button></div>
+      <span class="hint">Nhập số tổng Cinema Studio đang hiện cho project của job trên ${code}, không phải số gen trong ngày. App tự tính phần tăng thêm.${l.last ? ' Lần cuối '+fN(l.last.tot)+', '+nameOf(D, l.last.by)+' '+rel(l.last.at)+'.' : ''}</span></div>`
+      : w && l.open.length && !l.usable.length ? html`<p class="meta">Hào duyệt booking xong mới gen và cập nhật credit được.</p>` : null}
+    <ul class="lane-bk">${l.bks.map((b, i) => html`<${BookRow} key=${b.bid} p=${p} b=${b} D=${D} me=${me} i=${i} l=${l}/>`)}</ul>
+    <div class="acts">${l.hist.length ? html`<button type="button" class="btn xs" aria-pressed=${hist} onClick=${() => setHist(!hist)}><${Ic} n="history" s=${14}/>${hist ? 'Ẩn lịch sử' : 'Lịch sử ('+l.hist.length+')'}</button>` : null}${w && l.open.length && !p.closed ? html`<button type="button" class="btn xs" title="Job không gen thêm trên account này: chốt số đã dùng, phần book còn thừa trả lại cho account" onClick=${closeLane}><${Ic} n="check" s=${14}/>Chốt ${code}, không gen thêm</button>` : null}</div>
+    ${hist ? html`<table class="mini"><tbody>${l.hist.map(h => html`<tr key=${h.k}><td class="nw">${h.at ? fT(h.at) : fD(h.date)}</td><td>${nameOf(D, h.by)}</td><td class="n">${h.legacy ? html`<span>+${fN(h.n)}</span>` : html`<span>tổng <b>${fN(h.tot)}</b></span><div class="meta">${h.n >= 0 ? '+' : '−'}${fN(Math.abs(h.n))}</div>`}</td><td>${h.legacy ? html`<span class="meta">ghi cộng dồn${h.note ? ': '+h.note : ''}</span>` : null}</td><td>${w && (h.legacy || h === newest) ? html`<button type="button" class="icon-btn sm" title=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} aria-label=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} onClick=${() => undo(h)}><${Ic} n=${h.legacy ? 'x' : 'undo'} s=${14}/></button>` : null}</td></tr>`)}</tbody></table>` : null}
   </div>`;
 }
-function NewBooking({p, D}){
+function NewBooking({p, D, lanes}){
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({est: '', acc: ''});
   const need = toInt(f.est) || 0;
   const sg = suggestAcc(D, p.useCase, need, today());
   const accId = f.acc || (sg.best ? sg.best.a.id : '');
+  const more = p.bookings.some(b => b.status !== 'cancelled');
+  const same = lanes.find(l => l.acc && l.acc === accId);
   if(!canW()) return null;
-  if(!open) return html`<div><button type="button" class="btn sm" onClick=${() => setOpen(true)}><${Ic} n="plus" s=${16}/>${p.bookings.length ? 'Book thêm credit' : 'Book credit cho job'}</button></div>`;
-  const save = () => { if(!need){ toast('Nhập credit dự kiến.', 'warn'); return; } W.project(p.id, {bookings: {[rid('b')]: {acc: accId, date: today(), est: need, status: 'open', approved: false, n: Date.now(), usage: {}}}}); setOpen(false); setF({est: '', acc: ''}); toast('Đã book, chờ leader duyệt'); };
+  if(!open) return html`<div class="field"><div><button type="button" class="btn sm" onClick=${() => setOpen(true)}><${Ic} n="plus" s=${16}/>${more ? 'Book thêm credit' : 'Book credit cho job'}</button></div>${more ? html`<span class="hint">Job cần nhiều hơn phần đã book thì book thêm. Hào duyệt xong mới gen phần thêm.</span>` : null}</div>`;
+  const save = () => { if(!need){ toast('Nhập số credit cần book.', 'warn'); return; } W.project(p.id, {bookings: {[rid('b')]: {acc: accId, date: today(), est: need, status: 'open', approved: false, n: Date.now(), usage: {}}}}); setOpen(false); setF({est: '', acc: ''}); toast('Đã book '+fN(need)+' credit, chờ Hào duyệt'); };
   return html`<div class="editor">
-    <div class="field"><span class="lab">Credit dự kiến</span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
-    <div class="field"><span class="lab">Account</span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : null}</div>
-    <div class="acts"><button type="button" class="btn sm primary" disabled=${!need || !accId} onClick=${save}>Book credit</button><button type="button" class="btn sm" onClick=${() => setOpen(false)}>Hủy</button></div>
+    <div class="field"><span class="lab">${more ? 'Book thêm bao nhiêu credit' : 'Số credit cần book'}</span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
+    <div class="field"><span class="lab">Account</span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>
+      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đang chốt, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Mở thêm một khung account mới cho job; trên Cinema Studio dùng project riêng của account này.</span>` : null}</div>
+    <div class="acts"><button type="button" class="btn sm primary" disabled=${!need || !accId} onClick=${save}>Book ${need ? fN(need)+' ' : ''}credit</button><button type="button" class="btn sm" onClick=${() => setOpen(false)}>Hủy</button></div>
   </div>`;
 }
 function CreditCard({p, D, me}){
-  const pct = p.est ? Math.min(100, p.used / p.est * 100) : 0;
+  const lanes = creditLanes(p, D);
+  const booked = sum(lanes.map(l => l.booked)), used = sum(lanes.map(l => l.used));
+  const pct = booked ? Math.min(100, used / booked * 100) : 0;
   return html`<section class="panel" aria-label="Credit Higgsfield">
     <div class="panel-h"><h3>Credit Higgsfield</h3><a class="btn xs" href="#credit">Xem các account</a></div>
-    ${p.bookings.length ? html`<div class="bigline"><span class="big">${fN(p.used)}</span><span class="meta">/ ${fN(p.est)} credit dự kiến</span></div><div class="meter"><i class=${p.est && p.used > p.est ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
-    ${p.bookings.map(b => html`<${BookingView} key=${b.bid} p=${p} b=${b} D=${D} me=${me}/>`)}
-    <${NewBooking} p=${p} D=${D}/>
+    ${lanes.length ? html`<div class="bigline"><span class="big">${fN(used)}</span><span class="meta">đã dùng / ${fN(booked)} đã book${lanes.length > 1 ? ', '+lanes.length+' account' : ''}</span></div><div class="meter"><i class=${booked && used > booked ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
+    ${lanes.map(l => html`<${AccLane} key=${l.acc || 'none'} p=${p} l=${l} D=${D} me=${me}/>`)}
+    <${NewBooking} p=${p} D=${D} lanes=${lanes}/>
   </section>`;
 }
 function RevCard({p, me}){
