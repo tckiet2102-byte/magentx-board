@@ -140,6 +140,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .icon-btn.sm{width:30px;height:30px;border-radius:8px;border-width:1px}
 .icon-btn.bare{border-color:transparent;background:transparent;color:var(--ink-2)}
 .icon-btn.bare:hover{background:var(--tint);color:var(--ink)}
+.btn.bare{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.bare:hover,.btn.bare[aria-pressed=true]{background:var(--tint);color:var(--ink)}
 .icon-btn.on{color:var(--action);background:var(--action-soft);border-color:transparent}
 
 /* inputs */
@@ -504,20 +506,31 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .meter{height:7px;border-radius:4px;background:var(--tint);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--d-doing);border-radius:4px}
 .meter i.over{background:var(--d-fix)}
-.lane{display:flex;flex-direction:column;gap:12px;padding-top:16px;border-top:1px solid var(--rule)}
-.lane-h{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
-.lane-h > b.code{font-size:16px}
-.lane-h .meta.code{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.lane-num{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
-.lane-num b.num{font-size:22px;line-height:1.1}
+.lane{display:flex;flex-direction:column;gap:10px;padding-top:16px;border-top:1px solid var(--rule)}
+.lane-h{display:flex;align-items:center;gap:8px;min-width:0}
+.lane-h > b.code{font-size:15px;flex:none}
+.lane-mail{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--f-code);font-size:12.5px;color:var(--ink-3)}
+.lane-h > .st{margin-left:auto;flex:none}
+.lane-num{display:flex;align-items:baseline;gap:6px}
+.lane-num b.num{font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums}
+.lane-rest{margin-left:auto;font-size:13.5px;color:var(--ink-2);white-space:nowrap}
 .lane.done .lane-num b.num{color:var(--ink-2)}
-.meter.sm{height:5px}
-.tform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.lane-bk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.lane-bk > li{display:flex;flex-direction:column;gap:10px;padding:10px 12px;border-radius:10px;background:var(--subtle);border:1px solid var(--rule)}
-.bk-row{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;font-size:14.5px}
-.bk-st{display:flex;align-items:center;gap:8px;margin-left:auto}
 .lane.done .meter i{background:var(--d-todo)}
+.meter.sm{height:5px}
+.lane-upd{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.tform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.lane-last{margin:0;font-size:13px;color:var(--ink-3)}
+.lane-bk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lane-bk > li{display:flex;flex-direction:column;gap:8px;padding:8px 0;border-top:1px dashed var(--rule)}
+.lane-bk > li:last-child{border-bottom:1px dashed var(--rule)}
+.bk-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;min-height:30px;font-size:14px;color:var(--ink-2)}
+.bk-t{white-space:nowrap}
+.bk-d{flex:none;min-width:42px;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.bk-t b{color:var(--ink);font-weight:600}
+.bk-st{display:flex;align-items:center;gap:6px;margin-left:auto}
+.lane-act{display:flex;gap:4px 12px;flex-wrap:wrap;margin:-2px 0 0 -8px}
+.cr-how{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.cr-foot{padding-top:16px;border-top:1px solid var(--rule)}
 .uform{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:8px}
 .mini{width:100%;border-collapse:collapse;font-size:14px}
 .mini td{padding:7px 4px;border-top:1px solid var(--rule);vertical-align:top}
@@ -2990,8 +3003,10 @@ function BookRow({p, b, D, me, i, l}){
   };
   const split = () => { const rest = Math.max(0, b.est - b.used); W.project(p.id, {bookings: {[b.bid]: {status: 'done'}, [rid('b')]: {acc: b.acc, date: today(), est: rest, status: 'open', approved: false, n: Date.now(), usage: {}}}}); toast('Đã tách: phần còn lại '+fN(rest)+' credit chờ duyệt'); };
   const sg = (k === 'VƯỢT CAP' || k === 'ACC CHỈ CHO EXT' || k === 'CHƯA CHỌN ACC') && b.status === 'open' ? suggestAcc(D, p.useCase, Math.max(b.est - b.used, 0), b.date, {pid: p.id, bid: b.bid}).best : null;
-  return html`<li>
-    <div class="bk-row"><span><b>${i ? 'Book thêm' : 'Book'} ${fN(b.est)}</b> <span class="meta">ngày ${fD(b.date)}${b.used ? ', đã dùng '+fN(b.used) : ''}</span></span><span class="bk-st"><span class=${'st sm '+st[0]}>${st[1]}</span>${w ? html`<button type="button" class="icon-btn sm" aria-pressed=${edit} title="Sửa lần book này" aria-label=${'Sửa lần book '+fN(b.est)+' ngày '+fD(b.date)} onClick=${() => setEdit(!edit)}><${Ic} n=${edit ? 'x' : 'edit'} s=${14}/></button>` : null}</span></div>
+  const laneSt = l ? (l.state === 'issue' ? l.issue : (LANE_ST[l.state] || [])[1]) : '';
+  const showSt = st[1] !== laneSt, showUsed = l && l.bks.length > 1 && b.used;
+  return html`<li class=${edit ? 'on' : ''}>
+    <div class="bk-row"><span class="bk-d">${fD(b.date)}</span><span class="bk-t">${i ? 'Book thêm ' : 'Book '}<b class="num">${fN(b.est)}</b>${showUsed ? html`<span class="meta">, dùng ${fN(b.used)}</span>` : null}</span><span class="bk-st">${showSt ? html`<span class=${'st sm '+st[0]}>${st[1]}</span>` : null}${w ? html`<button type="button" class="icon-btn sm bare" aria-pressed=${edit} title="Sửa lần book này" aria-label=${'Sửa lần book '+fN(b.est)+' ngày '+fD(b.date)} onClick=${() => setEdit(!edit)}><${Ic} n=${edit ? 'x' : 'edit'} s=${14}/></button>` : null}</span></div>
     ${k === 'CHỜ DUYỆT' ? (canApproveBooking() ? html`<div><button type="button" class="btn sm ok" onClick=${() => approve()}><${Ic} n="check" s=${16}/>Duyệt ${fN(b.est)} credit</button></div>` : html`<p class="meta">Hào duyệt xong mới gen phần này.</p>`) : null}
     ${sg ? html`<div class="acts"><span class="meta">Gợi ý đổi sang ${sg.a.code} (còn ${fN(sg.room)})</span><button type="button" class="btn xs" disabled=${!w} onClick=${() => patch({acc: sg.a.id, approved: false})}>Đổi sang ${sg.a.code}</button></div>` : (k === 'VƯỢT CAP' && b.status === 'open' ? html`<p class="meta bad-t">Không account nào đủ chỗ. Mua top-up, thêm account hoặc dời sang kỳ reset sau.</p>` : null)}
     ${k === 'QUA KỲ RESET' && w ? html`<div class="acts"><span class="meta">Account đã reset kỳ mới.</span><button type="button" class="btn xs" onClick=${split}>Tách phần còn lại sang kỳ mới</button></div>` : null}
@@ -3023,16 +3038,17 @@ function AccLane({p, l, D, me}){
   const closeLane = () => { const o = {}; l.open.forEach(b => { o[b.bid] = {status: 'done'}; }); W.project(p.id, {bookings: o}); toast('Đã chốt '+code+': dùng '+fN(l.used)+(l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' credit cho account' : '')); };
   const undo = h => { const o = {}; h.ids.forEach(x => { (o[x[0]] = o[x[0]] || {usage: {}}).usage[x[1]] = null; }); W.project(p.id, {bookings: o}); toast(h.legacy ? 'Đã xóa dòng log' : 'Đã hoàn tác, tổng về '+fN(l.used - h.n)); };
   const newest = l.hist.find(h => !h.legacy);
+  const rest = l.booked - l.used;
   return html`<div class=${'lane'+(l.state === 'done' ? ' done' : '')}>
-    <div class="lane-h"><b class="code">${code}</b>${a ? html`<span class="meta code">${a.email}</span><${CopyBtn} text=${a.email || ''} label="Copy email đăng nhập"/>` : null}<span class="sp"></span><span class=${'st sm '+st[0]}>${st[1]}</span></div>
-    <div class="lane-num"><b class="num">${fN(l.used)}</b><span class="meta">/ ${fN(l.booked)} đã book${over <= 0 && l.booked > l.used ? (l.state === 'done' ? ', trả lại ' : ', còn ')+fN(l.booked - l.used) : ''}</span>${over > 0 ? html`<span class="bad-t">vượt ${fN(over)}</span>` : null}</div>
+    <div class="lane-h"><b class="code">${code}</b>${a ? html`<span class="lane-mail" title=${a.email}>${a.email}</span><${CopyBtn} text=${a.email || ''} label="Copy email đăng nhập"/>` : null}<span class=${'st sm '+st[0]}>${st[1]}</span></div>
+    <div class="lane-num"><b class="num">${fN(l.used)}</b><span class="meta">/ ${fN(l.booked)}</span><span class=${'lane-rest'+(over > 0 ? ' bad-t' : '')}>${over > 0 ? 'vượt '+fN(over) : rest > 0 ? (l.state === 'done' ? 'trả lại ' : 'còn ')+fN(rest) : 'vừa hết'}</span></div>
     <div class="meter sm"><i class=${over > 0 ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>
-    ${w && l.usable.length ? html`<div class="field"><span class="lab">Tổng đã dùng trên ${code}</span>
-      <div class="tform"><input class="inp sm" inputmode="numeric" placeholder=${'Đang là '+fN(l.used)} aria-label=${'Tổng credit đã dùng trên '+code} value=${val} onInput=${e => setVal(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') setTotal(); }}/><button type="button" class="btn sm primary" disabled=${!val.trim()} onClick=${setTotal}>Cập nhật</button></div>
-      <span class="hint">Nhập số tổng Cinema Studio đang hiện cho project của job trên ${code}, không phải số gen trong ngày. App tự tính phần tăng thêm.${l.last ? ' Lần cuối '+fN(l.last.tot)+', '+nameOf(D, l.last.by)+' '+rel(l.last.at)+'.' : ''}</span></div>`
-      : w && l.open.length && !l.usable.length ? html`<p class="meta">Hào duyệt booking xong mới gen và cập nhật credit được.</p>` : null}
+    ${w && l.usable.length ? html`<div class="lane-upd">
+      <div class="tform"><input class="inp sm" inputmode="numeric" placeholder="Nhập tổng mới" aria-label=${'Tổng credit Cinema Studio đang hiện cho job trên '+code} value=${val} onInput=${e => setVal(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') setTotal(); }}/><button type="button" class="btn sm primary" disabled=${!val.trim()} onClick=${setTotal}>Cập nhật</button></div>
+      ${l.last ? html`<span class="lane-last">Cập nhật ${rel(l.last.at)}, ${nameOf(D, l.last.by)}</span>` : null}
+    </div>` : w && l.open.length && !l.usable.length ? html`<p class="lane-last">Hào duyệt booking xong mới gen và cập nhật được.</p>` : null}
     <ul class="lane-bk">${l.bks.map((b, i) => html`<${BookRow} key=${b.bid} p=${p} b=${b} D=${D} me=${me} i=${i} l=${l}/>`)}</ul>
-    <div class="acts">${l.hist.length ? html`<button type="button" class="btn xs" aria-pressed=${hist} onClick=${() => setHist(!hist)}><${Ic} n="history" s=${14}/>${hist ? 'Ẩn lịch sử' : 'Lịch sử ('+l.hist.length+')'}</button>` : null}${w && l.open.length && !p.closed ? html`<button type="button" class="btn xs" title="Job không gen thêm trên account này: chốt số đã dùng, phần book còn thừa trả lại cho account" onClick=${closeLane}><${Ic} n="check" s=${14}/>Chốt ${code}, không gen thêm</button>` : null}</div>
+    ${l.hist.length || (w && l.open.length && !p.closed) ? html`<div class="lane-act">${l.hist.length ? html`<button type="button" class="btn xs bare" aria-pressed=${hist} onClick=${() => setHist(!hist)}><${Ic} n="history" s=${14}/>${hist ? 'Ẩn lịch sử' : 'Lịch sử ('+l.hist.length+')'}</button>` : null}${w && l.open.length && !p.closed ? html`<button type="button" class="btn xs bare" title=${'Job không gen thêm trên '+code+': chốt số đã dùng, phần book còn thừa trả lại cho account'} onClick=${closeLane}><${Ic} n="check" s=${14}/>Chốt, không gen thêm</button>` : null}</div>` : null}
     ${hist ? html`<table class="mini"><tbody>${l.hist.map(h => html`<tr key=${h.k}><td class="nw">${h.at ? fT(h.at) : fD(h.date)}</td><td>${nameOf(D, h.by)}</td><td class="n">${h.legacy ? html`<span>+${fN(h.n)}</span>` : html`<span>tổng <b>${fN(h.tot)}</b></span><div class="meta">${h.n >= 0 ? '+' : '−'}${fN(Math.abs(h.n))}</div>`}</td><td>${h.legacy ? html`<span class="meta">ghi cộng dồn${h.note ? ': '+h.note : ''}</span>` : null}</td><td>${w && (h.legacy || h === newest) ? html`<button type="button" class="icon-btn sm" title=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} aria-label=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} onClick=${() => undo(h)}><${Ic} n=${h.legacy ? 'x' : 'undo'} s=${14}/></button>` : null}</td></tr>`)}</tbody></table>` : null}
   </div>`;
 }
@@ -3045,12 +3061,13 @@ function NewBooking({p, D, lanes}){
   const more = p.bookings.some(b => b.status !== 'cancelled');
   const same = lanes.find(l => l.acc && l.acc === accId);
   if(!canW()) return null;
-  if(!open) return html`<div class="field"><div><button type="button" class="btn sm" onClick=${() => setOpen(true)}><${Ic} n="plus" s=${16}/>${more ? 'Book thêm credit' : 'Book credit cho job'}</button></div>${more ? html`<span class="hint">Job cần nhiều hơn phần đã book thì book thêm. Hào duyệt xong mới gen phần thêm.</span>` : null}</div>`;
+  if(!open) return html`<div class="cr-foot"><button type="button" class="btn sm" onClick=${() => setOpen(true)}><${Ic} n="plus" s=${16}/>${more ? 'Book thêm credit' : 'Book credit cho job'}</button></div>`;
   const save = () => { if(!need){ toast('Nhập số credit cần book.', 'warn'); return; } W.project(p.id, {bookings: {[rid('b')]: {acc: accId, date: today(), est: need, status: 'open', approved: false, n: Date.now(), usage: {}}}}); setOpen(false); setF({est: '', acc: ''}); toast('Đã book '+fN(need)+' credit, chờ Hào duyệt'); };
   return html`<div class="editor">
     <div class="field"><span class="lab">${more ? 'Book thêm bao nhiêu credit' : 'Số credit cần book'}</span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
     <div class="field"><span class="lab">Account</span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>
-      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đang chốt, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Mở thêm một khung account mới cho job; trên Cinema Studio dùng project riêng của account này.</span>` : null}</div>
+      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đang chốt, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Thêm một khung account cho job (project riêng trên Cinema Studio của account này).</span>` : null}</div>
+    <p class="lane-last">Hào duyệt xong mới gen phần này.</p>
     <div class="acts"><button type="button" class="btn sm primary" disabled=${!need || !accId} onClick=${save}>Book ${need ? fN(need)+' ' : ''}credit</button><button type="button" class="btn sm" onClick=${() => setOpen(false)}>Hủy</button></div>
   </div>`;
 }
@@ -3060,7 +3077,8 @@ function CreditCard({p, D, me}){
   const pct = booked ? Math.min(100, used / booked * 100) : 0;
   return html`<section class="panel" aria-label="Credit Higgsfield">
     <div class="panel-h"><h3>Credit Higgsfield</h3><a class="btn xs" href="#credit">Xem các account</a></div>
-    ${lanes.length ? html`<div class="bigline"><span class="big">${fN(used)}</span><span class="meta">đã dùng / ${fN(booked)} đã book${lanes.length > 1 ? ', '+lanes.length+' account' : ''}</span></div><div class="meter"><i class=${booked && used > booked ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
+    ${lanes.length ? html`<div class="bigline"><span class="big">${fN(used)}</span><span class="meta">đã dùng / ${fN(booked)} đã book</span></div><div class="meter"><i class=${booked && used > booked ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>
+      ${canW() && lanes.some(l => l.usable.length) ? html`<p class="cr-how">Mỗi account ghi theo số tổng Cinema Studio đang hiện cho project của job. App tự tính phần tăng.</p>` : null}` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
     ${lanes.map(l => html`<${AccLane} key=${l.acc || 'none'} p=${p} l=${l} D=${D} me=${me}/>`)}
     <${NewBooking} p=${p} D=${D} lanes=${lanes}/>
   </section>`;
