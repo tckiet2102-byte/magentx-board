@@ -1760,7 +1760,7 @@ function regCreditAll(D){
   const pids = D.projects.filter(p => p.bookings.length && p.jobOk).map(p => p.id);
   if(!pids.length){ toast('Chưa có dự án nào có booking credit và Job ID đúng dạng.', 'warn'); return; }
   regCredit(pids, true).then(o => {
-    if(o.configured === false) toast('Bảng chưa nối Job Register (thiếu REGISTER_URL trên Vercel).', 'warn');
+    if(o.configured === false) toast('Bảng chưa nối Job Register (thiếu REGISTER_URL trong cài đặt Cloudflare).', 'warn');
     else if(!o.ok) toast(o.error || 'Không ghi được credit sang Job Register.', 'warn');
     else toast('Đã ghi credit đã log của '+(o.updated || []).length+' job vào Job Register'+((o.missing || []).length ? ', '+o.missing.length+' job chưa có trong Register: '+o.missing.join(', ') : ''));
   });

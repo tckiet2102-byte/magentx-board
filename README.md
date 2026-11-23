@@ -1,16 +1,17 @@
 # MagentX Production Board
 
 Bảng sản xuất dùng chung cho phòng: lịch, dự án, duyệt QC, credit Higgsfield, đặt tên file.
-Web tĩnh trên Vercel, dữ liệu lưu ở Firebase Firestore. Không cần đăng nhập.
+Web tĩnh trên Cloudflare Pages (https://board.tieuchankiet.id.vn), dữ liệu lưu ở Firebase Firestore. Không cần đăng nhập.
 
 - `public/index.html`: toàn bộ app
 - `firestore.rules`: quyền đọc/ghi database
-- `api/drive.js`: hàm trung chuyển video Google Drive cho player duyệt (chạy trên Vercel)
+- `api/drive.js`: hàm trung chuyển video Google Drive cho player duyệt (chạy trên Cloudflare qua `functions/api/`)
 - `api/review.js`: API cho trang duyệt của khách (đọc/ghi qua Firestore REST, chỉ trả phần khách được xem)
 - `public/review.html`: trang duyệt video của khách, mở bằng link `/r/<dự án>/<mã link>`
 - `public/rv-core.js`: bộ tải sẵn video theo khúc, dùng chung cho player nội bộ và trang khách
 - `public/logo.svg`, `public/favicon.svg`: logo MagentX (vector) và icon trên tab trình duyệt
-- `vercel.json`: cấu hình deploy
+- `functions/api/`, `public/_redirects`, `public/_headers`: chạy trên Cloudflare Pages
+- `vercel.json`: cấu hình cũ cho Vercel
 - `magentx-demo-offline.html`: bản demo cũ (dữ liệu lưu trong trình duyệt), giữ lại để tham khảo
 
 ## 1. Tạo database (một lần)
@@ -27,12 +28,8 @@ Lần đầu mở app, database trống sẽ được ghi sẵn 5 nhân sự (H�
 1. Mở `magentx-demo-offline.html` trên đúng trình duyệt đã dùng demo, rồi bấm **Tải dữ liệu demo (.json)** trên thanh vàng ở đầu trang.
 2. Mở app mới, vào **Cài đặt › Sao lưu và nhập dữ liệu › Nhập từ file backup**, chọn file vừa tải, rồi bấm **Nhập**.
 
-## 2. Deploy lên Vercel
-```
-npx vercel login
-npx vercel --prod
-```
-Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau mỗi lần sửa `index.html`, chạy lại `npx vercel --prod`.
+## 2. Deploy
+Cloudflare Pages (dự án `board`) nối với repo này: đẩy hoặc merge vào `main` là tự deploy (khoảng 1 phút). Nhánh khác/PR có link xem thử riêng. Cài đặt trên Cloudflare: build command để trống, thư mục kết quả `public`.
 
 ## Đăng nhập bằng mã PIN
 - Mở web, chọn tên mình. Lần đầu: tạo mã PIN 4 số (nhập 2 lần). Lần sau: chỉ gõ 4 số.
@@ -83,11 +80,11 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 - Ở mỗi bước đã nộp link tới **file video trên Google Drive** (dạng `drive.google.com/file/d/…`), bấm **Duyệt trên player**: tua bằng thanh thời gian, lùi/tới từng khung hình (phím ← →), vẽ lên khung hình, ghi chú gắn với đúng thời điểm. Người làm tick **Đã sửa** cho từng ghi chú.
 - Nếu link kết quả là folder, bấm **Thêm link file video để duyệt trên player** và dán link file video trong folder đó.
 - Điều kiện: file chia sẻ **Bất kỳ ai có đường liên kết**, định dạng MP4 (H.264). Không đạt thì player chuyển sang trình xem của Google Drive, thời điểm ghi chú phải nhập tay.
-- Google chặn phát thẳng file Drive trên web khác, nên video đi qua `api/drive.js` trên Vercel. Băng thông tính vào gói Vercel (gói miễn phí 100 GB mỗi tháng), nên nộp bản xem nhẹ thay vì file master.
+- Google chặn phát thẳng file Drive trên web khác, nên video đi qua `api/drive.js` (chạy trên Cloudflare). Mỗi khúc video là một lượt gọi hàm (gói miễn phí 100.000 lượt mỗi ngày cho cả tài khoản), nên vẫn nộp bản xem nhẹ thay vì file master.
 - Ghi chú và nét vẽ lưu trong `projects/{id}.steps.{bước}.vn`. Phím tắt: Space phát/dừng, ← → từng khung hình, Shift + ← → 1 giây, D bật vẽ, N gõ ghi chú, Ctrl + Enter lưu.
 
 ## Gửi link duyệt cho khách
-- Trong player, bấm **Gửi khách**, rồi **Tạo link mới cho V…**. Link tự copy, dạng `https://magentx-board.vercel.app/r/<dự án>/<mã>`.
+- Trong player, bấm **Gửi khách**, rồi **Tạo link mới cho V…**. Link tự copy, dạng `https://board.tieuchankiet.id.vn/r/<dự án>/<mã>`. Link tạo trước khi chuyển còn mang địa chỉ magentx-board.vercel.app: đổi phần đầu thành board.tieuchankiet.id.vn là mở được.
 - Khách mở link không cần đăng nhập: xem video, tua từng khung hình, vẽ, gửi góp ý theo thời điểm, và bấm **Đồng ý bản này** hoặc **Cần sửa**. Khách chỉ thấy video, tên bước và góp ý của khách; không thấy dữ liệu nào khác.
 - Góp ý của khách hiện ngay trong player nội bộ với nhãn **Khách: tên**; team tick **Đã sửa** như ghi chú thường, khách thấy "MagentX đã sửa". Khách yêu cầu sửa thì dự án hiện cảnh báo trong **Cần xử lý**.
 - Link mở 30 ngày. Có bản mới thì bấm **Đưa V… lên link này** để khách xem bản mới trên cùng link. **Tắt link** khi không muốn khách mở nữa.
@@ -100,7 +97,7 @@ Chạy trong thư mục này. Khi Vercel hỏi framework, chọn **Other**. Sau 
 ## Quy trình tạo job
 - **Job khách:** thêm dòng trong Job Register trước, lấy Job ID ở cột A. Trên bảng bấm **Tạo dự án**, để mặc định "Đã có trong Job Register", dán Job ID (hoặc chọn trong danh sách khi đã nối sheet); bảng tự tách kick-off, client code, project và điền khách. Dán Job ID nhầm vào ô Tên dự án thì bảng tự chuyển sang ô Job ID. Job chưa có trong Register thì chọn "Chưa có, tạo mới": bảng ghép Job ID và thêm dòng vào sheet (hoặc đưa ba khối ô để copy).
 - **Job nội bộ:** tab **Booking nội bộ**. Ai cũng gửi yêu cầu được (tên việc, loại, người yêu cầu, brief, hạn xong, bản giao, credit dự kiến, mức gấp). Hào hoặc Hiếu bấm **Nhận và giao việc**: form dự án mở sẵn thông tin, chọn quy trình, người làm, thời gian; bảng tạo job `YYMM_MX_…`, đánh dấu yêu cầu đã giao và đưa vào Job Register. Có thể hoãn hoặc từ chối kèm lý do.
-- **Nối với Job Register:** làm một lần theo [`docs/register-sync.md`](docs/register-sync.md) (Apps Script trong sheet + hai biến môi trường trên Vercel). Khi đã nối: trang Dự án liệt kê job đang chạy trong Register mà bảng chưa có, form tạo dự án có danh sách chọn, danh sách khách lấy từ tab Clients, và thẻ "Folder và tên file" cho biết job đã có trong Register chưa. Chưa nối: thẻ đó có nút copy ba khối ô (B, E, P) để dán vào sheet, vì cột A, D, N là công thức.
+- **Nối với Job Register:** làm một lần theo [`docs/register-sync.md`](docs/register-sync.md) (Apps Script trong sheet + hai biến môi trường trên Cloudflare). Khi đã nối: trang Dự án liệt kê job đang chạy trong Register mà bảng chưa có, form tạo dự án có danh sách chọn, danh sách khách lấy từ tab Clients, và thẻ "Folder và tên file" cho biết job đã có trong Register chưa. Chưa nối: thẻ đó có nút copy ba khối ô (B, E, P) để dán vào sheet, vì cột A, D, N là công thức.
 
 ## Job ID, folder và tên file
 - Quy tắc nằm ở [`docs/naming-convention.md`](docs/naming-convention.md) (bản rút gọn; bản đầy đủ có danh sách khách và Drive ID nằm trong Drive của phòng).

@@ -24,12 +24,12 @@ Khi đã nối, bảng tự đọc danh sách job và khách trong sheet "[Magen
 
 Web app chỉ trả dữ liệu khi có đúng token, và không trả cột Quote, Credits, Notes.
 
-### 2. Biến môi trường trên Vercel (người quản lý Vercel làm)
-Trong project magentx-board trên Vercel › **Settings › Environment Variables**, thêm cho Production:
+### 2. Biến môi trường trên Cloudflare (người quản lý Cloudflare làm)
+Trong Cloudflare › **Workers & Pages › board › Settings › Variables and secrets**, bấm **Add**, chọn loại **Secret**, thêm cho Production:
 - `REGISTER_URL` = Web app URL ở bước 1.4
 - `REGISTER_TOKEN` = chuỗi `BOARD_TOKEN` ở bước 1.3
 
-Rồi **Redeploy** bản mới nhất. Token chỉ nằm ở Vercel và Apps Script, không nằm trong repo hay trình duyệt.
+Rồi vào **Deployments**, ở bản mới nhất bấm **⋯ › Retry deployment** (biến mới chỉ áp dụng cho lần deploy sau). Token chỉ nằm ở Cloudflare và Apps Script, không nằm trong repo hay trình duyệt.
 
 ### 3. Kiểm tra
 Vào bảng › **Cài đặt › Khách hàng và Job Register**. Dòng trạng thái phải là "Đã kết nối Job Register, N job, M khách". Nếu báo lỗi token thì kiểm tra hai chuỗi có khớp không. Sửa Apps Script xong phải **Deploy › Manage deployments › Edit › New version** thì web app mới nhận code mới.
@@ -43,5 +43,5 @@ Vào bảng › **Cài đặt › Khách hàng và Job Register**. Dòng trạng
 
 ## Cập nhật script (khi repo đổi `MagentX_BoardSync.gs`)
 1. Mở sheet › **Extensions › Apps Script**, mở file `MagentX_BoardSync.gs`, xóa hết nội dung, dán bản mới trong repo, bấm **Save**.
-2. **Deploy › Manage deployments**, chọn bản đang chạy, bấm biểu tượng bút (**Edit**), ở **Version** chọn **New version**, bấm **Deploy**. URL web app giữ nguyên nên không cần sửa Vercel.
+2. **Deploy › Manage deployments**, chọn bản đang chạy, bấm biểu tượng bút (**Edit**), ở **Version** chọn **New version**, bấm **Deploy**. URL web app giữ nguyên nên không cần sửa Cloudflare.
 3. Vào trang Credit trên bảng, bấm **Ghi credit sang Job Register** để thử. Script cũ sẽ báo "Apps Script trong Job Register là bản cũ".
