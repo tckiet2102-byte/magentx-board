@@ -4,7 +4,8 @@
    Hai cách dùng:
    - Phát trực tiếp: /api/drive?id=… (giữ header Range để tua).
    - Tải sẵn theo khúc: /api/drive?id=…&part=N&ps=<bytes>&k=<khóa bản> trả về đúng một khúc, kèm
-     x-total-size. Khúc có URL cố định nên CDN của Vercel giữ lại được, lần xem sau nhanh hơn.
+     x-total-size. Khúc có URL cố định nên được giữ ở cache (cdn-cache-control: trên Cloudflare do functions/api/drive.js
+     đặt vào Cache API, trước đây là CDN của Vercel), lần xem sau nhanh hơn.
    - Kiểm tra: /api/drive?id=…&check=1 → {ok, reason: 'private'|'missing'|'drive'} để player báo đúng lý do.
    - Trang khách: /api/drive?s=<dự án>.<mã link> thay cho id. Máy chủ tự tra mã file trong dự án
      (projects.shares.<mã>), chỉ phục vụ khi link còn bật và chưa hết hạn, nên trình duyệt của khách

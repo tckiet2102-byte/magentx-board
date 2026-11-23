@@ -1,5 +1,6 @@
 /* Trung chuyển tới Job Register (Apps Script web app trong sheet, xem apps-script/MagentX_BoardSync.gs).
-   Token nằm ở biến môi trường của Vercel, không lộ ra trình duyệt hay repo:
+   Token nằm ở biến môi trường của nơi chạy (Cloudflare › board › Settings › Variables and secrets; trước đây Vercel),
+   không lộ ra trình duyệt hay repo:
    - REGISTER_URL: URL web app (https://script.google.com/macros/s/…/exec)
    - REGISTER_TOKEN: chuỗi trùng với Script property BOARD_TOKEN
    GET  /api/register         → {configured, ok, jobs, clients}

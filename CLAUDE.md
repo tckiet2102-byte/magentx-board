@@ -10,6 +10,7 @@ Cloudflare Pages (dự án `board`) deploy tự động từ nhánh `main` của
 
 # Ghi chú app
 
+- Cache khúc video trên Cloudflare: `functions/api/drive.js` giữ các yêu cầu `?part=N` cùng trang trong Cache API (`caches.default`) theo `s-maxage` của `cdn-cache-control` (12 giờ; link khách `s=` 15 phút), trả header `x-edge-cache: HIT|MISS`. Cache API chỉ chạy trên tên miền riêng, không chạy trên `*.pages.dev`. Mỗi khúc vẫn là một lượt gọi hàm (gói miễn phí 100.000 lượt/ngày).
 - Chạy trên Cloudflare: `functions/api/<tên>.js` chỉ gọi lại `api/<tên>.js` (code Vercel Edge giữ nguyên) và chép biến môi trường của Cloudflare vào `process.env`. Thêm API mới trong `api/` thì thêm file bọc tương ứng trong `functions/api/`. Header của `/r/*` và `/rv-core.js` nằm ở `public/_headers`.
 - Dữ liệu ở Firebase Firestore (cấu hình `FIREBASE_CONFIG` đầu file), quyền ở `firestore.rules`.
 - Đăng nhập bằng mã PIN 4 số (`staff/{id}.pin`, băm SHA-256 + salt), giữ 24 giờ trên mỗi máy. Mã PIN của Hào vào được mọi tài khoản.
