@@ -959,6 +959,9 @@ a.lg-pn:hover{color:var(--action)}
 .reg-conn{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 22px 16px;padding:10px 14px;border-radius:10px;background:var(--tint);font-size:14px}
 .reg-conn.ok{background:var(--ok-soft)}
 .reg-conn.bad{background:var(--bad-soft)}
+.reg-sync{display:flex;flex-direction:column;gap:10px;margin:0 22px 16px;font-size:14px}
+.reg-miss{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.reg-miss li{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
 .rj-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .rj-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
 .rj-list li > div{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -987,7 +990,7 @@ a.lg-pn:hover{color:var(--action)}
 .in-done .reg-box{align-self:flex-start}
 .in-form{display:flex;flex-direction:column;gap:16px}
 .in-form textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
-@media (max-width:760px){.in-flow{grid-template-columns:minmax(0,1fr)}.in-card,.in-done li{padding:14px 16px}.reg-conn{margin:0 16px 14px}}
+@media (max-width:760px){.in-flow{grid-template-columns:minmax(0,1fr)}.in-card,.in-done li{padding:14px 16px}.reg-conn{margin:0 16px 14px}.reg-sync{margin:0 16px 14px}}
 /* người dùng phòng ban khác */
 .who-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto}
 .who-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 14px;border:1.5px solid var(--field);border-radius:11px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
@@ -1703,7 +1706,7 @@ function regLoad(force){
   S.reg = Object.assign({}, S.reg, {state: 'loading'}); emit();
   const done = o => { S.reg = Object.assign({jobs: [], clients: []}, o, {at: Date.now()}); emit(); };
   fetch('/api/register', {cache: 'no-store'}).then(r => r.json()).then(o => {
-    if(!o || o.configured === false) done({state: 'off'});
+    if(!o || o.configured === false) done({state: 'off', missing: (o && o.missing) || []});
     else if(!o.ok) done({state: 'error', error: o.error || 'Không đọc được Job Register.', jobs: S.reg.jobs, clients: S.reg.clients});
     else done({state: 'ok', jobs: o.jobs || [], clients: o.clients || []});
   }).catch(() => done({state: 'off'}));
@@ -3824,6 +3827,27 @@ function ReqUsersPanel({D, me}){
     </div>` : null}
   </section>`;
 }
+/* Đồng bộ với Job Register (Hào): job trên bảng chưa có trong sheet (ví dụ tạo lúc mất kết nối) và credit đã dùng */
+function RegSync({D}){
+  const [busy, setBusy] = useState(null), [open, setOpen] = useState(false);
+  if(S.reg.state !== 'ok' || meId() !== 'hao') return null;
+  const miss = D.projects.filter(p => p.jobOk && p.status !== 'cancelled' && !regJob(p.code)).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+  const addAll = async () => {
+    const ok = [], fail = [];
+    for(let i = 0; i < miss.length; i++){
+      setBusy({i: i + 1, n: miss.length});
+      const o = await regAdd(miss[i].id);
+      if(o && (o.ok || o.exists)) ok.push(miss[i].code); else fail.push(miss[i].code+': '+((o && o.error) || 'lỗi'));
+    }
+    setBusy(null); S.reg.at = 0; regLoad(true);
+    toast('Đã thêm '+ok.length+' job vào Job Register'+(fail.length ? '. Chưa thêm được '+fail.length+': '+fail.join('; ') : ''), fail.length ? 'warn' : '');
+  };
+  return html`<div class="reg-sync">
+    ${miss.length ? html`<div class="acts"><span><b>${miss.length} job trên bảng chưa có trong Job Register</b> (thường là job tạo lúc bảng chưa nối sheet).</span><button type="button" class="btn xs bare" aria-expanded=${open} onClick=${() => setOpen(!open)}>${open ? 'Ẩn' : 'Xem'}</button></div>
+      ${open ? html`<ul class="reg-miss">${miss.map(p => html`<li key=${p.id}><span class="code">${p.code}</span><span class="meta">${p.name}</span></li>`)}</ul>` : null}` : html`<span class="meta">Mọi job trên bảng đều đã có trong Job Register.</span>`}
+    <div class="acts">${miss.length ? html`<button type="button" class="btn sm primary" disabled=${!!busy} onClick=${addAll}>${busy ? 'Đang thêm '+busy.i+'/'+busy.n+'…' : 'Thêm '+miss.length+' job vào Job Register'}</button>` : null}<button type="button" class="btn sm" disabled=${!!busy} onClick=${() => regCreditAll(D)}><${Ic} n="upload" s=${16}/>Ghi credit đã dùng sang Job Register</button></div>
+  </div>`;
+}
 function ClientsPanel({D, me}){
   const c = D.cfg, lead = canW() && isLead(D, me);
   const list = clientList(D), models = modelList(D), custom = c.models || {};
@@ -3847,9 +3871,10 @@ function ClientsPanel({D, me}){
       ${S.reg.state === 'ok' ? html`<span><b>Đã kết nối Job Register.</b> ${S.reg.jobs.length} job, ${S.reg.clients.length} khách, cập nhật ${rel(S.reg.at)}. Danh sách khách dưới đây lấy từ tab Clients.</span>`
         : S.reg.state === 'error' ? html`<span><b>Không đọc được Job Register:</b> ${S.reg.error}</span>`
         : S.reg.state === 'loading' ? html`<span>Đang kiểm tra kết nối Job Register…</span>`
-        : html`<span><b>Chưa kết nối Job Register.</b> Bảng đang ở chế độ nhập tay. Kết nối theo <span class="code">docs/register-sync.md</span> để bảng đọc job, khách và tự thêm dòng job mới.</span>`}
+        : html`<span><b>Chưa kết nối Job Register</b>, bảng đang ở chế độ nhập tay.${(S.reg.missing || []).length ? html` Cloudflare đang thiếu ${S.reg.missing.map((m, i) => html`${i ? ', ' : ''}<span class="code">${m}</span>`)}: thêm ở Cloudflare › Workers & Pages › board › Settings › Variables and secrets (Production), rồi Deployments › Retry deployment. Cách lấy hai giá trị: <span class="code">docs/register-sync.md</span>.` : html` Kết nối theo <span class="code">docs/register-sync.md</span>.`}</span>`}
       <button type="button" class="btn xs" onClick=${() => regLoad(true)}>Kiểm tra lại</button>
     </div>
+    <${RegSync} D=${D}/>
     <div class="cl-links">
       <div class="field"><span class="lab">Link Job Register</span><${InlineText} value=${c.registerUrl || ''} placeholder="https://docs.google.com/spreadsheets/…" label="Link Job Register" disabled=${!lead} onSave=${v => W.config({registerUrl: safeUrl(v) ? v.trim() : ''})}/></div>
       <div class="field"><span class="lab">Link folder MAGENTX_PRODUCTION</span><${InlineText} value=${c.driveUrl || ''} placeholder="https://drive.google.com/drive/folders/…" label="Link folder MAGENTX_PRODUCTION" disabled=${!lead} onSave=${v => W.config({driveUrl: safeUrl(v) ? v.trim() : ''})}/></div>

@@ -6,7 +6,8 @@
    GET  /api/register         → {configured, ok, jobs, clients}
    POST /api/register {op:'add', job:{…}} → {ok, id, row} hoặc {ok:false, error}
    POST /api/register {op:'credit', items:[{id, n}]} → {ok, updated, missing}: ghi tổng credit đã log vào cột Credits Higgsfield
-   Chưa đặt biến môi trường thì trả {configured:false} để bảng chạy chế độ nhập tay. */
+   Chưa đặt biến môi trường thì trả {configured:false, missing:[tên biến]} để bảng chạy chế độ nhập tay và báo thiếu gì
+   (chỉ tên biến, không trả giá trị). */
 export const config = { runtime: 'edge' };
 
 const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -27,7 +28,12 @@ export default async function handler(req) {
   const site = req.headers.get('sec-fetch-site');
   if (site && site !== 'same-origin') return json({ ok: false, error: 'forbidden' }, 403);
   const URL0 = process.env.REGISTER_URL || '', TOKEN = process.env.REGISTER_TOKEN || '';
-  if (!/^https?:\/\//.test(URL0) || TOKEN.length < 16) return json({ configured: false });
+  if (!/^https?:\/\//.test(URL0) || TOKEN.length < 16) {
+    const missing = [];
+    if (!URL0) missing.push('REGISTER_URL'); else if (!/^https?:\/\//.test(URL0)) missing.push('REGISTER_URL (không phải link https)');
+    if (!TOKEN) missing.push('REGISTER_TOKEN'); else if (TOKEN.length < 16) missing.push('REGISTER_TOKEN (ngắn hơn 16 ký tự)');
+    return json({ configured: false, missing });
+  }
   if (req.method === 'GET') {
     const u = URL0 + (URL0.indexOf('?') < 0 ? '?' : '&') + 'op=list&token=' + encodeURIComponent(TOKEN);
     const o = await call(u, { method: 'GET' });
