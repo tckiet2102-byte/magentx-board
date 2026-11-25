@@ -534,6 +534,8 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .lane-act{display:flex;gap:4px 12px;flex-wrap:wrap;margin:-2px 0 0 -8px}
 .lane-close{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--subtle);border:1px solid var(--rule);font-size:14px;color:var(--ink-2)}
 .lane-close.job{margin-top:4px}
+.lane-close .lc-q{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 180px}
+.lane-close .lc-q b{color:var(--ink);font-weight:600}
 .lane-close.ask{flex-direction:column;align-items:stretch;background:var(--action-soft);border-color:color-mix(in oklab,var(--action) 35%,var(--rule))}
 .lane-close.ask p{margin:0;line-height:1.5;color:var(--ink)}
 .lane-close.done{background:transparent;border-style:dashed}
@@ -1203,7 +1205,7 @@ const P_STATUS_CLS = {planned:'todo', active:'doing', hold:'review', done:'done'
 const ST_ORDER = ['todo','doing','review','fix','done'];
 const ST_LABEL = {todo:'Chưa tới', doing:'Đang làm', review:'Chờ QC', fix:'Cần sửa', done:'Đã duyệt'};
 const CHECK_CLS = {'OK':'done', 'CHỜ DUYỆT':'review', 'VƯỢT CAP':'fix', 'ACC CHỈ CHO EXT':'fix', 'QUA KỲ RESET':'review', 'ĐÃ XONG':'todo', 'ĐÃ HỦY':'todo', 'THIẾU ƯỚC LƯỢNG':'review', 'THIẾU NGÀY BOOK':'review', 'CHƯA CHỌN ACC':'review'};
-const CHECK_TXT = {'OK':'OK · được gen', 'CHỜ DUYỆT':'Chờ Hào duyệt', 'VƯỢT CAP':'Vượt cap account', 'ACC CHỈ CHO EXT':'Account chỉ cho job EXT', 'QUA KỲ RESET':'Account đã qua kỳ reset', 'ĐÃ XONG':'Đã chốt', 'ĐÃ HỦY':'Đã hủy', 'THIẾU ƯỚC LƯỢNG':'Thiếu credit dự kiến', 'THIẾU NGÀY BOOK':'Thiếu ngày book', 'CHƯA CHỌN ACC':'Chưa chọn account'};
+const CHECK_TXT = {'OK':'OK · được gen', 'CHỜ DUYỆT':'Chờ Hào duyệt', 'VƯỢT CAP':'Vượt cap account', 'ACC CHỈ CHO EXT':'Account chỉ cho job EXT', 'QUA KỲ RESET':'Account đã qua kỳ reset', 'ĐÃ XONG':'Đã xong', 'ĐÃ HỦY':'Đã hủy', 'THIẾU ƯỚC LƯỢNG':'Thiếu credit dự kiến', 'THIẾU NGÀY BOOK':'Thiếu ngày book', 'CHƯA CHỌN ACC':'Chưa chọn account'};
 const DEF_CFG = {prefix:'MX', buffer:0, nearFull:1000, unloggedWarn:200, revDefault:2, payMin:300, clients:{}, models:{}, registerUrl:'', driveUrl:''};
 const WD = ['CN','T2','T3','T4','T5','T6','T7'];
 
@@ -1591,7 +1593,7 @@ function logDescBooking(o, old, add){
   if('approved' in o && !logSame(!!o.approved, !!old.approved)) add('credit', (o.approved ? 'duyệt booking ' : 'bỏ duyệt booking ')+fN(old.est)+' credit ở '+acc(o.acc || old.acc));
   /* dòng có tot là một phần của lần "cập nhật tổng": logDescProject ghi gộp một dòng cho cả lần đó */
   if(o.usage) Object.keys(o.usage).forEach(u => { const x = o.usage[u], was = (old.usage || {})[u]; if(x === null){ if(was && was.tot == null) add('credit', 'xóa dòng log '+fN(was.n)+' credit ở '+acc(old.acc)); } else if(x && !was){ if(x.tot == null) add('credit', 'log dùng '+fN(x.n)+' credit ở '+acc(old.acc)+(x.note ? ': '+logQ(x.note) : '')); } else if(x) add('credit', 'sửa log credit ở '+acc(old.acc)); });
-  if('status' in o && !logSame(o.status, old.status)) add('credit', (o.status === 'open' ? 'mở lại booking ở ' : o.status === 'cancelled' ? 'hủy booking ở ' : 'chốt booking ở ')+acc(old.acc));
+  if('status' in o && !logSame(o.status, old.status)) add('credit', (o.status === 'open' ? 'mở lại booking ở ' : o.status === 'cancelled' ? 'hủy booking ở ' : 'báo gen xong ở ')+acc(old.acc));
   if('acc' in o && !logSame(o.acc, old.acc)) add('credit', 'chuyển booking từ '+acc(old.acc)+' sang '+acc(o.acc));
   if('est' in o && !logSame(o.est, old.est)) add('credit', 'sửa credit dự kiến từ '+fN(old.est)+' thành '+fN(o.est));
   if('date' in o && !logSame(o.date, old.date)) add('credit', 'đổi ngày booking sang '+fD(o.date));
@@ -3095,8 +3097,8 @@ function laneAlloc(l, usable, T, base){
   });
   return out;
 }
-const LANE_ST = {run: ['done', 'Đang dùng'], wait: ['review', 'Chờ Hào duyệt'], done: ['todo', 'Đã chốt']};
-const BK_ST = b => b.status === 'done' ? ['todo', 'Đã chốt'] : b.chk.k === 'OK' ? ['done', 'Đang dùng'] : [CHECK_CLS[b.chk.k] || 'review', CHECK_TXT[b.chk.k] || b.chk.k];
+const LANE_ST = {run: ['done', 'Đang dùng'], wait: ['review', 'Chờ Hào duyệt'], done: ['todo', 'Đã gen xong']};
+const BK_ST = b => b.status === 'done' ? ['todo', 'Đã xong'] : b.chk.k === 'OK' ? ['done', 'Đang dùng'] : [CHECK_CLS[b.chk.k] || 'review', CHECK_TXT[b.chk.k] || b.chk.k];
 /* một lần book trên account: ngày, số book, trạng thái, nút duyệt / sửa */
 function BookRow({p, b, D, me, i, l}){
   const w = canW();
@@ -3126,7 +3128,7 @@ function BookRow({p, b, D, me, i, l}){
     ${edit ? html`<div class="editor">
       <div class="field"><span class="lab">Account</span><select class="sel sm" value=${b.acc || ''} onChange=${e => patch({acc: e.target.value, approved: false})}><option value="">Chọn account…</option>${D.accounts.map(x => html`<option key=${x.id} value=${x.id}>${x.code}, còn ${fN(x.m.bookable)}${x.scope === 'ext' ? ', chỉ job khách' : ''}</option>`)}</select><span class="hint">Đổi account thì Hào duyệt lại.</span></div>
       <div class="grid2"><div class="field"><span class="lab">Số credit book</span><${InlineNum} value=${b.est} label="Số credit book" onSave=${v => patch({est: v || 0})}/></div><div class="field"><span class="lab">Ngày book</span><input class="inp sm" type="date" value=${b.date || ''} aria-label="Ngày book" onChange=${e => e.target.value && patch({date: e.target.value})}/></div></div>
-      <div class="acts">${b.status === 'open' ? html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => { patch({status: 'done'}); setEdit(false); }}>Chốt lần book này</button>` : html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => patch({status: 'open'})}>Mở lại</button>`}<button type="button" class="btn sm danger" disabled=${b.used !== 0} title=${b.used ? 'Đã có credit dùng, chốt thay vì hủy' : ''} onClick=${() => { patch({status: 'cancelled'}); setEdit(false); toast('Đã hủy lần book '+fN(b.est)+' credit'); }}>Hủy lần book</button></div>
+      <div class="acts">${b.status === 'open' ? html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => { patch({status: 'done', doneAt: Date.now(), doneBy: me || null}); setEdit(false); }}>Báo xong lần book này</button>` : html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => patch({status: 'open'})}>Mở lại</button>`}<button type="button" class="btn sm danger" disabled=${b.used !== 0} title=${b.used ? 'Đã có credit dùng: báo xong thay vì hủy' : ''} onClick=${() => { patch({status: 'cancelled'}); setEdit(false); toast('Đã hủy lần book '+fN(b.est)+' credit'); }}>Hủy lần book</button></div>
     </div>` : null}
   </li>`;
 }
@@ -3144,12 +3146,12 @@ function AccLane({p, l, D, me}){
     if(d === 0){ setVal(''); toast('Tổng vẫn là '+fN(T)+', không có gì mới.'); return; }
     /* chia lại tổng cho các lần book đang dùng; phần đã chốt hoặc đang chờ duyệt giữ nguyên */
     const out = laneAlloc(l, l.targets, T, {date: today(), by: me || null, at: Date.now(), tot: T});
-    if(!out){ toast('Tổng mới thấp hơn phần đã chốt ở lần book trước ('+fN(l.used - sum(l.targets.map(b => b.used)))+'). Kiểm tra lại số trên Cinema Studio.', 'warn'); return; }
+    if(!out){ toast('Tổng mới thấp hơn phần của lần book đã xong ('+fN(l.used - sum(l.targets.map(b => b.used)))+'). Kiểm tra lại số trên Cinema Studio.', 'warn'); return; }
     W.project(p.id, {bookings: out}); setVal('');
     toast('Đã cập nhật '+code+': tổng '+fN(T)+' ('+(d > 0 ? '+' : '−')+fN(Math.abs(d))+')');
   };
   const [ask, setAsk] = useState(false);
-  const closeLane = () => { const o = {}, at = Date.now(); l.open.forEach(b => { o[b.bid] = {status: 'done', doneAt: at, doneBy: me || null}; }); W.project(p.id, {bookings: o}); setAsk(false); toast('Đã chốt booking '+code+': dùng '+fN(l.used)+(l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' credit cho account' : '')); };
+  const closeLane = () => { const o = {}, at = Date.now(); l.open.forEach(b => { o[b.bid] = {status: 'done', doneAt: at, doneBy: me || null}; }); W.project(p.id, {bookings: o}); setAsk(false); toast('Đã báo gen xong trên '+code+': tổng credit cuối '+fN(l.used)+(l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' credit cho account' : '')); };
   /* mở lại các lần book của lần chốt gần nhất (dữ liệu cũ không có doneAt thì mở lần book cuối) */
   const reopenLane = () => { const o = {}; const last = l.doneAt ? l.bks.filter(b => b.status === 'done' && +b.doneAt === l.doneAt) : l.bks.slice(-1); last.forEach(b => { o[b.bid] = {status: 'open', doneAt: null, doneBy: null}; }); W.project(p.id, {bookings: o}); toast('Đã mở lại booking '+code); };
   const undo = h => { const o = {}; h.ids.forEach(x => { (o[x[0]] = o[x[0]] || {usage: {}}).usage[x[1]] = null; }); W.project(p.id, {bookings: o}); toast(h.legacy ? 'Đã xóa dòng log' : 'Đã hoàn tác, tổng về '+fN(l.used - h.n)); };
@@ -3164,11 +3166,11 @@ function AccLane({p, l, D, me}){
       ${l.last ? html`<span class="lane-last">Cập nhật ${rel(l.last.at)}, ${nameOf(D, l.last.by)}</span>` : null}
     </div>` : null}
     <ul class="lane-bk">${l.bks.map((b, i) => html`<${BookRow} key=${b.bid} p=${p} b=${b} D=${D} me=${me} i=${i} l=${l}/>`)}</ul>
-    ${l.open.length && !p.closed ? (w ? (ask ? html`<div class="lane-close ask" role="group" aria-label=${'Chốt booking '+code}>
-        <p><b>Chốt booking ${code} ở ${fN(l.used)} credit?</b> ${l.booked > l.used ? fN(l.booked - l.used)+' credit book thừa trả lại cho account.' : l.used > l.booked ? 'Đã dùng vượt '+fN(l.used - l.booked)+' so với phần book.' : ''} Số cuối chưa đúng thì cập nhật tổng trước.</p>
-        <div class="acts"><button type="button" class="btn sm primary" onClick=${closeLane}><${Ic} n="check" s=${16}/>Chốt booking</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div>
-      </div>` : html`<div class="lane-close"><span>Gen xong trên ${code}?</span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Chốt booking</button></div>`) : null)
-      : l.state === 'done' ? html`<div class="lane-close done"><span><${Ic} n="check" s=${16}/><span><b>${l.doneAt ? 'Đã chốt '+fT(l.doneAt) : 'Đã chốt'}${l.doneBy ? ', '+nameOf(D, l.doneBy) : ''}</b><span class="meta">Dùng ${fN(l.used)}${l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' cho '+code : l.used > l.booked ? ', vượt '+fN(l.used - l.booked) : ''}${p.closed ? ', theo dự án đã đóng' : ''}</span></span></span>${w && !p.closed ? html`<button type="button" class="btn sm" onClick=${reopenLane}>Mở lại</button>` : null}</div>` : null}
+    ${l.open.length && !p.closed ? (w ? (ask ? html`<div class="lane-close ask" role="group" aria-label=${'Báo gen xong trên '+code}>
+        <p><b>Báo gen xong trên ${code}?</b> Tổng credit cuối của job trên account này là <b>${fN(l.used)}</b>.${l.booked > l.used ? ' '+fN(l.booked - l.used)+' credit book thừa trả lại cho account.' : l.used > l.booked ? ' Đã dùng vượt '+fN(l.used - l.booked)+' so với phần book.' : ''} Sau đó job không gen thêm trên ${code}. Tổng chưa đúng thì cập nhật số Cinema Studio trước.</p>
+        <div class="acts"><button type="button" class="btn sm primary" onClick=${closeLane}><${Ic} n="check" s=${16}/>Xác nhận gen xong</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div>
+      </div>` : html`<div class="lane-close"><span class="lc-q"><b>Gen xong trên ${code}?</b><span class="meta">Báo xong để chốt tổng credit cuối và trả phần book thừa cho account.</span></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong</button></div>`) : null)
+      : l.state === 'done' ? html`<div class="lane-close done"><span><${Ic} n="check" s=${16}/><span><b>${l.doneAt ? 'Đã gen xong '+fT(l.doneAt) : 'Đã gen xong'}${l.doneBy ? ', '+nameOf(D, l.doneBy) : ''}</b><span class="meta">Tổng credit cuối ${fN(l.used)}${l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' cho '+code : l.used > l.booked ? ', vượt '+fN(l.used - l.booked)+' so với phần book' : ''}${p.closed ? ', theo dự án đã đóng' : ''}</span></span></span>${w && !p.closed ? html`<button type="button" class="btn sm" onClick=${reopenLane}>Mở lại để gen tiếp</button>` : null}</div>` : null}
     ${l.hist.length ? html`<div class="lane-act"><button type="button" class="btn xs bare" aria-pressed=${hist} onClick=${() => setHist(!hist)}><${Ic} n="history" s=${14}/>${hist ? 'Ẩn lịch sử' : 'Lịch sử ('+l.hist.length+')'}</button></div>` : null}
     ${hist ? html`<table class="mini"><tbody>${l.hist.map(h => html`<tr key=${h.k}><td class="nw">${h.at ? fT(h.at) : fD(h.date)}</td><td>${nameOf(D, h.by)}</td><td class="n">${h.legacy ? html`<span>+${fN(h.n)}</span>` : html`<span>tổng <b>${fN(h.tot)}</b></span><div class="meta">${h.n >= 0 ? '+' : '−'}${fN(Math.abs(h.n))}</div>`}</td><td>${h.legacy ? html`<span class="meta">ghi cộng dồn${h.note ? ': '+h.note : ''}</span>` : null}</td><td>${w && (h.legacy || h === newest) ? html`<button type="button" class="icon-btn sm" title=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} aria-label=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} onClick=${() => undo(h)}><${Ic} n=${h.legacy ? 'x' : 'undo'} s=${14}/></button>` : null}</td></tr>`)}</tbody></table>` : null}
   </div>`;
@@ -3187,20 +3189,20 @@ function NewBooking({p, D, lanes}){
   return html`<div class="editor">
     <div class="field"><span class="lab">${more ? 'Book thêm bao nhiêu credit' : 'Số credit cần book'}</span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
     <div class="field"><span class="lab">Account</span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>
-      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đang chốt, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Thêm một khung account cho job (project riêng trên Cinema Studio của account này).</span>` : null}</div>
+      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đã gen xong, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Thêm một khung account cho job (project riêng trên Cinema Studio của account này).</span>` : null}</div>
     <p class="lane-last">Hào duyệt xong mới gen phần này.</p>
     <div class="acts"><button type="button" class="btn sm primary" disabled=${!need || !accId} onClick=${save}>Book ${need ? fN(need)+' ' : ''}credit</button><button type="button" class="btn sm" onClick=${() => setOpen(false)}>Hủy</button></div>
   </div>`;
 }
-/* chốt booking của mọi account đang mở trong job một lần (chỉ hiện khi có từ 2 account đang mở) */
+/* báo gen xong mọi account đang mở trong job một lần (chỉ hiện khi có từ 2 account đang mở) */
 function CloseAll({p, lanes, me}){
   const [ask, setAsk] = useState(false);
   const open = lanes.filter(l => l.open.length);
   if(!canW() || p.closed || open.length < 2) return null;
   const used = sum(open.map(l => l.used)), back = sum(open.map(l => Math.max(0, l.booked - l.used)));
-  const go = () => { const o = {}, at = Date.now(); open.forEach(l => l.open.forEach(b => { o[b.bid] = {status: 'done', doneAt: at, doneBy: me || null}; })); W.project(p.id, {bookings: o}); setAsk(false); toast('Đã chốt booking cả job: dùng '+fN(used)+(back ? ', trả lại '+fN(back)+' credit' : '')); };
-  return ask ? html`<div class="lane-close ask job"><p><b>Chốt booking cả job ở ${fN(used)} credit?</b> ${open.map(l => l.a ? l.a.code : '').join(', ')}${back ? ', trả lại tổng '+fN(back)+' credit cho các account' : ''}.</p><div class="acts"><button type="button" class="btn sm primary" onClick=${go}><${Ic} n="check" s=${16}/>Chốt cả job</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div></div>`
-    : html`<div class="lane-close job"><span>Job gen xong hết?</span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Chốt booking cả job</button></div>`;
+  const go = () => { const o = {}, at = Date.now(); open.forEach(l => l.open.forEach(b => { o[b.bid] = {status: 'done', doneAt: at, doneBy: me || null}; })); W.project(p.id, {bookings: o}); setAsk(false); toast('Đã báo gen xong cả job: tổng credit cuối '+fN(used)+(back ? ', trả lại '+fN(back)+' credit' : '')); };
+  return ask ? html`<div class="lane-close ask job"><p><b>Báo gen xong cả job?</b> Tổng credit cuối <b>${fN(used)}</b> trên ${open.map(l => l.a ? l.a.code : '').join(', ')}${back ? ', trả lại tổng '+fN(back)+' credit cho các account' : ''}. Sau đó job không gen thêm trên các account này.</p><div class="acts"><button type="button" class="btn sm primary" onClick=${go}><${Ic} n="check" s=${16}/>Xác nhận gen xong</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div></div>`
+    : html`<div class="lane-close job"><span class="lc-q"><b>Job gen xong hết?</b><span class="meta">Báo xong một lần cho mọi account đang dùng.</span></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong cả job</button></div>`;
 }
 function CreditCard({p, D, me}){
   const lanes = creditLanes(p, D);
