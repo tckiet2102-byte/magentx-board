@@ -722,6 +722,8 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .rv-stage{position:relative;display:grid;place-items:center;min-height:0;overflow:hidden;padding:0}
 .rv-fit{position:relative;background:#000}
 .rv-fit video,.rv-fit iframe{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;background:#000}
+/* không cho lưu video: chặn chuột phải, kéo thả, giữ lâu trên iPhone */
+.rv-fit,.rv-fit video{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .rv-fit canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
 .rv-fit canvas.on{pointer-events:auto;cursor:crosshair;outline:2px solid var(--action);outline-offset:-2px}
 .rv-msg{margin:0;padding:24px;color:var(--ink-2);font-size:15px;text-align:center}
@@ -4210,9 +4212,9 @@ function ReviewPlayer({D, pid, sid, me}){
     <div class="rv-main">
       <div class="rv-left">
         <div class="rv-stage" ref=${stageRef}>
-          ${mode === 'none' ? html`<p class="rv-msg">Không phát được link này. Player cần link tới file video trên Google Drive.</p>` : html`<div class="rv-fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'}>
+          ${mode === 'none' ? html`<p class="rv-msg">Không phát được link này. Player cần link tới file video trên Google Drive.</p>` : html`<div class="rv-fit" style=${box ? 'width:'+box.w+'px;height:'+box.h+'px' : 'width:100%;height:100%'} onContextMenu=${e => e.preventDefault()} onDragStart=${e => e.preventDefault()}>
             ${mode === 'video'
-              ? html`<video ref=${vref} src=${blobUrl || src} playsinline preload="auto" muted=${muted}
+              ? html`<video ref=${vref} src=${blobUrl || src} playsinline preload="auto" muted=${muted} draggable=${false} controlslist="nodownload noremoteplayback noplaybackrate" disablepictureinpicture="" disableremoteplayback="" x-webkit-airplay="deny"
                   onLoadedMetadata=${e => { const v = e.target; setMeta({dur: v.duration || 0, w: v.videoWidth, h: v.videoHeight}); const r = restore.current; restore.current = null; if(r){ v.currentTime = r.t; v.playbackRate = rate; if(r.play) v.play().catch(() => {}); } }}
                   onWaiting=${() => setWaiting(true)} onPlaying=${() => { setWaiting(false); retries.current = 0; }} onCanPlay=${() => setWaiting(false)}
                   onPlay=${() => setPlaying(true)} onPause=${e => { setPlaying(false); setCur(e.target.currentTime); }} onEnded=${() => setPlaying(false)}
