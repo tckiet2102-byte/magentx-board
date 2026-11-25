@@ -1897,16 +1897,23 @@ function accMetrics(a, bookings, t, cfg){
   const base = (+a.perPeriod || 0) + topup;
   const cap = base;
   const balOk = a.balance !== null && a.balance !== undefined && a.balance !== '' && !!a.balanceAt && a.balanceAt >= per.start && a.balanceAt < per.end;
-  /* Số dư Hào nhập là ảnh chụp lúc check. Chỉ credit log tới lúc đó mới nằm trong phần đã trừ trên Higgsfield;
-     credit log sau lần check trừ tiếp vào số dư, không được bù vào Dùng chưa log. Dữ liệu cũ chỉ có ngày check thì log cùng ngày tính là trước. */
+  /* Số dư Hào nhập là số còn lại thật trên Higgsfield lúc check, đã gồm mọi credit đã dùng: job đã book (đã log hay chưa)
+     và phần không job nào book. Đã trừ lúc check = gốc − số dư. Credit job ghi trong kỳ, kể cả ghi sau lúc check
+     (thường là phần dùng từ trước nhưng cập nhật tổng muộn), trước hết được tính vào phần đã trừ đó, làm giảm Dùng chưa log;
+     chỉ phần job ghi vượt quá mức đã trừ lúc check mới là credit dùng thêm, trừ tiếp vào số dư (Còn khoảng).
+     Log trước lúc check mà vượt mức đã trừ (log thừa) không làm giảm số dư. Dữ liệu cũ chỉ có ngày check thì log cùng ngày tính là trước. */
   const before = u => (a.balanceTs && u.at) ? +u.at <= +a.balanceTs : (u.date || '') <= a.balanceAt;
   const usedAtCheck = balOk ? sum(logs.filter(before).map(u => +u.n || 0)) : 0;
-  const usedSince = balOk ? used - usedAtCheck : 0;
-  const unlogged = balOk ? Math.max(0, base - (+a.balance) - usedAtCheck) : 0;
+  const spentAtCheck = balOk ? base - (+a.balance) : 0;
+  const usedSince = balOk ? Math.max(0, used - Math.max(spentAtCheck, usedAtCheck)) : 0;
+  const unlogged = balOk ? Math.max(0, spentAtCheck - used) : 0;
   const balNow = balOk ? (+a.balance) - usedSince : null;
-  const bookable = cap - reserved - unlogged;
+  /* Còn book = số còn lại ước tính − phần các booking đang mở còn giữ (giữ chỗ − đã log) */
+  const bookable = balOk ? balNow - (reserved - used) : cap - reserved;
+  /* phần chiếm cap ngoài các booking (Dùng chưa log, âm khi log thừa): dùng cho kiểm tra vượt cap và gợi ý account */
+  const extra = cap - reserved - bookable;
   const state = a.active === false ? 'off' : bookable <= 0 ? 'lock' : bookable < cfg.nearFull ? 'near' : 'open';
-  return {rd, per, reserved, parts, used, usedAtCheck, usedSince, balNow, topup, base, cap, balOk, unlogged, bookable, state, daysLeft: diffDays(t, per.end)};
+  return {rd, per, reserved, parts, used, usedAtCheck, spentAtCheck, usedSince, balNow, topup, base, cap, balOk, unlogged, extra, bookable, state, daysLeft: diffDays(t, per.end)};
 }
 function bookingCheck(b, ctx){
   const a = ctx.amap[b.acc];
@@ -1927,7 +1934,7 @@ function bookingCheck(b, ctx){
   if(per.end <= ctx.t) return {k:'QUA KỲ RESET'};
   const isCur = per.start === a.m.per.start;
   const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0);
-  if(cum + (isCur ? a.m.unlogged : 0) > cap) return {k:'VƯỢT CAP'};
+  if(cum + (isCur ? a.m.extra : 0) > cap) return {k:'VƯỢT CAP'};
   if(!b.approved) return {k:'CHỜ DUYỆT'};
   return {k:'OK'};
 }
@@ -1939,7 +1946,7 @@ function suggestAcc(D, useCase, need, date, excl){
     const isCur = per.start === a.m.per.start;
     const list = D.bookings.filter(x => x.acc === a.id && !(excl && x.pid === excl.pid && x.bid === excl.bid));
     const cap = (+a.perPeriod || 0) + (isCur ? a.m.topup : 0);
-    const room = cap - sum(list.map(x => creditIn(x, per))) - (isCur ? a.m.unlogged : 0);
+    const room = cap - sum(list.map(x => creditIn(x, per))) - (isCur ? a.m.extra : 0);
     const okScope = !(a.scope === 'ext' && useCase === 'INT');
     const fits = okScope && room >= (need || 0) && room > 0;
     const r = {a, room, per, okScope, fits};
@@ -3381,8 +3388,8 @@ function AccRow({a, D}){
     <td class="n">${fN(m.reserved)}<${ResBar} m=${m}/></td>
     <td class=${'n'+(m.unlogged > D.cfg.unloggedWarn ? ' bad' : '')}>${m.balOk ? fN(m.unlogged) : '—'}</td>
     <td class=${'n strong'+(m.bookable <= 0 ? ' bad' : '')}>${fN(m.bookable)}</td>
-    <td>${edit ? html`<${InlineEdit} value=${a.balance === null || a.balance === undefined ? '' : String(a.balance)} placeholder="Số dư" onDone=${saveBal}/>`
-      : html`<div>${a.balance === null || a.balance === undefined || a.balance === '' ? html`<span class="faint">Chưa nhập</span>` : html`<b class="num">${fN(a.balance)}</b>`}</div>${a.balanceAt ? html`<div class="meta">check ${fD(a.balanceAt)}${a.balanceBy && S.staff[a.balanceBy] ? ', '+S.staff[a.balanceBy].name : ''}${m.balOk ? '' : ', kỳ cũ'}</div>` : null}${m.balOk && m.usedSince ? html`<div class="bal-now"><span>Còn khoảng <b class="num">${fN(m.balNow)}</b></span><span class="meta">đã trừ ${fN(m.usedSince)} credit log sau lần check</span></div>` : null}${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => setEdit(true)}><${Ic} n="edit" s=${14}/>Điều chỉnh số dư</button></div>` : null}`}</td>
+    <td>${edit ? html`<${InlineEdit} value=${a.balance === null || a.balance === undefined ? '' : String(a.balance)} placeholder="Số còn lại trên Higgsfield" onDone=${saveBal}/>`
+      : html`<div>${a.balance === null || a.balance === undefined || a.balance === '' ? html`<span class="faint">Chưa nhập</span>` : html`<b class="num">${fN(a.balance)}</b>`}</div>${a.balanceAt ? html`<div class="meta">check ${fD(a.balanceAt)}${a.balanceBy && S.staff[a.balanceBy] ? ', '+S.staff[a.balanceBy].name : ''}${m.balOk ? '' : ', kỳ cũ'}</div>` : null}${m.balOk && m.usedSince ? html`<div class="bal-now"><span>Còn khoảng <b class="num">${fN(m.balNow)}</b></span><span class="meta">đã trừ ${fN(m.usedSince)} credit job dùng thêm sau lần check</span></div>` : null}${w ? html`<div class="cell-actions"><button type="button" class="btn xs" onClick=${() => setEdit(true)}><${Ic} n="edit" s=${14}/>Điều chỉnh số dư</button></div>` : null}`}</td>
   </tr>`;
 }
 function CreditView({D, me}){
@@ -3416,9 +3423,9 @@ function CreditView({D, me}){
       <li>Không có booking thì không gen. Mỗi booking là 1 job trên 1 account trong 1 kỳ reset.</li>
       <li>Ước lượng credit cho cả dự án (gen ảnh, video draft, sửa feedback, final, upscale). Số này được giữ chỗ ngay từ đầu.</li>
       <li>Chọn account theo gợi ý. Chỉ bắt đầu gen khi Check là OK, tức Hào đã duyệt.</li>
-      <li>Cuối mỗi ngày gen, ai gen người đó ghi số credit trong trang dự án; app tự cộng tổng cho job.</li>
+      <li>Người gen cập nhật số tổng Cinema Studio của job trong trang dự án; app tự tính phần tăng thêm.</li>
       <li>Còn lại âm là job đã vượt dự kiến: tăng credit dự kiến ngay và xem lại Check.</li>
-      <li>Hào check số dư từng account trên Higgsfield và cập nhật ở bảng trên. Phần đã trừ trên Higgsfield mà chưa ai log tới lúc check hiện ở Dùng chưa log và trừ thẳng vào Còn book. Credit log sau lần check trừ tiếp vào số dư (dòng Còn khoảng).</li>
+      <li>Hào check số còn lại của từng account trên Higgsfield và nhập ở bảng trên. Số này đã gồm mọi credit đã dùng, của job đã book lẫn phần chưa ai book. Phần đã trừ trên Higgsfield mà các job chưa ghi hiện ở Dùng chưa log. Job cập nhật credit sau lần check thì trước hết tính vào phần đã trừ đó (Dùng chưa log giảm, số dư giữ nguyên); chỉ khi tổng job ghi vượt mức đã trừ lúc check mới trừ tiếp vào số dư (dòng Còn khoảng). Còn book = số còn lại trừ phần các booking đang mở còn giữ.</li>
       <li>Credit log tính vào kỳ có ngày log, kể cả khi log trên booking của kỳ trước.</li>
       <li>Xong job: chuyển dự án sang Hoàn thành, giữ chỗ về đúng số thực tế. Hủy job: credit đã ghi vẫn được tính.</li>
       <li>Tới ngày reset, account tự mở lại đủ Cap. Job chưa xong lúc reset: bấm “Tách phần còn lại sang kỳ mới” trong booking.</li>
