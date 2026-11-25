@@ -521,7 +521,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .lane.done .meter i{background:var(--d-todo)}
 .meter.sm{height:5px}
 .lane-upd{display:flex;flex-direction:column;gap:6px;margin-top:2px}
-.tform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.tform{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
 .lane-last{margin:0;font-size:13px;color:var(--ink-3)}
 .lane-bk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .lane-bk > li{display:flex;flex-direction:column;gap:8px;padding:8px 0;border-top:1px dashed var(--rule)}
@@ -534,7 +534,7 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .lane-act{display:flex;gap:4px 12px;flex-wrap:wrap;margin:-2px 0 0 -8px}
 .lane-close{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--subtle);border:1px solid var(--rule);font-size:14px;color:var(--ink-2)}
 .lane-close.job{margin-top:4px}
-.lane-close .lc-q{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 180px}
+.lane-close .lc-q{display:flex;align-items:center;gap:2px;min-width:0;flex:1 1 180px}
 .lane-close .lc-q b{color:var(--ink);font-weight:600}
 .lane-close.ask{flex-direction:column;align-items:stretch;background:var(--action-soft);border-color:color-mix(in oklab,var(--action) 35%,var(--rule))}
 .lane-close.ask p{margin:0;line-height:1.5;color:var(--ink)}
@@ -542,7 +542,12 @@ textarea.inp{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
 .lane-close.done > span{display:flex;align-items:flex-start;gap:8px;color:var(--ok)}
 .lane-close.done > span > span{display:flex;flex-direction:column;gap:2px}
 .lane-close.done b{color:var(--ink);font-weight:600}
-.cr-how{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.help-w{display:inline-flex;vertical-align:middle;margin-left:4px}
+.help{position:relative;display:inline-grid;place-items:center;width:18px;height:18px;padding:0;border-radius:50%;border:1.5px solid var(--field);background:transparent;color:var(--ink-2);font:700 11.5px/1 var(--f);cursor:help;flex:none}
+.help::after{content:"";position:absolute;inset:-8px}
+.help:hover,.help:focus-visible,.help[aria-expanded=true]{border-color:var(--ink-2);color:var(--ink)}
+.help-tip{position:fixed;z-index:70;transform:translate(-50%,calc(-100% - 8px));width:max-content;max-width:min(300px,calc(100vw - 24px));padding:9px 12px;border-radius:10px;background:var(--ink);color:var(--surface);font-size:13px;font-weight:500;line-height:1.45;text-align:left;white-space:normal;box-shadow:var(--shadow);pointer-events:none}
+.help-tip.below{transform:translate(-50%,8px)}
 .cr-foot{padding-top:16px;border-top:1px solid var(--rule)}
 .uform{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:8px}
 .mini{width:100%;border-collapse:collapse;font-size:14px}
@@ -3050,6 +3055,23 @@ function ToolStrip({p, D, tool, done}){
   if(tool === 'assign') return html`<div class="tool-strip"><span>Giao các bước chưa duyệt cho</span><select class="sel sm auto" value=${who} onChange=${e => setWho(e.target.value)} aria-label="Người nhận">${D.staffList.filter(s => s.active !== false).map(s => html`<option key=${s.id} value=${s.id}>${s.name}</option>`)}</select><span class="sp"></span><button type="button" class="btn sm primary" disabled=${!who} onClick=${() => { const steps = {}; p.steps.forEach(s => { if(s.state !== 'done') steps[s.id] = {who: [who]}; }); W.project(p.id, {steps}); done(); toast('Đã giao cho '+nameOf(D, who)); }}>Giao</button><button type="button" class="btn sm" onClick=${done}>Thôi</button></div>`;
   return null;
 }
+/* Dấu ? cạnh một tính năng: rê chuột, Tab tới hoặc chạm để xem giải thích; bấm ra ngoài, Esc hoặc cuộn trang thì tắt.
+   Bong bóng đặt cố định theo vị trí nút (không bị khung cha cắt), tự lật xuống dưới khi gần mép trên. */
+function Help({text, label}){
+  const [tip, setTip] = useState(null);
+  const ref = useRef(null), id = useRef('h'+rid('')).current;
+  const show = () => { const el = ref.current; if(!el) return; const r = el.getBoundingClientRect(); setTip({x: Math.min(window.innerWidth - 152, Math.max(152, r.left + r.width / 2)), top: r.top, bottom: r.bottom, below: r.top < 140}); };
+  useEffect(() => {
+    if(!tip) return;
+    const off = e => { if(e.type !== 'pointerdown' || !ref.current || !ref.current.contains(e.target)) setTip(null); };
+    const esc = e => { if(e.key === 'Escape') setTip(null); };
+    window.addEventListener('scroll', off, true); window.addEventListener('resize', off); document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { window.removeEventListener('scroll', off, true); window.removeEventListener('resize', off); document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [tip]);
+  return html`<span class="help-w"><button type="button" ref=${ref} class="help" aria-label=${'Giải thích'+(label ? ': '+label : '')} aria-describedby=${tip ? id : null} aria-expanded=${!!tip}
+      onPointerEnter=${e => { if(e.pointerType !== 'touch') show(); }} onPointerLeave=${e => { if(e.pointerType !== 'touch') setTip(null); }}
+      onFocus=${show} onBlur=${() => setTip(null)} onClick=${e => { e.preventDefault(); e.stopPropagation(); show(); }}>?</button>${tip ? html`<span id=${id} class=${'help-tip'+(tip.below ? ' below' : '')} role="tooltip" style=${'left:'+tip.x+'px;top:'+(tip.below ? tip.bottom : tip.top)+'px'}>${text}</span>` : null}</span>`;
+}
 /* ---------- Credit trong trang dự án ----------
    Mỗi account job dùng là một khung: đã dùng / đã book, trạng thái (Đang dùng, Chờ Hào duyệt, Đã chốt), các lần book trên account đó.
    Ghi credit theo kiểu cập nhật tổng: Cinema Studio hiện tổng đã dùng của project trên account, người làm nhập số tổng đó,
@@ -3126,7 +3148,7 @@ function BookRow({p, b, D, me, i, l}){
     ${sg ? html`<div class="acts"><span class="meta">Gợi ý đổi sang ${sg.a.code} (còn ${fN(sg.room)})</span><button type="button" class="btn xs" disabled=${!w} onClick=${() => patch({acc: sg.a.id, approved: false})}>Đổi sang ${sg.a.code}</button></div>` : (k === 'VƯỢT CAP' && b.status === 'open' ? html`<p class="meta bad-t">Không account nào đủ chỗ. Mua top-up, thêm account hoặc dời sang kỳ reset sau.</p>` : null)}
     ${k === 'QUA KỲ RESET' && w ? html`<div class="acts"><span class="meta">Account đã reset kỳ mới.</span><button type="button" class="btn xs" onClick=${split}>Tách phần còn lại sang kỳ mới</button></div>` : null}
     ${edit ? html`<div class="editor">
-      <div class="field"><span class="lab">Account</span><select class="sel sm" value=${b.acc || ''} onChange=${e => patch({acc: e.target.value, approved: false})}><option value="">Chọn account…</option>${D.accounts.map(x => html`<option key=${x.id} value=${x.id}>${x.code}, còn ${fN(x.m.bookable)}${x.scope === 'ext' ? ', chỉ job khách' : ''}</option>`)}</select><span class="hint">Đổi account thì Hào duyệt lại.</span></div>
+      <div class="field"><span class="lab">Account <${Help} label="đổi account" text="Đổi account thì Hào phải duyệt lại lần book này."/></span><select class="sel sm" value=${b.acc || ''} onChange=${e => patch({acc: e.target.value, approved: false})}><option value="">Chọn account…</option>${D.accounts.map(x => html`<option key=${x.id} value=${x.id}>${x.code}, còn ${fN(x.m.bookable)}${x.scope === 'ext' ? ', chỉ job khách' : ''}</option>`)}</select></div>
       <div class="grid2"><div class="field"><span class="lab">Số credit book</span><${InlineNum} value=${b.est} label="Số credit book" onSave=${v => patch({est: v || 0})}/></div><div class="field"><span class="lab">Ngày book</span><input class="inp sm" type="date" value=${b.date || ''} aria-label="Ngày book" onChange=${e => e.target.value && patch({date: e.target.value})}/></div></div>
       <div class="acts">${b.status === 'open' ? html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => { patch({status: 'done', doneAt: Date.now(), doneBy: me || null}); setEdit(false); }}>Báo xong lần book này</button>` : html`<button type="button" class="btn sm" disabled=${p.closed} onClick=${() => patch({status: 'open'})}>Mở lại</button>`}<button type="button" class="btn sm danger" disabled=${b.used !== 0} title=${b.used ? 'Đã có credit dùng: báo xong thay vì hủy' : ''} onClick=${() => { patch({status: 'cancelled'}); setEdit(false); toast('Đã hủy lần book '+fN(b.est)+' credit'); }}>Hủy lần book</button></div>
     </div>` : null}
@@ -3162,14 +3184,14 @@ function AccLane({p, l, D, me}){
     <div class="lane-num"><b class="num">${fN(l.used)}</b><span class="meta">/ ${fN(l.booked)}</span><span class=${'lane-rest'+(over > 0 ? ' bad-t' : '')}>${over > 0 ? 'vượt '+fN(over) : rest > 0 ? (l.state === 'done' ? 'trả lại ' : 'còn ')+fN(rest) : 'vừa hết'}</span></div>
     <div class="meter sm"><i class=${over > 0 ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>
     ${w && l.targets.length ? html`<div class="lane-upd">
-      <div class="tform"><input class="inp sm" inputmode="numeric" placeholder="Nhập tổng mới" aria-label=${'Tổng credit Cinema Studio đang hiện cho job trên '+code} value=${val} onInput=${e => setVal(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') setTotal(); }}/><button type="button" class="btn sm primary" disabled=${!val.trim()} onClick=${setTotal}>Cập nhật</button></div>
+      <div class="tform"><input class="inp sm" inputmode="numeric" placeholder="Nhập tổng mới" aria-label=${'Tổng credit Cinema Studio đang hiện cho job trên '+code} value=${val} onInput=${e => setVal(e.target.value)} onKeyDown=${e => { if(e.key === 'Enter') setTotal(); }}/><button type="button" class="btn sm primary" disabled=${!val.trim()} onClick=${setTotal}>Cập nhật</button><${Help} label="cập nhật tổng" text=${'Nhập số tổng credit Cinema Studio đang hiện cho project của job trên '+code+', không phải số gen trong ngày. App tự tính phần tăng thêm so với lần trước.'}/></div>
       ${l.last ? html`<span class="lane-last">Cập nhật ${rel(l.last.at)}, ${nameOf(D, l.last.by)}</span>` : null}
     </div>` : null}
     <ul class="lane-bk">${l.bks.map((b, i) => html`<${BookRow} key=${b.bid} p=${p} b=${b} D=${D} me=${me} i=${i} l=${l}/>`)}</ul>
     ${l.open.length && !p.closed ? (w ? (ask ? html`<div class="lane-close ask" role="group" aria-label=${'Báo gen xong trên '+code}>
         <p><b>Báo gen xong trên ${code}?</b> Tổng credit cuối của job trên account này là <b>${fN(l.used)}</b>.${l.booked > l.used ? ' '+fN(l.booked - l.used)+' credit book thừa trả lại cho account.' : l.used > l.booked ? ' Đã dùng vượt '+fN(l.used - l.booked)+' so với phần book.' : ''} Sau đó job không gen thêm trên ${code}. Tổng chưa đúng thì cập nhật số Cinema Studio trước.</p>
         <div class="acts"><button type="button" class="btn sm primary" onClick=${closeLane}><${Ic} n="check" s=${16}/>Xác nhận gen xong</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div>
-      </div>` : html`<div class="lane-close"><span class="lc-q"><b>Gen xong trên ${code}?</b><span class="meta">Báo xong để chốt tổng credit cuối và trả phần book thừa cho account.</span></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong</button></div>`) : null)
+      </div>` : html`<div class="lane-close"><span class="lc-q"><b>Gen xong trên ${code}?</b><${Help} label="báo gen xong" text=${'Báo xong để chốt tổng credit cuối của job trên '+code+' và trả phần book thừa cho account. Sau đó job không gen thêm trên account này; cần gen tiếp thì bấm Mở lại để gen tiếp.'}/></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong</button></div>`) : null)
       : l.state === 'done' ? html`<div class="lane-close done"><span><${Ic} n="check" s=${16}/><span><b>${l.doneAt ? 'Đã gen xong '+fT(l.doneAt) : 'Đã gen xong'}${l.doneBy ? ', '+nameOf(D, l.doneBy) : ''}</b><span class="meta">Tổng credit cuối ${fN(l.used)}${l.booked > l.used ? ', trả lại '+fN(l.booked - l.used)+' cho '+code : l.used > l.booked ? ', vượt '+fN(l.used - l.booked)+' so với phần book' : ''}${p.closed ? ', theo dự án đã đóng' : ''}</span></span></span>${w && !p.closed ? html`<button type="button" class="btn sm" onClick=${reopenLane}>Mở lại để gen tiếp</button>` : null}</div>` : null}
     ${l.hist.length ? html`<div class="lane-act"><button type="button" class="btn xs bare" aria-pressed=${hist} onClick=${() => setHist(!hist)}><${Ic} n="history" s=${14}/>${hist ? 'Ẩn lịch sử' : 'Lịch sử ('+l.hist.length+')'}</button></div>` : null}
     ${hist ? html`<table class="mini"><tbody>${l.hist.map(h => html`<tr key=${h.k}><td class="nw">${h.at ? fT(h.at) : fD(h.date)}</td><td>${nameOf(D, h.by)}</td><td class="n">${h.legacy ? html`<span>+${fN(h.n)}</span>` : html`<span>tổng <b>${fN(h.tot)}</b></span><div class="meta">${h.n >= 0 ? '+' : '−'}${fN(Math.abs(h.n))}</div>`}</td><td>${h.legacy ? html`<span class="meta">ghi cộng dồn${h.note ? ': '+h.note : ''}</span>` : null}</td><td>${w && (h.legacy || h === newest) ? html`<button type="button" class="icon-btn sm" title=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} aria-label=${h.legacy ? 'Xóa dòng' : 'Hoàn tác lần cập nhật này'} onClick=${() => undo(h)}><${Ic} n=${h.legacy ? 'x' : 'undo'} s=${14}/></button>` : null}</td></tr>`)}</tbody></table>` : null}
@@ -3187,10 +3209,9 @@ function NewBooking({p, D, lanes}){
   if(!open) return html`<div class="cr-foot"><button type="button" class="btn sm" onClick=${() => setOpen(true)}><${Ic} n="plus" s=${16}/>${more ? 'Book thêm credit' : 'Book credit cho job'}</button></div>`;
   const save = () => { if(!need){ toast('Nhập số credit cần book.', 'warn'); return; } W.project(p.id, {bookings: {[rid('b')]: {acc: accId, date: today(), est: need, status: 'open', approved: false, n: Date.now(), by: meId() || null, usage: {}}}}); setOpen(false); setF({est: '', acc: ''}); toast('Đã book '+fN(need)+' credit, chờ Hào duyệt'); };
   return html`<div class="editor">
-    <div class="field"><span class="lab">${more ? 'Book thêm bao nhiêu credit' : 'Số credit cần book'}</span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
-    <div class="field"><span class="lab">Account</span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>
-      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : same ? html`<span class="hint">Gộp vào khung ${same.a ? same.a.code : ''} của job${same.state === 'done' ? ' (đã gen xong, sẽ mở lại)' : ''}: tổng đã dùng vẫn cập nhật tiếp ở cùng một ô.</span>` : accId && more ? html`<span class="hint">Thêm một khung account cho job (project riêng trên Cinema Studio của account này).</span>` : null}</div>
-    <p class="lane-last">Hào duyệt xong mới gen phần này.</p>
+    <div class="field"><span class="lab">${more ? 'Book thêm bao nhiêu credit' : 'Số credit cần book'} <${Help} label="book credit" text="Tổng credit dự tính cho phần việc này. Hào duyệt xong mới được gen phần này."/></span><input class="inp sm" inputmode="numeric" placeholder="Tổng cho phần việc này" value=${f.est} onInput=${e => setF(Object.assign({}, f, {est: e.target.value.replace(/[^\d]/g, '')}))}/></div>
+    <div class="field"><span class="lab">Account <${Help} label="chọn account" text="Chọn cùng account job đang dùng thì phần book thêm gộp vào khung đó, tổng đã dùng vẫn cập nhật ở một ô. Chọn account khác thì thêm một khung mới (project riêng trên Cinema Studio của account đó)."/></span><select class="sel sm" value=${accId} onChange=${e => setF(Object.assign({}, f, {acc: e.target.value}))}><option value="">Chọn account…</option>${sg.rows.map(r => html`<option key=${r.a.id} value=${r.a.id} disabled=${!r.okScope}>${r.a.code}, còn ${fN(r.room)}${sg.best && sg.best.a.id === r.a.id ? ' (gợi ý)' : ''}</option>`)}</select>
+      ${need && !sg.best ? html`<span class="hint bad-t">Không account nào đủ chỗ cho ${fN(need)} credit.</span>` : null}</div>
     <div class="acts"><button type="button" class="btn sm primary" disabled=${!need || !accId} onClick=${save}>Book ${need ? fN(need)+' ' : ''}credit</button><button type="button" class="btn sm" onClick=${() => setOpen(false)}>Hủy</button></div>
   </div>`;
 }
@@ -3202,7 +3223,7 @@ function CloseAll({p, lanes, me}){
   const used = sum(open.map(l => l.used)), back = sum(open.map(l => Math.max(0, l.booked - l.used)));
   const go = () => { const o = {}, at = Date.now(); open.forEach(l => l.open.forEach(b => { o[b.bid] = {status: 'done', doneAt: at, doneBy: me || null}; })); W.project(p.id, {bookings: o}); setAsk(false); toast('Đã báo gen xong cả job: tổng credit cuối '+fN(used)+(back ? ', trả lại '+fN(back)+' credit' : '')); };
   return ask ? html`<div class="lane-close ask job"><p><b>Báo gen xong cả job?</b> Tổng credit cuối <b>${fN(used)}</b> trên ${open.map(l => l.a ? l.a.code : '').join(', ')}${back ? ', trả lại tổng '+fN(back)+' credit cho các account' : ''}. Sau đó job không gen thêm trên các account này.</p><div class="acts"><button type="button" class="btn sm primary" onClick=${go}><${Ic} n="check" s=${16}/>Xác nhận gen xong</button><button type="button" class="btn sm" onClick=${() => setAsk(false)}>Thôi</button></div></div>`
-    : html`<div class="lane-close job"><span class="lc-q"><b>Job gen xong hết?</b><span class="meta">Báo xong một lần cho mọi account đang dùng.</span></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong cả job</button></div>`;
+    : html`<div class="lane-close job"><span class="lc-q"><b>Job gen xong hết?</b><${Help} label="báo gen xong cả job" text="Báo gen xong một lần cho mọi account job đang dùng, chốt tổng credit cuối của từng account và trả phần book thừa."/></span><button type="button" class="btn sm" onClick=${() => setAsk(true)}><${Ic} n="check" s=${16}/>Báo gen xong cả job</button></div>`;
 }
 function CreditCard({p, D, me}){
   const lanes = creditLanes(p, D);
@@ -3211,7 +3232,7 @@ function CreditCard({p, D, me}){
   return html`<section class="panel" aria-label="Credit Higgsfield">
     <div class="panel-h"><h3>Credit Higgsfield</h3><a class="btn xs" href="#credit">Xem các account</a></div>
     ${lanes.length ? html`<div class="bigline"><span class="big">${fN(used)}</span><span class="meta">đã dùng / ${fN(booked)} đã book</span></div><div class="meter"><i class=${booked && used > booked ? 'over' : ''} style=${'width:'+pct+'%'}></i></div>
-      ${canW() ? html`<p class="cr-how">Mỗi account ghi theo số tổng Cinema Studio đang hiện cho project của job. App tự tính phần tăng.</p>` : null}` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
+` : html`<p class="meta">Chưa book credit. Không có booking thì không gen.</p>`}
     ${lanes.map(l => html`<${AccLane} key=${l.acc || 'none'} p=${p} l=${l} D=${D} me=${me}/>`)}
     <${CloseAll} p=${p} lanes=${lanes} me=${me}/>
     <${NewBooking} p=${p} D=${D} lanes=${lanes}/>
